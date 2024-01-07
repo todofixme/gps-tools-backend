@@ -1,0 +1,31 @@
+### upload single file
+POST {{baseUrl}}/file?filename=test.txt
+Accept: application/json
+Content-Type: text/plain
+
+< data/test.txt
+
+> {% client.global.set("fileId", response.body.id) %}
+
+### upload multipart
+POST {{baseUrl}}/files
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="file.txt"
+
+< data/test.txt
+--WebAppBoundary--
+
+
+### download file
+GET {{baseUrl}}/files/{{fileId}}
+Accept: */*
+
+### show file
+GET {{baseUrl}}/show/{{fileId}}
+Accept: */*
+
+### delete file
+DELETE {{baseUrl}}/files/{{fileId}}
+Accept: */*
