@@ -1,3 +1,3 @@
-# Backend of GPX-Tools based on Spring/Kotlin
+# Backend of GPS-Tools based on Spring/Kotlin
 
-Used as backend for [GPX-Tools Frontend](https://github.com/devshred/gpx-tools-frontend).
+Used as backend for [GPS-Tools Frontend](https://github.com/devshred/gps-tools-frontend).

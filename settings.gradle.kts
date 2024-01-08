@@ -1,1 +1,1 @@
-rootProject.name = "gpx-tools-backend"
+rootProject.name = "gps-tools-backend"
