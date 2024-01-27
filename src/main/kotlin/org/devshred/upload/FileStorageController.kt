@@ -1,15 +1,15 @@
 package org.devshred.upload
 
 import jakarta.servlet.http.HttpServletRequest
+import kotlinx.serialization.*
+import kotlinx.serialization.protobuf.*
+import org.apache.tika.mime.MediaType.APPLICATION_XML
 import org.slf4j.LoggerFactory
+import org.springframework.core.io.InputStreamResource
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
-import org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE
-import org.springframework.http.MediaType.APPLICATION_PDF_VALUE
-import org.springframework.http.MediaType.IMAGE_JPEG_VALUE
-import org.springframework.http.MediaType.TEXT_PLAIN_VALUE
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.CrossOrigin
@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.server.ResponseStatusException
+import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.util.*
 
@@ -53,22 +54,39 @@ class FileStorageController(private val store: FileStore, private val ioService:
         val storedFile = store.get(UUID.fromString(id))
         val resource = ioService.getAsStream(storedFile!!.storageLocation)
 
+        val wayPoints = protoBufInputStreamResourceToWaypoints(resource)
+
+        val outputStream = waiPointsToByteArrayOutputStream(wayPoints)
+        val inputStreamResource = InputStreamResource(ByteArrayInputStream(outputStream.toByteArray()))
+
         return ResponseEntity.ok() //
-            .contentType(MediaType.valueOf(storedFile.mimeType)) //
-            .contentLength(storedFile.size)
-            .body(resource)
+            .contentType(MediaType.APPLICATION_XML) //
+            .body(inputStreamResource)
     }
 
     @ResponseBody
-    @PostMapping(
-        path = ["/file"],
-        consumes = [APPLICATION_OCTET_STREAM_VALUE, APPLICATION_PDF_VALUE, IMAGE_JPEG_VALUE, TEXT_PLAIN_VALUE],
-    )
+    @PostMapping(path = ["/file"])
     @Throws(IOException::class)
     fun uploadFile(request: HttpServletRequest, @RequestParam filename: String): ResponseEntity<StoredFile> {
         val storedFile: StoredFile = ioService.createTempFile(request.inputStream, filename)
-        store.put(storedFile.id, storedFile)
-        return ResponseEntity.ok(storedFile)
+
+        if (storedFile.mimeType != APPLICATION_XML.toString()) {
+            ioService.delete(storageLocation = storedFile.storageLocation)
+            throw IllegalArgumentException("not a file format to hold GPS data")
+        }
+
+        try {
+            val wayPoints = wayPointsFromFileLocation(storedFile.storageLocation)
+            val inputStream = wayPointsToProtobufInputStream(wayPoints)
+            val protobufFile = ioService.createTempFile(inputStream, filename)
+            store.put(protobufFile.id, protobufFile)
+
+            ioService.delete(storedFile.storageLocation)
+            return ResponseEntity.ok(protobufFile)
+        } catch (ex: IOException) {
+            ioService.delete(storageLocation = storedFile.storageLocation)
+            throw IllegalArgumentException("not a file format to hold GPS data")
+        }
     }
 
     @ResponseBody
@@ -81,7 +99,14 @@ class FileStorageController(private val store: FileStore, private val ioService:
         file.forEach {
             val storedFile: StoredFile = ioService.createTempFile(it.inputStream, it.originalFilename!!)
             store.put(storedFile.id, storedFile)
-            results.add(storedFile)
+
+            val wayPoints = wayPointsFromFileLocation(storedFile.storageLocation)
+            val inputStream = wayPointsToProtobufInputStream(wayPoints)
+            val protobufFile = ioService.createTempFile(inputStream, it.originalFilename!!)
+            store.put(protobufFile.id, protobufFile)
+
+            ioService.delete(storedFile.storageLocation)
+            results.add(protobufFile)
         }
         return ResponseEntity.ok(results)
     }

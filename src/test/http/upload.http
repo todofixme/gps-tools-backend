@@ -1,9 +1,9 @@
 ### upload single file
-POST {{baseUrl}}/file?filename=test.txt
+POST {{baseUrl}}/file?filename=test.gpx
 Accept: application/json
 Content-Type: text/plain
 
-< data/test.txt
+< data/test.gpx
 
 > {% client.global.set("fileId", response.body.id) %}
 
@@ -29,3 +29,6 @@ Accept: */*
 ### delete file
 DELETE {{baseUrl}}/files/{{fileId}}
 Accept: */*
+
+### merge files
+POST {{baseUrl}}/merge?fileId={{fileId}}

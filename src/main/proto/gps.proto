@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+
+package org.devshred.gps.proto;
+
+message WayPoint {
+  double latitude = 1;
+  double longitude = 2;
+  double length = 3;
+  double time = 4;
+}

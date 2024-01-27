@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<root>
+    <title>My value storage.</title>
+    <entry>
+        <key>SomeKey</key>
+        <value>Fancy value.</value>
+    </entry>
+    <entry>
+        <key>YetAnotherKey.</key>
+        <value>Crazy value.</value>
+    </entry>
+</root>
