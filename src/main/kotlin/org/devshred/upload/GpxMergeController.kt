@@ -3,7 +3,6 @@ package org.devshred.upload
 import io.jenetics.jpx.GPX
 import io.jenetics.jpx.TrackSegment
 import org.slf4j.LoggerFactory
-import org.springframework.core.io.InputStreamResource
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.PostMapping
@@ -11,8 +10,6 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.bind.annotation.RestController
-import java.io.File
-import java.io.FileInputStream
 import java.io.IOException
 import java.util.*
 
@@ -34,15 +31,11 @@ class GpxMergeController(private val store: FileStore, private val ioService: IO
             wayPoints.forEach { segmentBuilder.addPoint(it) }
         }
         val gpx = GPX.builder().addTrack { track -> track.addSegment(segmentBuilder.build()) }.build()
-        val gpxFile = File.createTempFile(UUID.randomUUID().toString(), ".tmp")
-        GPX.write(gpx, gpxFile.toPath())
-        val inputStream = InputStreamResource(FileInputStream(gpxFile.absolutePath)).inputStream
 
-        val mergedGpx = ioService.createTempFile(inputStream, "merged.gpx")
-        store.put(mergedGpx.id, mergedGpx)
+        val protoStream = wayPointsToProtobufInputStream(gpx.tracks[0].segments[0].points)
+        val protobufFile = ioService.createTempFile(protoStream, "merged.gpx")
+        store.put(protobufFile.id, protobufFile)
 
-        gpxFile.delete()
-
-        return ResponseEntity.ok(mergedGpx)
+        return ResponseEntity.ok(protobufFile)
     }
 }

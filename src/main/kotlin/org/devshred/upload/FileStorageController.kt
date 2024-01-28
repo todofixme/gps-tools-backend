@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
+import org.springframework.util.StringUtils
 import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -36,31 +37,26 @@ class FileStorageController(private val store: FileStore, private val ioService:
 
     @GetMapping("/files/{id}")
     @Throws(IOException::class)
-    fun download(@PathVariable id: String, @RequestHeader headers: Map<String, String>): ResponseEntity<Resource> {
+    fun download(
+        @PathVariable id: String,
+        @RequestParam("m", required = false) mode: String?,
+        @RequestHeader headers: Map<String, String>
+    ): ResponseEntity<Resource> {
         val storedFile = store.get(UUID.fromString(id))
         val resource = ioService.getAsStream(storedFile!!.storageLocation)
-        val contentDisposition = "attachment; filename=\"${storedFile.filename}\""
-
-        return ResponseEntity.ok() //
-            .contentType(MediaType.valueOf(storedFile.mimeType)) //
-            .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition) //
-            .contentLength(storedFile.size)
-            .body(resource)
-    }
-
-    @GetMapping("/show/{id}")
-    @Throws(IOException::class)
-    fun showFile(@PathVariable id: String, @RequestHeader headers: Map<String, String>): ResponseEntity<Resource> {
-        val storedFile = store.get(UUID.fromString(id))
-        val resource = ioService.getAsStream(storedFile!!.storageLocation)
-
         val wayPoints = protoBufInputStreamResourceToWaypoints(resource)
 
         val outputStream = waiPointsToByteArrayOutputStream(wayPoints)
         val inputStreamResource = InputStreamResource(ByteArrayInputStream(outputStream.toByteArray()))
 
+        val responseHeaders = HttpHeaders()
+        if (StringUtils.hasText(mode) && mode == "dl") {
+            responseHeaders.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"${storedFile.filename}\"")
+        }
+
         return ResponseEntity.ok() //
-            .contentType(MediaType.APPLICATION_XML) //
+            .contentType(MediaType.valueOf(storedFile.mimeType)) //
+            .headers(responseHeaders)
             .body(inputStreamResource)
     }
 
