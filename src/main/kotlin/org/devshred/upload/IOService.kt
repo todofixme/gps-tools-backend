@@ -2,6 +2,7 @@ package org.devshred.upload
 
 import org.apache.tika.Tika
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.InputStreamResource
 import org.springframework.stereotype.Service
 import java.io.File
@@ -11,11 +12,14 @@ import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import java.util.*
+import java.util.UUID
 
 @Service
 class IOService {
     private val log = LoggerFactory.getLogger(javaClass)
+
+    @Value("\${app.base-url}")
+    lateinit var baseUrl: String
 
     fun getAsStream(storageLocation: String): InputStreamResource {
         try {
@@ -40,7 +44,7 @@ class IOService {
             throw IOException("Could not save file: " + tempFile.getName(), ioe)
         }
         val mimeType: String = Tika().detect(tempFile)
-        val href = "http://localhost:7001/files/$uuid"
+        val href = "http://${baseUrl}/files/$uuid"
 
         return StoredFile(uuid, filename, mimeType, href, tempFile.length(), tempFile.absolutePath)
     }

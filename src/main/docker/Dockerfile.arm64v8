@@ -1,0 +1,9 @@
+# FROM arm64v8/openjdk:17
+FROM eclipse-temurin:21-jre-alpine
+
+WORKDIR /app
+
+ARG JAR_FILE=build/libs/gps-tools-backend-*.jar
+COPY ${JAR_FILE} /app/gps-tools-backend.jar
+
+ENTRYPOINT ["java","-jar","/app/gps-tools-backend.jar"]

@@ -18,12 +18,12 @@ Content-Disposition: form-data; name="file"; filename="file.txt"
 --WebAppBoundary--
 
 
-### download file
+### get file
 GET {{baseUrl}}/files/{{fileId}}
 Accept: */*
 
-### show file
-GET {{baseUrl}}/show/{{fileId}}
+### download file
+GET {{baseUrl}}/files/{{fileId}}?m=dl
 Accept: */*
 
 ### delete file
@@ -32,3 +32,5 @@ Accept: */*
 
 ### merge files
 POST {{baseUrl}}/merge?fileId={{fileId}}
+
+> {% client.global.set("fileId", response.body.id) %}
