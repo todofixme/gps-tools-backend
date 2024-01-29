@@ -44,7 +44,7 @@ class IOService {
             throw IOException("Could not save file: " + tempFile.getName(), ioe)
         }
         val mimeType: String = Tika().detect(tempFile)
-        val href = "http://${baseUrl}/files/$uuid"
+        val href = "${baseUrl}/files/$uuid"
 
         return StoredFile(uuid, filename, mimeType, href, tempFile.length(), tempFile.absolutePath)
     }
