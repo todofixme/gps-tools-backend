@@ -1,3 +1,7 @@
+#!/bin/sh
+
+./gradlew clean build -x test
+
 docker build -t quay.io/johannesschmidt/gps-tools-backend  -f src/main/docker/Dockerfile .
 docker push quay.io/johannesschmidt/gps-tools-backend
 
