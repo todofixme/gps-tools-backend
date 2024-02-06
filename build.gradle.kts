@@ -11,10 +11,11 @@ plugins {
     id("kotlinx-serialization") version kotlinVersion
 
     id("com.github.ben-manes.versions") version "0.51.0"
+    id("org.jlleitschuh.gradle.ktlint") version "12.1.0"
 }
 
 group = "org.devshred"
-version = "0.0.1-SNAPSHOT"
+version = "0.1.0-SNAPSHOT"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -41,7 +42,6 @@ dependencies {
     implementation("io.jenetics:jpx:3.1.0")
     testImplementation("com.ninja-squad:springmockk:4.0.2")
     testImplementation("org.apache.commons:commons-lang3:3.14.0")
-
 }
 
 tasks.withType<KotlinCompile> {
@@ -60,9 +60,19 @@ tasks {
         resolutionStrategy {
             componentSelection {
                 all {
-                    val rejected = listOf("alpha", "beta", "rc", "cr", "m", "preview", "b", "ea")
-                        .map { qualifier -> Regex("(?i).*[.-]$qualifier[.\\d-+]*") }
-                        .any { it.matches(candidate.version) }
+                    val rejected =
+                        listOf(
+                            "alpha",
+                            "beta",
+                            "rc",
+                            "cr",
+                            "m",
+                            "preview",
+                            "b",
+                            "ea",
+                        )
+                            .map { qualifier -> Regex("(?i).*[.-]$qualifier[.\\d-+]*") }
+                            .any { it.matches(candidate.version) }
                     if (rejected) {
                         reject("Release candidate")
                     }
