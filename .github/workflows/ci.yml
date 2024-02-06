@@ -8,10 +8,8 @@
 name: Java CI with Gradle
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  release:
+    types: [published] # prereleased and released
 
 permissions:
   contents: read
@@ -22,13 +20,44 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up JDK 17
-      uses: actions/setup-java@v3
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    - name: Build with Gradle
-      uses: gradle/gradle-build-action@bd5760595778326ba7f1441bcf7e88b49de61a25 # v2.6.0
-      with:
-        arguments: build
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Build with Gradle
+        uses: gradle/gradle-build-action@bd5760595778326ba7f1441bcf7e88b49de61a25 # v2.6.0
+        with:
+          arguments: build
+
+      - name: Get latest release from Git
+        id: release-version
+        run: |
+          output=$(git ls-remote --refs --sort="version:refname" --tags $repo | cut -d/ -f3-|tail -n1)
+          echo "release_version=$output" >> $GITHUB_OUTPUT
+
+      - name: Build and Push Docker Image (AMD64)
+        uses: mr-smithers-excellent/docker-build-push@v6
+        with:
+          image: devshred/gps-tools-backend
+          tags: latest, ${{steps.release-version.outputs.release_version}}
+          registry: docker.io
+          multiPlatform: false
+          platform: linux/amd64
+          dockerfile: src/main/docker/Dockerfile
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image (ARM)
+        uses: mr-smithers-excellent/docker-build-push@v6
+        with:
+          image: devshred/gps-tools-backend
+          tags: ${{steps.release-version.outputs.release_version}}-arm64
+          registry: docker.io
+          multiPlatform: true
+          platform: linux/arm64,linux/arm64/v8
+          dockerfile: src/main/docker/Dockerfile.arm
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}

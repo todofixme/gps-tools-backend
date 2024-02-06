@@ -10,12 +10,14 @@ plugins {
 
     id("kotlinx-serialization") version kotlinVersion
 
+    id("net.researchgate.release") version "3.0.2"
+    id("com.palantir.git-version") version "3.0.0"
+
     id("com.github.ben-manes.versions") version "0.51.0"
     id("org.jlleitschuh.gradle.ktlint") version "12.1.0"
 }
 
 group = "org.devshred"
-version = "0.1.0-SNAPSHOT"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -81,3 +83,9 @@ tasks {
         }
     }
 }
+
+tasks.processResources {
+    filesMatching("git.properties") { expand(project.properties) }
+}
+
+val gitVersion: groovy.lang.Closure<String> by extra
