@@ -1,3 +1,9 @@
 server.port: 7001
 
 app.base-url: ${BASE_URL:http://localhost:7001}
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 5MB
