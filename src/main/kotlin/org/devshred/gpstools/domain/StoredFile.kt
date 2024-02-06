@@ -1,4 +1,4 @@
-package org.devshred.upload
+package org.devshred.gpstools.domain
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import java.util.UUID

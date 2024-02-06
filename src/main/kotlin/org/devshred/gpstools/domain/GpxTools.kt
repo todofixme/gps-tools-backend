@@ -1,4 +1,4 @@
-package org.devshred.upload
+package org.devshred.gpstools.domain
 
 import io.jenetics.jpx.GPX
 import io.jenetics.jpx.Length
@@ -18,7 +18,11 @@ fun calculateLength(gpx: GPX): Length {
 }
 
 fun wayPointsFromFileLocation(location: String): List<WayPoint> =
-    GPX.read(Path.of(location)).tracks[0].segments[0].points
+    GPX
+        .read(Path.of(location))
+        .tracks[0]
+        .segments[0]
+        .points
 
 fun waiPointsToByteArrayOutputStream(wayPoints: List<WayPoint>): ByteArrayOutputStream {
     val segmentBuilder = TrackSegment.builder()

@@ -1,3 +1,3 @@
-package org.devshred.upload
+package org.devshred.gpstools.domain
 
 class NotFoundException(message: String?) : RuntimeException(message)

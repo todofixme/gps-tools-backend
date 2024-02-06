@@ -1,4 +1,4 @@
-package org.devshred.upload
+package org.devshred.gpstools.domain
 
 import org.apache.tika.Tika
 import org.slf4j.LoggerFactory
@@ -31,7 +31,10 @@ class IOService {
         }
     }
 
-    fun createTempFile(inputStream: InputStream, filename: String): StoredFile {
+    fun createTempFile(
+        inputStream: InputStream,
+        filename: String,
+    ): StoredFile {
         val uuid = UUID.randomUUID()
         val tempFile = File.createTempFile(uuid.toString(), ".tmp")
         tempFile.deleteOnExit()
@@ -44,7 +47,7 @@ class IOService {
             throw IOException("Could not save file: " + tempFile.getName(), ioe)
         }
         val mimeType: String = Tika().detect(tempFile)
-        val href = "${baseUrl}/files/$uuid"
+        val href = "$baseUrl/files/$uuid"
 
         return StoredFile(uuid, filename, mimeType, href, tempFile.length(), tempFile.absolutePath)
     }

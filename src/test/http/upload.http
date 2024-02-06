@@ -12,9 +12,9 @@ POST {{baseUrl}}/files
 Content-Type: multipart/form-data; boundary=WebAppBoundary
 
 --WebAppBoundary
-Content-Disposition: form-data; name="file"; filename="file.txt"
+Content-Disposition: form-data; name="file"; filename="file.gpx"
 
-< data/test.txt
+< data/test.gpx
 --WebAppBoundary--
 
 

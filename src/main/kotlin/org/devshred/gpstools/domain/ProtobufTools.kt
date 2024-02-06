@@ -1,4 +1,4 @@
-package org.devshred.upload
+package org.devshred.gpstools.domain
 
 import io.jenetics.jpx.Latitude
 import io.jenetics.jpx.Length
@@ -29,7 +29,7 @@ data class ProtoPoint(
     val latitude: Latitude,
     val longitude: Longitude,
     val elevation: Optional<Length>,
-    val time: Optional<Instant>
+    val time: Optional<Instant>,
 )
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -46,7 +46,12 @@ fun protoBufInputStreamResourceToWaypoints(inputStreamResource: InputStreamResou
 }
 
 fun toProtoPoint(wayPoint: WayPoint): ProtoPoint =
-    ProtoPoint(wayPoint.latitude, wayPoint.longitude, wayPoint.elevation, wayPoint.time)
+    ProtoPoint(
+        wayPoint.latitude,
+        wayPoint.longitude,
+        wayPoint.elevation,
+        wayPoint.time,
+    )
 
 fun toWayPoint(protoWayPoint: ProtoPoint): WayPoint =
     WayPoint.builder()
@@ -65,7 +70,10 @@ class WayPointSerializer : KSerializer<ProtoPoint> {
             element("time", Long.serializer().descriptor)
         }
 
-    override fun serialize(encoder: Encoder, value: ProtoPoint) {
+    override fun serialize(
+        encoder: Encoder,
+        value: ProtoPoint,
+    ) {
         encoder.encodeStructure(descriptor) {
             encodeDoubleElement(descriptor, 0, value.latitude.toDouble())
             encodeDoubleElement(descriptor, 1, value.longitude.toDouble())
@@ -95,7 +103,7 @@ class WayPointSerializer : KSerializer<ProtoPoint> {
             latitude ?: error("Missing required field 'latitude'"),
             longitude ?: error("Missing required field 'longitude'"),
             elevation,
-            time
+            time,
         )
     }
 }
