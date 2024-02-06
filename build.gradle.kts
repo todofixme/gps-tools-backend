@@ -1,3 +1,4 @@
+import net.researchgate.release.ReleaseExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -55,6 +56,12 @@ tasks.withType<KotlinCompile> {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+configure<ReleaseExtension> {
+    preTagCommitMessage = "[gradle-release] pre tag commit:"
+    tagCommitMessage = "[gradle-release] creating tag:"
+    newVersionCommitMessage = "[gradle-release] new version commit:"
 }
 
 tasks {
