@@ -54,7 +54,7 @@ jobs:
         uses: mr-smithers-excellent/docker-build-push@v6
         with:
           image: devshred/gps-tools-backend
-          tags: ${{steps.release-version.outputs.release_version}}-arm64
+          tags: latest-arm64, ${{steps.release-version.outputs.release_version}}-arm64
           registry: docker.io
           multiPlatform: true
           platform: linux/arm64,linux/arm64/v8
