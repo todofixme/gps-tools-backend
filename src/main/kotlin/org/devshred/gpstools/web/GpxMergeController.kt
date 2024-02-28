@@ -6,7 +6,7 @@ import org.devshred.gpstools.domain.FileStore
 import org.devshred.gpstools.domain.IOService
 import org.devshred.gpstools.domain.StoredFile
 import org.devshred.gpstools.domain.protoBufInputStreamResourceToWaypoints
-import org.devshred.gpstools.domain.wayPointsToProtobufInputStream
+import org.devshred.gpstools.domain.trackPointsToProtobufInputStream
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.CrossOrigin
@@ -39,7 +39,7 @@ class GpxMergeController(private val store: FileStore, private val ioService: IO
         }
         val gpx = GPX.builder().addTrack { track -> track.addSegment(segmentBuilder.build()) }.build()
 
-        val protoStream = wayPointsToProtobufInputStream(gpx.tracks[0].segments[0].points)
+        val protoStream = trackPointsToProtobufInputStream(gpx.tracks[0].segments[0].points)
         val protobufFile = ioService.createTempFile(protoStream, "merged.gpx")
         store.put(protobufFile.id, protobufFile)
 

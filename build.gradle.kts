@@ -1,3 +1,4 @@
+import com.google.protobuf.gradle.id
 import net.researchgate.release.ReleaseExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -9,7 +10,7 @@ plugins {
     id("org.springframework.boot") version "3.2.2"
     id("io.spring.dependency-management") version "1.1.4"
 
-    id("kotlinx-serialization") version kotlinVersion
+    id("com.google.protobuf") version "0.9.4"
 
     id("net.researchgate.release") version "3.0.2"
     id("com.palantir.git-version") version "3.0.0"
@@ -28,6 +29,8 @@ repositories {
     mavenCentral()
 }
 
+val protoBufVersion = "3.25.3"
+
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
@@ -36,20 +39,21 @@ dependencies {
 
     implementation("io.jenetics:jpx:3.1.0")
 
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.6.2")
+    implementation("com.google.protobuf:protobuf-kotlin:$protoBufVersion")
+    implementation("com.google.protobuf:protobuf-java-util:$protoBufVersion")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(module = "mockito-core")
     }
-    implementation("io.jenetics:jpx:3.1.0")
     testImplementation("com.ninja-squad:springmockk:4.0.2")
     testImplementation("org.apache.commons:commons-lang3:3.14.0")
+    testImplementation("org.apache.commons:commons-math3:3.6.1")
 }
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
+        freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
         jvmTarget = "17"
     }
 }
@@ -96,3 +100,22 @@ tasks.processResources {
 }
 
 val gitVersion: groovy.lang.Closure<String> by extra
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:$protoBufVersion"
+    }
+    generateProtoTasks {
+        all().forEach {
+            it.builtins {
+                id("kotlin")
+            }
+        }
+    }
+}
+
+ktlint {
+    filter {
+        exclude { entry -> entry.file.toString().contains("generated") }
+    }
+}

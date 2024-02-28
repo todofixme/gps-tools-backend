@@ -7,8 +7,8 @@ import java.io.InputStream
 @Service
 class GpxService(private val ioService: IOService) {
     fun gpxFileToProtobufInputStream(gpxFile: String): InputStream {
-        val wayPoints = wayPointsFromFileLocation(gpxFile)
-        return wayPointsToProtobufInputStream(wayPoints)
+        val wayPoints = trackPointsFromFileLocation(gpxFile)
+        return trackPointsToProtobufInputStream(wayPoints)
     }
 
     fun protobufFileToWaypointInputStream(storageLocation: String): ByteArrayInputStream {
@@ -19,7 +19,7 @@ class GpxService(private val ioService: IOService) {
     }
 
     fun wayPointInputStreamFromFileLocation(storageLocation: String): InputStream {
-        val wayPoints = wayPointsFromFileLocation(storageLocation)
-        return wayPointsToProtobufInputStream(wayPoints)
+        val wayPoints = trackPointsFromFileLocation(storageLocation)
+        return trackPointsToProtobufInputStream(wayPoints)
     }
 }
