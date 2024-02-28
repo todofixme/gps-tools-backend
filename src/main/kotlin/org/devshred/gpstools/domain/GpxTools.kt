@@ -17,7 +17,7 @@ fun calculateLength(gpx: GPX): Length {
         .collect(Geoid.WGS84.toPathLength())
 }
 
-fun wayPointsFromFileLocation(location: String): List<WayPoint> =
+fun trackPointsFromFileLocation(location: String): List<WayPoint> =
     GPX
         .read(Path.of(location))
         .tracks[0]
@@ -28,7 +28,11 @@ fun waiPointsToByteArrayOutputStream(wayPoints: List<WayPoint>): ByteArrayOutput
     val segmentBuilder = TrackSegment.builder()
     wayPoints.forEach { segmentBuilder.addPoint(it) }
 
-    val gpx = GPX.builder().addTrack { track -> track.addSegment(segmentBuilder.build()) }.build()
+    val gpx =
+        GPX.builder()
+            .creator("GPS-Tools - https://gps-tools.pages.dev")
+            .addTrack { track -> track.addSegment(segmentBuilder.build()) }
+            .build()
 
     val out = ByteArrayOutputStream()
     GPX.Writer.DEFAULT.write(gpx, out)

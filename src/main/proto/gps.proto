@@ -2,11 +2,26 @@ syntax = "proto3";
 
 option java_multiple_files = true;
 
-package org.devshred.gps.proto;
+package org.devshred.gpstools.proto3;
 
-message WayPoint {
+message TrackPoint {
   double latitude = 1;
   double longitude = 2;
-  double length = 3;
-  double time = 4;
+  optional double elevation = 3;
+  optional int64 time = 4;
+}
+
+message WayPoint {
+  TrackPoint trackPoint = 1;
+  optional string name = 2;
+  optional string symbol = 3;
+}
+
+message Track {
+  repeated TrackPoint trackPoints = 1;
+}
+
+message GpsContainer {
+  repeated WayPoint wayPoints = 1;
+  Track track = 2;
 }
