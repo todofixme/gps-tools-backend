@@ -1,41 +1,33 @@
 package org.devshred.gpstools.domain
 
 import io.jenetics.jpx.GPX
-import io.jenetics.jpx.Length
-import io.jenetics.jpx.TrackSegment
 import io.jenetics.jpx.WayPoint
-import io.jenetics.jpx.geom.Geoid
+import org.springframework.core.io.InputStreamResource
 import java.io.ByteArrayOutputStream
 import java.nio.file.Path
-import java.util.stream.Stream
 
-fun calculateLength(gpx: GPX): Length {
-    return gpx.tracks()
-        .flatMap(io.jenetics.jpx.Track::segments)
-        .findFirst()
-        .map { it.points() }.orElse(Stream.empty())
-        .collect(Geoid.WGS84.toPathLength())
-}
+private const val GPX_CREATOR = "GPS-Tools - https://gps-tools.pages.dev"
 
-fun trackPointsFromFileLocation(location: String): List<WayPoint> =
-    GPX
-        .read(Path.of(location))
-        .tracks[0]
-        .segments[0]
-        .points
+fun gpxFromFileLocation(location: String): GPX = GPX.read(Path.of(location))
 
-fun waiPointsToByteArrayOutputStream(wayPoints: List<WayPoint>): ByteArrayOutputStream {
-    val segmentBuilder = TrackSegment.builder()
-    wayPoints.forEach { segmentBuilder.addPoint(it) }
-
-    val gpx =
-        GPX.builder()
-            .creator("GPS-Tools - https://gps-tools.pages.dev")
-            .addTrack { track -> track.addSegment(segmentBuilder.build()) }
-            .build()
-
+fun gpxToByteArrayOutputStream(gpx: GPX): ByteArrayOutputStream {
     val out = ByteArrayOutputStream()
     GPX.Writer.DEFAULT.write(gpx, out)
 
     return out
+}
+
+fun extractPointsFromGpxTrack(inputStream: InputStreamResource): Pair<List<WayPoint>, List<WayPoint>> {
+    val gpx = protoInputStreamResourceToGpx(inputStream)
+    return gpx.wayPoints to gpx.tracks[0].segments[0].points
+}
+
+fun buildGpx(
+    wayPoints: List<WayPoint>,
+    trackPoints: List<WayPoint>,
+): GPX {
+    val gpxBuilder = GPX.builder().creator(GPX_CREATOR)
+    gpxBuilder.wayPoints(wayPoints)
+    gpxBuilder.addTrack { track -> track.addSegment { segment -> segment.points(trackPoints) } }
+    return gpxBuilder.build()
 }

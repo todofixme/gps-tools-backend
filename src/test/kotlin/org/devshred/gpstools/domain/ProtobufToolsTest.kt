@@ -2,7 +2,7 @@ package org.devshred.gpstools.domain
 
 import org.apache.commons.math3.random.RandomDataGenerator
 import org.assertj.core.api.Assertions.assertThat
-import org.devshred.gpstools.proto3.trackPoint
+import org.devshred.gpstools.proto3.wayPoint
 import org.junit.jupiter.api.Test
 import io.jenetics.jpx.WayPoint as GpxWayPoint
 
@@ -26,7 +26,7 @@ class ProtobufToolsTest {
         val lat = randomGenerator.nextDouble()
         val lon = randomGenerator.nextDouble()
         val protoBuf =
-            trackPoint {
+            wayPoint {
                 latitude = lat
                 longitude = lon
             }

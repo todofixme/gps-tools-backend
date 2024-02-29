@@ -6,20 +6,15 @@ import java.io.InputStream
 
 @Service
 class GpxService(private val ioService: IOService) {
-    fun gpxFileToProtobufInputStream(gpxFile: String): InputStream {
-        val wayPoints = trackPointsFromFileLocation(gpxFile)
-        return trackPointsToProtobufInputStream(wayPoints)
-    }
-
-    fun protobufFileToWaypointInputStream(storageLocation: String): ByteArrayInputStream {
-        val resource = ioService.getAsStream(storageLocation)
-        val wayPoints = protoBufInputStreamResourceToWaypoints(resource)
-        val outputStream = waiPointsToByteArrayOutputStream(wayPoints)
+    fun protoFileToGpxInputStream(storageLocation: String): ByteArrayInputStream {
+        val stream = ioService.getAsStream(storageLocation)
+        val gpx = protoInputStreamResourceToGpx(stream)
+        val outputStream = gpxToByteArrayOutputStream(gpx)
         return ByteArrayInputStream(outputStream.toByteArray())
     }
 
-    fun wayPointInputStreamFromFileLocation(storageLocation: String): InputStream {
-        val wayPoints = trackPointsFromFileLocation(storageLocation)
-        return trackPointsToProtobufInputStream(wayPoints)
+    fun protoInputStreamFromFileLocation(fileLocation: String): InputStream {
+        val gpx = gpxFromFileLocation(fileLocation)
+        return gpxToProtobufInputStream(gpx)
     }
 }

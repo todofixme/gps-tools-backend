@@ -4,24 +4,23 @@ option java_multiple_files = true;
 
 package org.devshred.gpstools.proto3;
 
-message TrackPoint {
+message WayPoint {
   double latitude = 1;
   double longitude = 2;
+
   optional double elevation = 3;
   optional int64 time = 4;
-}
 
-message WayPoint {
-  TrackPoint trackPoint = 1;
-  optional string name = 2;
-  optional string symbol = 3;
+  optional string name = 5;
+  optional string symbol = 6;
 }
 
 message Track {
-  repeated TrackPoint trackPoints = 1;
+  repeated WayPoint wayPoints = 1;
 }
 
 message GpsContainer {
-  repeated WayPoint wayPoints = 1;
-  Track track = 2;
+  optional string name = 1;
+  repeated WayPoint wayPoints = 2;
+  Track track = 3;
 }

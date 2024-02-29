@@ -1,51 +1,77 @@
 package org.devshred.gpstools.domain
 
-import io.jenetics.jpx.WayPoint
+import io.jenetics.jpx.GPX
+import io.jenetics.jpx.TrackSegment
 import org.devshred.gpstools.proto3.GpsContainer
 import org.devshred.gpstools.proto3.gpsContainer
 import org.devshred.gpstools.proto3.track
-import org.devshred.gpstools.proto3.trackPoint
+import org.devshred.gpstools.proto3.wayPoint
 import org.springframework.core.io.InputStreamResource
 import java.io.InputStream
 import io.jenetics.jpx.WayPoint as GpxWayPoint
-import org.devshred.gpstools.proto3.TrackPoint as ProtoTrackPoint
+import org.devshred.gpstools.proto3.WayPoint as ProtoWayPoint
 
-fun trackPointsToProtobufInputStream(wayPoints: List<GpxWayPoint>): InputStream {
+fun gpxToProtobufInputStream(gpx: GPX): InputStream {
     val container =
         gpsContainer {
+            gpx.wayPoints.map(::toProtoBuf).forEach { wayPoints += it }
             track =
                 track {
-                    wayPoints.forEach { trackPoints += toProtoBuf(it) }
+                    gpx.tracks[0].segments[0].points.forEach { wayPoints += toProtoBuf(it) }
                 }
         }
     return container.toByteArray().inputStream()
 }
 
-fun protoBufInputStreamResourceToWaypoints(inputStreamResource: InputStreamResource): List<WayPoint> {
+fun protoInputStreamResourceToGpx(inputStreamResource: InputStreamResource): GPX {
     val gpsContainer = GpsContainer.parseFrom(inputStreamResource.contentAsByteArray)
-    return gpsContainer.track.trackPointsList.map(::toGpx)
+    val gpxBuilder = GPX.builder()
+
+    if (gpsContainer.hasName()) {
+        gpxBuilder.metadata { it.name(gpsContainer.name) }
+    }
+
+    if (gpsContainer.wayPointsCount > 0) {
+        gpsContainer.wayPointsList.forEach { gpxBuilder.addWayPoint(toGpx(it)) }
+    }
+
+    val segmentBuilder = TrackSegment.builder()
+    gpsContainer.track.wayPointsList.forEach { segmentBuilder.addPoint(toGpx(it)) }
+    gpxBuilder.addTrack { it.addSegment(segmentBuilder.build()) }
+
+    return gpxBuilder.build()
 }
 
-fun toProtoBuf(gpx: GpxWayPoint): ProtoTrackPoint =
-    trackPoint {
+fun toProtoBuf(gpx: GpxWayPoint): ProtoWayPoint =
+    wayPoint {
         latitude = gpx.latitude.toDouble()
         longitude = gpx.longitude.toDouble()
         if (gpx.elevation.isPresent) elevation = gpx.elevation.get().toDouble()
         if (gpx.time.isPresent) time = gpx.time.get().epochSecond
+        if (gpx.name.isPresent) name = gpx.name.get()
+        if (gpx.symbol.isPresent) symbol = gpx.symbol.get()
     }
 
-fun toGpx(protoWayPoint: ProtoTrackPoint): GpxWayPoint {
+fun toGpx(proto: ProtoWayPoint): GpxWayPoint {
     val builder =
         GpxWayPoint.builder()
-            .lat(protoWayPoint.latitude)
-            .lon(protoWayPoint.longitude)
+            .lat(proto.latitude)
+            .lon(proto.longitude)
 
-    if (protoWayPoint.hasElevation()) {
-        builder.ele(protoWayPoint.elevation)
+    if (proto.hasElevation()) {
+        builder.ele(proto.elevation)
     }
 
-    if (protoWayPoint.hasTime()) {
-        builder.time(protoWayPoint.time)
+    if (proto.hasTime()) {
+        builder.time(proto.time)
+    }
+
+    if (proto.hasName()) {
+        builder.name(proto.name)
+    }
+
+    if (proto.hasSymbol()) {
+        builder.sym(proto.symbol)
     }
 
     return builder.build()

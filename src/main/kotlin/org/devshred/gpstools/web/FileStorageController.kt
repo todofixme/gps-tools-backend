@@ -45,7 +45,7 @@ class FileStorageController(
     ): ResponseEntity<Resource> {
         val storedFile = store.get(UUID.fromString(id))
 
-        val inputStream = gpxService.protobufFileToWaypointInputStream(storedFile.storageLocation)
+        val inputStream = gpxService.protoFileToGpxInputStream(storedFile.storageLocation)
         val inputStreamResource = InputStreamResource(inputStream)
 
         val responseHeaders = HttpHeaders()
@@ -78,12 +78,12 @@ class FileStorageController(
         }
 
         try {
-            val inputStream = gpxService.wayPointInputStreamFromFileLocation(uploadedFile.storageLocation)
-            val protobufFile = ioService.createTempFile(inputStream, filename)
-            store.put(protobufFile.id, protobufFile)
+            val inputStream = gpxService.protoInputStreamFromFileLocation(uploadedFile.storageLocation)
+            val protoFile = ioService.createTempFile(inputStream, filename)
+            store.put(protoFile.id, protoFile)
 
             ioService.delete(uploadedFile.storageLocation)
-            return ResponseEntity.ok(protobufFile)
+            return ResponseEntity.ok(protoFile)
         } catch (ex: IOException) {
             ioService.delete(storageLocation = uploadedFile.storageLocation)
             throw IllegalArgumentException(ERROR_MSG_NO_GPS_FILE)
@@ -110,11 +110,11 @@ class FileStorageController(
                         throw IllegalArgumentException(ERROR_MSG_NO_GPS_FILE)
                     }
 
-                    val inputStream = gpxService.wayPointInputStreamFromFileLocation(uploadedFile.storageLocation)
-                    val protobufFile = ioService.createTempFile(inputStream, it.originalFilename!!)
-                    store.put(protobufFile.id, protobufFile)
+                    val inputStream = gpxService.protoInputStreamFromFileLocation(uploadedFile.storageLocation)
+                    val protoFile = ioService.createTempFile(inputStream, it.originalFilename!!)
+                    store.put(protoFile.id, protoFile)
                     ioService.delete(uploadedFile.storageLocation)
-                    results.add(protobufFile)
+                    results.add(protoFile)
                 } catch (ex: IOException) {
                     ioService.delete(storageLocation = uploadedFile.storageLocation)
                     throw IllegalArgumentException(ERROR_MSG_NO_GPS_FILE)
