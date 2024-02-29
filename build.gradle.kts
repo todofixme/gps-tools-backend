@@ -63,9 +63,9 @@ tasks.withType<Test> {
 }
 
 configure<ReleaseExtension> {
-    preTagCommitMessage = "[gradle-release] pre tag commit:"
-    tagCommitMessage = "[gradle-release] creating tag:"
-    newVersionCommitMessage = "[gradle-release] new version commit:"
+    preTagCommitMessage = "chore(release): pre tag commit "
+    tagCommitMessage = "chore(release): creating tag "
+    newVersionCommitMessage = "chore(release): new version commit "
 }
 
 tasks {
