@@ -9,6 +9,12 @@
       </link>
     </author>
   </metadata>
+  <wpt lat="53.545505" lon="10.060718">
+    <ele>6.137416</ele>
+    <time>2024-01-24T15:35:10.586Z</time>
+    <name>Start</name>
+    <sym>summit</sym>
+  </wpt>
   <trk>
     <name>Billerhuder Insel</name>
     <trkseg>

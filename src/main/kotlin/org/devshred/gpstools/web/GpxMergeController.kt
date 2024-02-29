@@ -1,12 +1,13 @@
 package org.devshred.gpstools.web
 
-import io.jenetics.jpx.GPX
-import io.jenetics.jpx.TrackSegment
+import io.jenetics.jpx.WayPoint
 import org.devshred.gpstools.domain.FileStore
 import org.devshred.gpstools.domain.IOService
+import org.devshred.gpstools.domain.NotFoundException
 import org.devshred.gpstools.domain.StoredFile
-import org.devshred.gpstools.domain.protoBufInputStreamResourceToWaypoints
-import org.devshred.gpstools.domain.trackPointsToProtobufInputStream
+import org.devshred.gpstools.domain.buildGpx
+import org.devshred.gpstools.domain.extractPointsFromGpxTrack
+import org.devshred.gpstools.domain.gpxToProtobufInputStream
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.CrossOrigin
@@ -30,19 +31,28 @@ class GpxMergeController(private val store: FileStore, private val ioService: IO
     fun merge(
         @RequestParam(name = "fileId") fileIds: List<UUID>,
     ): ResponseEntity<StoredFile> {
-        val segmentBuilder = TrackSegment.builder()
-        fileIds.forEach { uuid ->
-            log.info("merging $uuid")
-            val wayPoints =
-                protoBufInputStreamResourceToWaypoints(ioService.getAsStream(store.get(uuid).storageLocation))
-            wayPoints.forEach { segmentBuilder.addPoint(it) }
+        if (fileIds.isEmpty()) {
+            throw NotFoundException("No fileId provided.")
         }
-        val gpx = GPX.builder().addTrack { track -> track.addSegment(segmentBuilder.build()) }.build()
 
-        val protoStream = trackPointsToProtobufInputStream(gpx.tracks[0].segments[0].points)
-        val protobufFile = ioService.createTempFile(protoStream, "merged.gpx")
-        store.put(protobufFile.id, protobufFile)
+        if (fileIds.size == 1) {
+            log.info("No need to merge.")
+            return ResponseEntity.ok(store.get(fileIds[0]))
+        }
 
-        return ResponseEntity.ok(protobufFile)
+        val allWayPoints: MutableList<WayPoint> = mutableListOf()
+        val allTrackPoints: MutableList<WayPoint> = mutableListOf()
+        fileIds.forEach { uuid ->
+            log.info("About to merge $uuid.")
+            val (wayPoints, trackPoints) = extractPointsFromGpxTrack(ioService.getAsStream(store.get(uuid).storageLocation))
+            allWayPoints.addAll(wayPoints)
+            allTrackPoints.addAll(trackPoints)
+        }
+        val gpx = buildGpx(allWayPoints, allTrackPoints)
+        val protoStream = gpxToProtobufInputStream(gpx)
+        val protoFile = ioService.createTempFile(protoStream, "merged.gpx")
+        store.put(protoFile.id, protoFile)
+
+        return ResponseEntity.ok(protoFile)
     }
 }
