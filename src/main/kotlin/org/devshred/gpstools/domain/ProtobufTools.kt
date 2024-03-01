@@ -8,23 +8,41 @@ import org.devshred.gpstools.proto3.track
 import org.devshred.gpstools.proto3.wayPoint
 import org.springframework.core.io.InputStreamResource
 import java.io.InputStream
+import java.util.Optional
 import io.jenetics.jpx.WayPoint as GpxWayPoint
 import org.devshred.gpstools.proto3.WayPoint as ProtoWayPoint
 
 fun gpxToProtobufInputStream(gpx: GPX): InputStream {
+    val trackName: Optional<String> =
+        if (gpx.tracks.isNotEmpty() && gpx.tracks[0].name.isPresent) {
+            gpx.tracks[0].name
+        } else if (gpx.metadata.isPresent && gpx.metadata.get().name.isPresent) {
+            gpx.metadata.get().name
+        } else {
+            Optional.empty()
+        }
+
     val container =
         gpsContainer {
+            if (trackName.isPresent) {
+                name = trackName.get()
+            }
             gpx.wayPoints.map(::toProtoBuf).forEach { wayPoints += it }
-            track =
-                track {
-                    gpx.tracks[0].segments[0].points.forEach { wayPoints += toProtoBuf(it) }
-                }
+            if (gpx.tracks.isNotEmpty()) {
+                track =
+                    track {
+                        gpx.tracks[0].segments[0].points.forEach { wayPoints += toProtoBuf(it) }
+                    }
+            }
         }
     return container.toByteArray().inputStream()
 }
 
+fun protoInputStreamResourceToGpsContainer(inputStreamResource: InputStreamResource): GpsContainer =
+    GpsContainer.parseFrom(inputStreamResource.contentAsByteArray)
+
 fun protoInputStreamResourceToGpx(inputStreamResource: InputStreamResource): GPX {
-    val gpsContainer = GpsContainer.parseFrom(inputStreamResource.contentAsByteArray)
+    val gpsContainer = protoInputStreamResourceToGpsContainer(inputStreamResource)
     val gpxBuilder = GPX.builder()
 
     if (gpsContainer.hasName()) {
@@ -37,7 +55,12 @@ fun protoInputStreamResourceToGpx(inputStreamResource: InputStreamResource): GPX
 
     val segmentBuilder = TrackSegment.builder()
     gpsContainer.track.wayPointsList.forEach { segmentBuilder.addPoint(toGpx(it)) }
-    gpxBuilder.addTrack { it.addSegment(segmentBuilder.build()) }
+    gpxBuilder.addTrack {
+        if (gpsContainer.hasName()) {
+            it.name(gpsContainer.name)
+        }
+        it.addSegment(segmentBuilder.build())
+    }
 
     return gpxBuilder.build()
 }

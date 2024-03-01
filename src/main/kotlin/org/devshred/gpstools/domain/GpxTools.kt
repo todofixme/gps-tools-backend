@@ -17,16 +17,13 @@ fun gpxToByteArrayOutputStream(gpx: GPX): ByteArrayOutputStream {
     return out
 }
 
-fun extractPointsFromGpxTrack(inputStream: InputStreamResource): Pair<List<WayPoint>, List<WayPoint>> {
-    val gpx = protoInputStreamResourceToGpx(inputStream)
-    return gpx.wayPoints to gpx.tracks[0].segments[0].points
-}
-
 fun buildGpx(
+    name: String?,
     wayPoints: List<WayPoint>,
     trackPoints: List<WayPoint>,
 ): GPX {
     val gpxBuilder = GPX.builder().creator(GPX_CREATOR)
+    name?.let { gpxBuilder.metadata { it.name(name) } }
     gpxBuilder.wayPoints(wayPoints)
     gpxBuilder.addTrack { track -> track.addSegment { segment -> segment.points(trackPoints) } }
     return gpxBuilder.build()
