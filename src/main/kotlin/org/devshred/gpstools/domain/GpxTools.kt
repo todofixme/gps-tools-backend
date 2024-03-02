@@ -2,7 +2,6 @@ package org.devshred.gpstools.domain
 
 import io.jenetics.jpx.GPX
 import io.jenetics.jpx.WayPoint
-import org.springframework.core.io.InputStreamResource
 import java.io.ByteArrayOutputStream
 import java.nio.file.Path
 

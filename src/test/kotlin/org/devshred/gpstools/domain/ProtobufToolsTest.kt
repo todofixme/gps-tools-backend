@@ -7,6 +7,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.devshred.gpstools.proto3.GpsContainer
 import org.devshred.gpstools.proto3.wayPoint
 import org.junit.jupiter.api.Test
+import org.springframework.core.io.InputStreamResource
 import io.jenetics.jpx.WayPoint as GpxWayPoint
 
 class ProtobufToolsTest {
@@ -79,6 +80,40 @@ class ProtobufToolsTest {
         val gpsContainer = GpsContainer.parseFrom(gpxToProtobufInputStream(gpx))
 
         assertThat(gpsContainer.name).isEmpty()
+    }
+
+    @Test
+    fun `overwrite name of the track`() {
+        val nameStoredAtProtoFile = randomAlphabetic(8)
+        val namePassedAsRequestParameter = randomAlphabetic(8)
+        val gpxFromProtoFile =
+            GPX.builder()
+                .metadata { m -> m.name(nameStoredAtProtoFile) }
+                .build()
+        val streamFromProtoFile = gpxToProtobufInputStream(gpxFromProtoFile)
+
+        val actualGpx =
+            protoInputStreamResourceToGpx(InputStreamResource(streamFromProtoFile), namePassedAsRequestParameter)
+
+        assertThat(actualGpx.metadata.get().name.get()).isEqualTo(namePassedAsRequestParameter)
+        assertThat(actualGpx.tracks[0].name.get()).isEqualTo(namePassedAsRequestParameter)
+    }
+
+    @Test
+    fun `don't overwrite name of the track if no trackname was passed`() {
+        val nameStoredAtProtoFile = randomAlphabetic(8)
+        val namePassedAsRequestParameter = null
+        val gpxFromProtoFile =
+            GPX.builder()
+                .metadata { m -> m.name(nameStoredAtProtoFile) }
+                .build()
+        val streamFromProtoFile = gpxToProtobufInputStream(gpxFromProtoFile)
+
+        val actualGpx =
+            protoInputStreamResourceToGpx(InputStreamResource(streamFromProtoFile), namePassedAsRequestParameter)
+
+        assertThat(actualGpx.metadata.get().name.get()).isEqualTo(nameStoredAtProtoFile)
+        assertThat(actualGpx.tracks[0].name.get()).isEqualTo(nameStoredAtProtoFile)
     }
 
     private fun randomWayPoint(): GpxWayPoint =

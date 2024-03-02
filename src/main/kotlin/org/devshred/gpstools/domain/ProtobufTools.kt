@@ -41,8 +41,16 @@ fun gpxToProtobufInputStream(gpx: GPX): InputStream {
 fun protoInputStreamResourceToGpsContainer(inputStreamResource: InputStreamResource): GpsContainer =
     GpsContainer.parseFrom(inputStreamResource.contentAsByteArray)
 
-fun protoInputStreamResourceToGpx(inputStreamResource: InputStreamResource): GPX {
-    val gpsContainer = protoInputStreamResourceToGpsContainer(inputStreamResource)
+fun protoInputStreamResourceToGpx(
+    inputStreamResource: InputStreamResource,
+    trackname: String?,
+): GPX {
+    val gpsContainer =
+        trackname?.let {
+            protoInputStreamResourceToGpsContainer(inputStreamResource).toBuilder().setName(trackname).build()
+        }.orElse {
+            protoInputStreamResourceToGpsContainer(inputStreamResource)
+        }
     val gpxBuilder = GPX.builder()
 
     if (gpsContainer.hasName()) {
@@ -98,4 +106,8 @@ fun toGpx(proto: ProtoWayPoint): GpxWayPoint {
     }
 
     return builder.build()
+}
+
+inline fun <R> R?.orElse(block: () -> R): R {
+    return this ?: block()
 }

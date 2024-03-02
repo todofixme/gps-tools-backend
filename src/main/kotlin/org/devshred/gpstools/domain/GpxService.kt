@@ -6,9 +6,12 @@ import java.io.InputStream
 
 @Service
 class GpxService(private val ioService: IOService) {
-    fun protoFileToGpxInputStream(storageLocation: String): ByteArrayInputStream {
+    fun protoFileToGpxInputStream(
+        storageLocation: String,
+        name: String?,
+    ): ByteArrayInputStream {
         val stream = ioService.getAsStream(storageLocation)
-        val gpx = protoInputStreamResourceToGpx(stream)
+        val gpx = protoInputStreamResourceToGpx(stream, name)
         val outputStream = gpxToByteArrayOutputStream(gpx)
         return ByteArrayInputStream(outputStream.toByteArray())
     }

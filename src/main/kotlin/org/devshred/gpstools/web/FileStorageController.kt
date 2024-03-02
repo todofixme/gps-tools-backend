@@ -41,11 +41,12 @@ class FileStorageController(
     fun download(
         @PathVariable id: String,
         @RequestParam("m", required = false) mode: String?,
+        @RequestParam("name", required = false) name: String?,
         @RequestHeader headers: Map<String, String>,
     ): ResponseEntity<Resource> {
         val storedFile = store.get(UUID.fromString(id))
 
-        val inputStream = gpxService.protoFileToGpxInputStream(storedFile.storageLocation)
+        val inputStream = gpxService.protoFileToGpxInputStream(storedFile.storageLocation, name)
         val inputStreamResource = InputStreamResource(inputStream)
 
         val responseHeaders = HttpHeaders()

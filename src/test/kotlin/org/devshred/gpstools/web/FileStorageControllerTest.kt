@@ -52,7 +52,7 @@ class FileStorageControllerTest(
 
         every { fileStore.get(uuid) } returns storedFile
         every { ioService.getAsStream(storageLocation) } returns InputStreamResource(InputStream.nullInputStream())
-        every { gpxService.protoFileToGpxInputStream(storageLocation) } returns ByteArrayInputStream(byteArrayOf())
+        every { gpxService.protoFileToGpxInputStream(storageLocation, null) } returns ByteArrayInputStream(byteArrayOf())
 
         mockMvc.perform(get("/files/$uuid?m=dl")) //
             .andExpectAll(
@@ -62,7 +62,29 @@ class FileStorageControllerTest(
             )
 
         verify { fileStore.get(uuid) }
-        verify { gpxService.protoFileToGpxInputStream(storageLocation) }
+        verify { gpxService.protoFileToGpxInputStream(storageLocation, null) }
+    }
+
+    @Test
+    fun `download file with trackname`() {
+        val uuid = UUID.randomUUID()
+        val storageLocation = "/path/to/file"
+        val storedFile = StoredFile(uuid, "test.gpx", APPLICATION_XML_VALUE, "href", 123, storageLocation)
+        val trackname = "My Track"
+
+        every { fileStore.get(uuid) } returns storedFile
+        every { ioService.getAsStream(storageLocation) } returns InputStreamResource(InputStream.nullInputStream())
+        every { gpxService.protoFileToGpxInputStream(storageLocation, trackname) } returns ByteArrayInputStream(byteArrayOf())
+
+        mockMvc.perform(get("/files/$uuid?m=dl&name=$trackname")) //
+            .andExpectAll(
+                status().isOk,
+                content().contentType(APPLICATION_XML_VALUE),
+                header().string(HttpHeaders.CONTENT_DISPOSITION, ("attachment; filename=\"test.gpx\"")),
+            )
+
+        verify { fileStore.get(uuid) }
+        verify { gpxService.protoFileToGpxInputStream(storageLocation, trackname) }
     }
 
     @Test
@@ -85,13 +107,13 @@ class FileStorageControllerTest(
         val storedFile = StoredFile(uuid, "test.gpx", TEXT_PLAIN_VALUE, "href", 123, storageLocation)
 
         every { fileStore.get(uuid) } returns storedFile
-        every { gpxService.protoFileToGpxInputStream(storageLocation) } throws NotFoundException("not found")
+        every { gpxService.protoFileToGpxInputStream(storageLocation, null) } throws NotFoundException("not found")
 
         mockMvc.perform(get("/files/$uuid")) //
             .andExpect(status().isNotFound)
 
         verify { fileStore.get(uuid) }
-        verify { gpxService.protoFileToGpxInputStream(storageLocation) }
+        verify { gpxService.protoFileToGpxInputStream(storageLocation, null) }
     }
 
     @Test
@@ -109,7 +131,7 @@ class FileStorageControllerTest(
         val storedFile = StoredFile(uuid, "test.txt", TEXT_PLAIN_VALUE, "href", 123, storageLocation)
 
         every { fileStore.get(uuid) } returns storedFile
-        every { gpxService.protoFileToGpxInputStream(storageLocation) } returns ByteArrayInputStream(byteArrayOf())
+        every { gpxService.protoFileToGpxInputStream(storageLocation, null) } returns ByteArrayInputStream(byteArrayOf())
 
         mockMvc.perform(get("/files/$uuid")) //
             .andExpectAll(
@@ -119,7 +141,7 @@ class FileStorageControllerTest(
             )
 
         verify { fileStore.get(uuid) }
-        verify { gpxService.protoFileToGpxInputStream(storageLocation) }
+        verify { gpxService.protoFileToGpxInputStream(storageLocation, null) }
     }
 
     @Test
