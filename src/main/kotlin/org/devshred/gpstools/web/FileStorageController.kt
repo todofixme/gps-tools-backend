@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.server.ResponseStatusException
+import java.io.File
 import java.io.IOException
 import java.util.UUID
 
@@ -51,7 +52,14 @@ class FileStorageController(
 
         val responseHeaders = HttpHeaders()
         if (StringUtils.hasText(mode) && mode == "dl") {
-            responseHeaders.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"${storedFile.filename}\"")
+            val file = File(storedFile.filename)
+            val filename = file.nameWithoutExtension.onlyAlphanumericChars()
+                .ifBlank { "unnamed" }
+            val extension = file.extension
+            responseHeaders.set(
+                HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"$filename.$extension\""
+            )
         }
 
         return ResponseEntity.ok() //
@@ -140,3 +148,6 @@ class FileStorageController(
 }
 
 private fun isGpsFile(filename: String) = filename.endsWith(".gpx")
+
+fun String.onlyAlphanumericChars() =
+    this.asSequence().filter { it.isLetterOrDigit() }.joinToString("")

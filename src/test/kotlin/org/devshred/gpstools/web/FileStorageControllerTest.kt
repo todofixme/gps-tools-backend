@@ -5,6 +5,7 @@ import io.mockk.called
 import io.mockk.every
 import io.mockk.verify
 import org.apache.commons.io.input.NullInputStream
+import org.assertj.core.api.Assertions.assertThat
 import org.devshred.gpstools.domain.FileStore
 import org.devshred.gpstools.domain.GpxService
 import org.devshred.gpstools.domain.IOService
@@ -335,5 +336,13 @@ class FileStorageControllerTest(
 
         verify { fileStore.delete(uuid) }
         verify { ioService.delete(storageLocation) }
+    }
+
+    @Test
+    fun `remove special characters`(){
+        assertThat("foobar".onlyAlphanumericChars()).isEqualTo("foobar")
+        assertThat("Fähre".onlyAlphanumericChars()).isEqualTo("Fähre")
+        assertThat("f🙂🙃bar".onlyAlphanumericChars()).isEqualTo("fbar")
+        assertThat("foo bar".onlyAlphanumericChars()).isEqualTo("foobar")
     }
 }
