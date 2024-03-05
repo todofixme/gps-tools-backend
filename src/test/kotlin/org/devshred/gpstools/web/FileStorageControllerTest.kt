@@ -53,7 +53,12 @@ class FileStorageControllerTest(
 
         every { fileStore.get(uuid) } returns storedFile
         every { ioService.getAsStream(storageLocation) } returns InputStreamResource(InputStream.nullInputStream())
-        every { gpxService.protoFileToGpxInputStream(storageLocation, null) } returns ByteArrayInputStream(byteArrayOf())
+        every {
+            gpxService.protoFileToGpxInputStream(
+                storageLocation,
+                null,
+            )
+        } returns ByteArrayInputStream(byteArrayOf())
 
         mockMvc.perform(get("/files/$uuid?m=dl")) //
             .andExpectAll(
@@ -75,13 +80,14 @@ class FileStorageControllerTest(
 
         every { fileStore.get(uuid) } returns storedFile
         every { ioService.getAsStream(storageLocation) } returns InputStreamResource(InputStream.nullInputStream())
-        every { gpxService.protoFileToGpxInputStream(storageLocation, trackname) } returns ByteArrayInputStream(byteArrayOf())
+        every { gpxService.protoFileToGpxInputStream(storageLocation, trackname) } returns
+            ByteArrayInputStream(byteArrayOf())
 
         mockMvc.perform(get("/files/$uuid?m=dl&name=$trackname")) //
             .andExpectAll(
                 status().isOk,
                 content().contentType(APPLICATION_XML_VALUE),
-                header().string(HttpHeaders.CONTENT_DISPOSITION, ("attachment; filename=\"test.gpx\"")),
+                header().string(HttpHeaders.CONTENT_DISPOSITION, ("attachment; filename=\"My_Track.gpx\"")),
             )
 
         verify { fileStore.get(uuid) }
@@ -132,7 +138,12 @@ class FileStorageControllerTest(
         val storedFile = StoredFile(uuid, "test.txt", TEXT_PLAIN_VALUE, "href", 123, storageLocation)
 
         every { fileStore.get(uuid) } returns storedFile
-        every { gpxService.protoFileToGpxInputStream(storageLocation, null) } returns ByteArrayInputStream(byteArrayOf())
+        every {
+            gpxService.protoFileToGpxInputStream(
+                storageLocation,
+                null,
+            )
+        } returns ByteArrayInputStream(byteArrayOf())
 
         mockMvc.perform(get("/files/$uuid")) //
             .andExpectAll(
@@ -339,10 +350,40 @@ class FileStorageControllerTest(
     }
 
     @Test
-    fun `remove special characters`(){
-        assertThat("foobar".onlyAlphanumericChars()).isEqualTo("foobar")
-        assertThat("Fähre".onlyAlphanumericChars()).isEqualTo("Fähre")
-        assertThat("f🙂🙃bar".onlyAlphanumericChars()).isEqualTo("fbar")
-        assertThat("foo bar".onlyAlphanumericChars()).isEqualTo("foobar")
+    fun `keep alphanumerical characters`() {
+        assertThat("foobar".sanitize()).isEqualTo("foobar")
+        assertThat("FooBar123".sanitize()).isEqualTo("FooBar123")
+    }
+
+    @Test
+    fun `keep umlauts`() {
+        assertThat("Fähre".sanitize()).isEqualTo("Fähre")
+    }
+
+    @Test
+    fun `replace emojis with underscore`() {
+        assertThat("f🙂🙃bar".sanitize()).isEqualTo("f__bar")
+    }
+
+    @Test
+    fun `replace whitespace with underscore`() {
+        assertThat("foo bar".sanitize()).isEqualTo("foo_bar")
+    }
+
+    @Test
+    fun `trim leading and trailing whitespaces`() {
+        assertThat(" foobar ".sanitize()).isEqualTo("foobar")
+    }
+
+    @Test
+    fun `keep some special characters`() {
+        assertThat("foo_bar".sanitize()).isEqualTo("foo_bar")
+        assertThat("foo-bar".sanitize()).isEqualTo("foo-bar")
+        assertThat("foo.bar".sanitize()).isEqualTo("foo.bar")
+    }
+
+    @Test
+    fun `don't use more than two consecutive underscores`() {
+        assertThat("F_O__O___B____A_R".sanitize()).isEqualTo("F_O__O__B__A_R")
     }
 }

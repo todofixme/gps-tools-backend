@@ -51,7 +51,7 @@ fun protoInputStreamResourceToGpx(
         }.orElse {
             protoInputStreamResourceToGpsContainer(inputStreamResource)
         }
-    val gpxBuilder = GPX.builder()
+    val gpxBuilder = GPX.builder().creator(GPX_CREATOR)
 
     if (gpsContainer.hasName()) {
         gpxBuilder.metadata { it.name(gpsContainer.name) }

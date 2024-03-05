@@ -5,6 +5,7 @@ import org.devshred.gpstools.domain.FileStore
 import org.devshred.gpstools.domain.GpxService
 import org.devshred.gpstools.domain.IOService
 import org.devshred.gpstools.domain.StoredFile
+import org.devshred.gpstools.domain.orElse
 import org.springframework.core.io.InputStreamResource
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpHeaders
@@ -52,13 +53,16 @@ class FileStorageController(
 
         val responseHeaders = HttpHeaders()
         if (StringUtils.hasText(mode) && mode == "dl") {
-            val file = File(storedFile.filename)
-            val filename = file.nameWithoutExtension.onlyAlphanumericChars()
-                .ifBlank { "unnamed" }
-            val extension = file.extension
+            val basename = name?.let { "$it.gpx" }.orElse { storedFile.filename }
+            val file = File(basename)
+            val filename =
+                file.nameWithoutExtension
+                    .sanitize()
+                    .ifBlank { "unnamed" }
+            val extension = file.extension.ifBlank { "gpx" }
             responseHeaders.set(
                 HttpHeaders.CONTENT_DISPOSITION,
-                "attachment; filename=\"$filename.$extension\""
+                "attachment; filename=\"$filename.$extension\"",
             )
         }
 
@@ -149,5 +153,13 @@ class FileStorageController(
 
 private fun isGpsFile(filename: String) = filename.endsWith(".gpx")
 
-fun String.onlyAlphanumericChars() =
-    this.asSequence().filter { it.isLetterOrDigit() }.joinToString("")
+private val notAllowedCharacters = "[^a-zA-Z0-9\\p{L}\\p{M}*\\p{N}.\\-]".toRegex()
+private val moreThan2UnderscoresInARow = "_{3,}".toRegex()
+private const val TWO_UNDERSCORES = "__"
+
+fun String.sanitize(): String {
+    return this
+        .trim()
+        .replace(notAllowedCharacters, "_")
+        .replace(moreThan2UnderscoresInARow, TWO_UNDERSCORES)
+}

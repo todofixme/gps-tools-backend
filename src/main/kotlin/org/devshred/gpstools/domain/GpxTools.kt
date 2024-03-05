@@ -5,7 +5,7 @@ import io.jenetics.jpx.WayPoint
 import java.io.ByteArrayOutputStream
 import java.nio.file.Path
 
-private const val GPX_CREATOR = "GPS-Tools - https://gps-tools.pages.dev"
+internal const val GPX_CREATOR = "GPS-Tools - https://gps-tools.pages.dev"
 
 fun gpxFromFileLocation(location: String): GPX = GPX.read(Path.of(location))
 
