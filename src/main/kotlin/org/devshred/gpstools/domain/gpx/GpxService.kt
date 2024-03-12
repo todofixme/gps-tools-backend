@@ -1,5 +1,8 @@
-package org.devshred.gpstools.domain
+package org.devshred.gpstools.domain.gpx
 
+import org.devshred.gpstools.domain.IOService
+import org.devshred.gpstools.domain.proto.gpxToProtobufInputStream
+import org.devshred.gpstools.domain.proto.protoInputStreamResourceToGpx
 import org.springframework.stereotype.Service
 import java.io.ByteArrayInputStream
 import java.io.InputStream

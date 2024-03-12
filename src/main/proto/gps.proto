@@ -1,26 +1,48 @@
 syntax = "proto3";
 
+import "google/protobuf/timestamp.proto";
+
 option java_multiple_files = true;
 
-package org.devshred.gpstools.proto3;
+package org.devshred.gpstools.domain.proto;
 
-message WayPoint {
+enum ProtoPoiType {
+    GENERIC = 0;
+    SUMMIT = 1;
+    VALLEY = 2;
+    WATER = 3;
+    FOOD = 4;
+    DANGER = 5;
+    LEFT = 6;
+    RIGHT = 7;
+    STRAIGHT = 8;
+    FIRST_AID = 9;
+    FOURTH_CATEGORY = 10;
+    THIRD_CATEGORY = 11;
+    SECOND_CATEGORY = 12;
+    FIRST_CATEGORY = 13;
+    HORS_CATEGORY = 14;
+    RESIDENCE = 15;
+    SPRINT = 16;
+}
+
+message ProtoWayPoint {
   double latitude = 1;
   double longitude = 2;
 
   optional double elevation = 3;
-  optional int64 time = 4;
+  optional google.protobuf.Timestamp time = 4;
 
   optional string name = 5;
-  optional string symbol = 6;
+  optional ProtoPoiType type = 6;
 }
 
-message Track {
-  repeated WayPoint wayPoints = 1;
+message ProtoTrack {
+  repeated ProtoWayPoint wayPoints = 1;
 }
 
-message GpsContainer {
+message ProtoGpsContainer {
   optional string name = 1;
-  repeated WayPoint wayPoints = 2;
-  Track track = 3;
+  repeated ProtoWayPoint wayPoints = 2;
+  ProtoTrack track = 3;
 }

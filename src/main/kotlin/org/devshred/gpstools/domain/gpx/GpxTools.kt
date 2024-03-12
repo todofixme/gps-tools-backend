@@ -1,4 +1,4 @@
-package org.devshred.gpstools.domain
+package org.devshred.gpstools.domain.gpx
 
 import io.jenetics.jpx.GPX
 import io.jenetics.jpx.WayPoint

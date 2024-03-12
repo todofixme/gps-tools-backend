@@ -3,7 +3,7 @@ import net.researchgate.release.ReleaseExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    val kotlinVersion = "1.9.22"
+    val kotlinVersion = "1.9.23"
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.spring") version kotlinVersion
 
@@ -30,6 +30,8 @@ repositories {
 }
 
 val protoBufVersion = "3.25.3"
+val jacksonVersion = "2.15.4"
+val xmlunitVersion = "2.9.1"
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -42,12 +44,19 @@ dependencies {
     implementation("com.google.protobuf:protobuf-kotlin:$protoBufVersion")
     implementation("com.google.protobuf:protobuf-java-util:$protoBufVersion")
 
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:$jacksonVersion")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
+    implementation("org.apache.commons:commons-lang3:3.14.0")
+
+    testImplementation(kotlin("test-junit5"))
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(module = "mockito-core")
     }
     testImplementation("com.ninja-squad:springmockk:4.0.2")
-    testImplementation("org.apache.commons:commons-lang3:3.14.0")
     testImplementation("org.apache.commons:commons-math3:3.6.1")
+    testImplementation("org.xmlunit:xmlunit-core:$xmlunitVersion")
+    testImplementation("org.xmlunit:xmlunit-matchers:$xmlunitVersion")
+    testImplementation("org.xmlunit:xmlunit-assertj:$xmlunitVersion")
 }
 
 tasks.withType<KotlinCompile> {

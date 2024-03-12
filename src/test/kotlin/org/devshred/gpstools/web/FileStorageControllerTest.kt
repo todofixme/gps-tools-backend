@@ -7,10 +7,11 @@ import io.mockk.verify
 import org.apache.commons.io.input.NullInputStream
 import org.assertj.core.api.Assertions.assertThat
 import org.devshred.gpstools.domain.FileStore
-import org.devshred.gpstools.domain.GpxService
 import org.devshred.gpstools.domain.IOService
 import org.devshred.gpstools.domain.NotFoundException
 import org.devshred.gpstools.domain.StoredFile
+import org.devshred.gpstools.domain.gpx.GpxService
+import org.devshred.gpstools.domain.tcx.TcxService
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
@@ -45,8 +46,11 @@ class FileStorageControllerTest(
     @MockkBean
     lateinit var gpxService: GpxService
 
+    @MockkBean
+    lateinit var tcxService: TcxService
+
     @Test
-    fun `download file`() {
+    fun `download file as GPX`() {
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
         val storedFile = StoredFile(uuid, "test.gpx", APPLICATION_XML_VALUE, "href", 123, storageLocation)
@@ -60,10 +64,10 @@ class FileStorageControllerTest(
             )
         } returns ByteArrayInputStream(byteArrayOf())
 
-        mockMvc.perform(get("/files/$uuid?m=dl")) //
+        mockMvc.perform(get("/files/$uuid?mode=dl").header("Accept", GpsType.GPX.mimeType)) //
             .andExpectAll(
                 status().isOk,
-                content().contentType(APPLICATION_XML_VALUE),
+                content().contentType(GpsType.GPX.mimeType),
                 header().string(HttpHeaders.CONTENT_DISPOSITION, ("attachment; filename=\"test.gpx\"")),
             )
 
@@ -72,7 +76,7 @@ class FileStorageControllerTest(
     }
 
     @Test
-    fun `download file with trackname`() {
+    fun `download file with trackname as GPX`() {
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
         val storedFile = StoredFile(uuid, "test.gpx", APPLICATION_XML_VALUE, "href", 123, storageLocation)
@@ -83,10 +87,10 @@ class FileStorageControllerTest(
         every { gpxService.protoFileToGpxInputStream(storageLocation, trackname) } returns
             ByteArrayInputStream(byteArrayOf())
 
-        mockMvc.perform(get("/files/$uuid?m=dl&name=$trackname")) //
+        mockMvc.perform(get("/files/$uuid?mode=dl&name=$trackname").header("Accept", GpsType.GPX.mimeType))
             .andExpectAll(
                 status().isOk,
-                content().contentType(APPLICATION_XML_VALUE),
+                content().contentType(GpsType.GPX.mimeType),
                 header().string(HttpHeaders.CONTENT_DISPOSITION, ("attachment; filename=\"My_Track.gpx\"")),
             )
 
@@ -100,7 +104,7 @@ class FileStorageControllerTest(
 
         every { fileStore.get(uuid) } throws NotFoundException("not found")
 
-        mockMvc.perform(get("/files/$uuid")) //
+        mockMvc.perform(get("/files/$uuid").header("Accept", GpsType.GPX.mimeType))
             .andExpect(status().isNotFound)
 
         verify { fileStore.get(uuid) }
@@ -116,7 +120,7 @@ class FileStorageControllerTest(
         every { fileStore.get(uuid) } returns storedFile
         every { gpxService.protoFileToGpxInputStream(storageLocation, null) } throws NotFoundException("not found")
 
-        mockMvc.perform(get("/files/$uuid")) //
+        mockMvc.perform(get("/files/$uuid").header("Accept", GpsType.GPX.mimeType))
             .andExpect(status().isNotFound)
 
         verify { fileStore.get(uuid) }
@@ -132,7 +136,7 @@ class FileStorageControllerTest(
     }
 
     @Test
-    fun `get file`() {
+    fun `get file as GPX`() {
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
         val storedFile = StoredFile(uuid, "test.txt", TEXT_PLAIN_VALUE, "href", 123, storageLocation)
@@ -145,10 +149,10 @@ class FileStorageControllerTest(
             )
         } returns ByteArrayInputStream(byteArrayOf())
 
-        mockMvc.perform(get("/files/$uuid")) //
+        mockMvc.perform(get("/files/$uuid").header("Accept", GpsType.GPX.mimeType))
             .andExpectAll(
                 status().isOk,
-                content().contentType(TEXT_PLAIN_VALUE),
+                content().contentType(GpsType.GPX.mimeType),
                 header().doesNotExist(HttpHeaders.CONTENT_DISPOSITION),
             )
 
@@ -385,5 +389,27 @@ class FileStorageControllerTest(
     @Test
     fun `don't use more than two consecutive underscores`() {
         assertThat("F_O__O___B____A_R".sanitize()).isEqualTo("F_O__O__B__A_R")
+    }
+
+    @Test
+    fun `test containsKeyIgnoringCase`() {
+        assertThat(mapOf("FOO" to "bar").containsKeyIgnoringCase("FOO")).isTrue()
+        assertThat(mapOf("FOO" to "bar").containsKeyIgnoringCase("foo")).isTrue()
+        assertThat(mapOf("FOO" to "bar").containsKeyIgnoringCase("BAR")).isFalse()
+
+        assertThat(mapOf("foo" to "bar").containsKeyIgnoringCase("FOO")).isTrue()
+        assertThat(mapOf("foo" to "bar").containsKeyIgnoringCase("foo")).isTrue()
+        assertThat(mapOf("foo" to "bar").containsKeyIgnoringCase("BAR")).isFalse()
+    }
+
+    @Test
+    fun `test getIgnoringCase`() {
+        assertThat(mapOf("FOO" to "bar").getIgnoringCase("FOO")).isEqualTo("bar")
+        assertThat(mapOf("FOO" to "bar").getIgnoringCase("foo")).isEqualTo("bar")
+        assertThat(mapOf("FOO" to "bar").getIgnoringCase("BAR")).isNull()
+
+        assertThat(mapOf("foo" to "bar").getIgnoringCase("FOO")).isEqualTo("bar")
+        assertThat(mapOf("foo" to "bar").getIgnoringCase("foo")).isEqualTo("bar")
+        assertThat(mapOf("foo" to "bar").getIgnoringCase("BAR")).isNull()
     }
 }

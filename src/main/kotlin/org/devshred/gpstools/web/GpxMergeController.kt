@@ -5,10 +5,10 @@ import org.devshred.gpstools.domain.FileStore
 import org.devshred.gpstools.domain.IOService
 import org.devshred.gpstools.domain.NotFoundException
 import org.devshred.gpstools.domain.StoredFile
-import org.devshred.gpstools.domain.buildGpx
-import org.devshred.gpstools.domain.gpxToProtobufInputStream
-import org.devshred.gpstools.domain.protoInputStreamResourceToGpsContainer
-import org.devshred.gpstools.domain.toGpx
+import org.devshred.gpstools.domain.gpx.buildGpx
+import org.devshred.gpstools.domain.proto.gpxToProtobufInputStream
+import org.devshred.gpstools.domain.proto.protoInputStreamResourceToProtoGpsContainer
+import org.devshred.gpstools.domain.proto.toGpx
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.CrossOrigin
@@ -47,7 +47,7 @@ class GpxMergeController(private val store: FileStore, private val ioService: IO
         fileIds.forEachIndexed { index, uuid ->
             log.info("About to merge $uuid.")
             val gpsContainer =
-                protoInputStreamResourceToGpsContainer(ioService.getAsStream(store.get(uuid).storageLocation))
+                protoInputStreamResourceToProtoGpsContainer(ioService.getAsStream(store.get(uuid).storageLocation))
             allWayPoints.addAll(gpsContainer.wayPointsList.map { toGpx(it) })
             allTrackPoints.addAll(gpsContainer.track.wayPointsList.map { toGpx(it) })
             if (index == 0 && gpsContainer.name.isNotEmpty()) {
