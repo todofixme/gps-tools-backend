@@ -19,12 +19,16 @@ Content-Disposition: form-data; name="file"; filename="file.gpx"
 
 
 ### get file
-GET {{baseUrl}}/files/{{fileId}}
-Accept: */*
+GET {{baseUrl}}/files/{{fileId}}?type=tcx
+#Accept: */*
+#Accept: application/vnd.garmin.tcx+xml
+#Accept: application/gpx+xml
 
 ### download file
 GET {{baseUrl}}/files/{{fileId}}?m=dl
-Accept: */*
+#Accept: */*
+#Accept: application/vnd.garmin.tcx+xml
+#Accept: application/gpx+xml
 
 ### delete file
 DELETE {{baseUrl}}/files/{{fileId}}

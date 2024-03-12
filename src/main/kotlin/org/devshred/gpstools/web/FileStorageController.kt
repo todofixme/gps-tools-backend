@@ -2,10 +2,11 @@ package org.devshred.gpstools.web
 
 import jakarta.servlet.http.HttpServletRequest
 import org.devshred.gpstools.domain.FileStore
-import org.devshred.gpstools.domain.GpxService
 import org.devshred.gpstools.domain.IOService
 import org.devshred.gpstools.domain.StoredFile
-import org.devshred.gpstools.domain.orElse
+import org.devshred.gpstools.domain.common.orElse
+import org.devshred.gpstools.domain.gpx.GpxService
+import org.devshred.gpstools.domain.tcx.TcxService
 import org.springframework.core.io.InputStreamResource
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpHeaders
@@ -37,29 +38,51 @@ class FileStorageController(
     private val store: FileStore,
     private val ioService: IOService,
     private val gpxService: GpxService,
+    private val tcxService: TcxService,
 ) {
     @GetMapping("/files/{id}")
     @Throws(IOException::class)
     fun download(
         @PathVariable id: String,
-        @RequestParam("m", required = false) mode: String?,
+        @RequestParam("mode", required = false) mode: String?,
         @RequestParam("name", required = false) name: String?,
+        @RequestParam("type", required = false) type: String?,
         @RequestHeader headers: Map<String, String>,
     ): ResponseEntity<Resource> {
         val storedFile = store.get(UUID.fromString(id))
 
-        val inputStream = gpxService.protoFileToGpxInputStream(storedFile.storageLocation, name)
+        val gpsType =
+            type?.let {
+                GpsType.fromTypeString(it).orElse { throw IllegalArgumentException("unknown type $it") }
+            }.orElse {
+                if (headers.containsKeyIgnoringCase("accept")) {
+                    headers.getIgnoringCase("accept")?.let {
+                        GpsType.fromMimeType(it).orElse { throw IllegalArgumentException("invalid accept header $it") }
+                    }
+                } else {
+                    DEFAULT_GPS_TYPE
+                }
+            }
+
+        val inputStream =
+            when (gpsType) {
+                GpsType.GPX -> gpxService.protoFileToGpxInputStream(storedFile.storageLocation, name)
+                GpsType.TCX -> tcxService.protoFileToTcxInputStream(storedFile.storageLocation, name)
+                else -> {
+                    throw IllegalArgumentException("$gpsType is not supported yet")
+                }
+            }
         val inputStreamResource = InputStreamResource(inputStream)
 
         val responseHeaders = HttpHeaders()
         if (StringUtils.hasText(mode) && mode == "dl") {
-            val basename = name?.let { "$it.gpx" }.orElse { storedFile.filename }
+            val basename = name.orElse { storedFile.filename }
             val file = File(basename)
             val filename =
                 file.nameWithoutExtension
                     .sanitize()
                     .ifBlank { "unnamed" }
-            val extension = file.extension.ifBlank { "gpx" }
+            val extension = gpsType.name.lowercase()
             responseHeaders.set(
                 HttpHeaders.CONTENT_DISPOSITION,
                 "attachment; filename=\"$filename.$extension\"",
@@ -67,7 +90,7 @@ class FileStorageController(
         }
 
         return ResponseEntity.ok() //
-            .contentType(MediaType.valueOf(storedFile.mimeType)) //
+            .contentType(MediaType.valueOf(gpsType.mimeType)) //
             .headers(responseHeaders)
             .body(inputStreamResource)
     }
@@ -156,10 +179,24 @@ private fun isGpsFile(filename: String) = filename.endsWith(".gpx")
 private val notAllowedCharacters = "[^a-zA-Z0-9\\p{L}\\p{M}*\\p{N}.\\-]".toRegex()
 private val moreThan2UnderscoresInARow = "_{3,}".toRegex()
 private const val TWO_UNDERSCORES = "__"
+private val DEFAULT_GPS_TYPE = GpsType.GPX
 
 fun String.sanitize(): String {
     return this
         .trim()
         .replace(notAllowedCharacters, "_")
         .replace(moreThan2UnderscoresInARow, TWO_UNDERSCORES)
+}
+
+fun Map<String, Any>.containsKeyIgnoringCase(other: String): Boolean {
+    return any { it.key.equals(other, ignoreCase = true) }
+}
+
+fun <V> Map<String, V>.getIgnoringCase(other: String): V? {
+    return this.filterKeys {
+        it.equals(other, ignoreCase = true)
+    }
+        .asSequence().firstOrNull()
+        ?.value
+        .orElse { null }
 }

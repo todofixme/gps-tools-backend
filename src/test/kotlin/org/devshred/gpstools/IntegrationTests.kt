@@ -2,6 +2,7 @@ package org.devshred.gpstools
 
 import org.apache.commons.lang3.RandomStringUtils.randomAlphabetic
 import org.assertj.core.api.Assertions.assertThat
+import org.devshred.gpstools.web.GpsType
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -9,7 +10,6 @@ import org.springframework.boot.test.web.client.TestRestTemplate
 import org.springframework.boot.test.web.client.exchange
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.http.MediaType.APPLICATION_OCTET_STREAM
 import org.springframework.http.MediaType.APPLICATION_XML
 import org.springframework.http.RequestEntity.get
 import org.springframework.http.RequestEntity.post
@@ -38,10 +38,10 @@ class IntegrationTests(
         val uuid = createResponse.body!!.id
 
         // download a file
-        val downloadRequest = get("/files/$uuid").build()
+        val downloadRequest = get("/files/$uuid").header("Accept", GpsType.GPX.mimeType).build()
         val downloadResponse = restTemplate.exchange<String>(downloadRequest)
 
-        assertThat(downloadResponse.headers.contentType).isEqualTo(APPLICATION_OCTET_STREAM)
+        assertThat(downloadResponse.headers.contentType.toString()).isEqualTo(GpsType.GPX.mimeType)
         assertThat(downloadResponse.body).isNotNull()
         // TODO: compare waypoints
 

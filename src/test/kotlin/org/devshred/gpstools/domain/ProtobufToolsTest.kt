@@ -4,10 +4,20 @@ import io.jenetics.jpx.GPX
 import org.apache.commons.lang3.RandomStringUtils.randomAlphabetic
 import org.apache.commons.math3.random.RandomDataGenerator
 import org.assertj.core.api.Assertions.assertThat
-import org.devshred.gpstools.proto3.GpsContainer
-import org.devshred.gpstools.proto3.wayPoint
+import org.devshred.gpstools.domain.gps.PoiType
+import org.devshred.gpstools.domain.proto.ProtoGpsContainer
+import org.devshred.gpstools.domain.proto.ProtoPoiType
+import org.devshred.gpstools.domain.proto.gpxToProtobufInputStream
+import org.devshred.gpstools.domain.proto.protoInputStreamResourceToGpx
+import org.devshred.gpstools.domain.proto.protoWayPoint
+import org.devshred.gpstools.domain.proto.toGpx
+import org.devshred.gpstools.domain.proto.toProtoBuf
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import org.springframework.core.io.InputStreamResource
+import java.util.stream.Stream
 import io.jenetics.jpx.WayPoint as GpxWayPoint
 
 class ProtobufToolsTest {
@@ -30,7 +40,7 @@ class ProtobufToolsTest {
         val lat = randomGenerator.nextDouble()
         val lon = randomGenerator.nextDouble()
         val protoBuf =
-            wayPoint {
+            protoWayPoint {
                 latitude = lat
                 longitude = lon
             }
@@ -55,7 +65,7 @@ class ProtobufToolsTest {
                 }
                 .build()
 
-        val gpsContainer = GpsContainer.parseFrom(gpxToProtobufInputStream(gpx))
+        val gpsContainer = ProtoGpsContainer.parseFrom(gpxToProtobufInputStream(gpx))
 
         assertThat(gpsContainer.name).isEqualTo(trackname)
     }
@@ -68,7 +78,7 @@ class ProtobufToolsTest {
                 .metadata { m -> m.name(trackname) }
                 .build()
 
-        val gpsContainer = GpsContainer.parseFrom(gpxToProtobufInputStream(gpx))
+        val gpsContainer = ProtoGpsContainer.parseFrom(gpxToProtobufInputStream(gpx))
 
         assertThat(gpsContainer.name).isEqualTo(trackname)
     }
@@ -77,7 +87,7 @@ class ProtobufToolsTest {
     fun `skip setting trackname if neither track nor metadata was found`() {
         val gpx = GPX.builder().build()
 
-        val gpsContainer = GpsContainer.parseFrom(gpxToProtobufInputStream(gpx))
+        val gpsContainer = ProtoGpsContainer.parseFrom(gpxToProtobufInputStream(gpx))
 
         assertThat(gpsContainer.name).isEmpty()
     }
@@ -116,6 +126,40 @@ class ProtobufToolsTest {
         assertThat(actualGpx.tracks[0].name.get()).isEqualTo(nameStoredAtProtoFile)
     }
 
+    @ParameterizedTest(name = "{0} should convert to {1}")
+    @MethodSource("protoToGps")
+    fun `convert PoiType to ProtoPoiType`(
+        poiType: PoiType,
+        protoPoiType: ProtoPoiType,
+    ) {
+        assertThat(toProtoBuf(poiType)).isEqualTo(protoPoiType)
+    }
+
     private fun randomWayPoint(): GpxWayPoint =
         GpxWayPoint.builder().lat(randomGenerator.nextDouble()).lon(randomGenerator.nextDouble()).build()
+
+    companion object {
+        @JvmStatic
+        private fun protoToGps(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(PoiType.GENERIC, ProtoPoiType.GENERIC),
+                Arguments.of(PoiType.SUMMIT, ProtoPoiType.SUMMIT),
+                Arguments.of(PoiType.VALLEY, ProtoPoiType.VALLEY),
+                Arguments.of(PoiType.WATER, ProtoPoiType.WATER),
+                Arguments.of(PoiType.FOOD, ProtoPoiType.FOOD),
+                Arguments.of(PoiType.DANGER, ProtoPoiType.DANGER),
+                Arguments.of(PoiType.LEFT, ProtoPoiType.LEFT),
+                Arguments.of(PoiType.RIGHT, ProtoPoiType.RIGHT),
+                Arguments.of(PoiType.STRAIGHT, ProtoPoiType.STRAIGHT),
+                Arguments.of(PoiType.FIRST_AID, ProtoPoiType.FIRST_AID),
+                Arguments.of(PoiType.FOURTH_CATEGORY, ProtoPoiType.FOURTH_CATEGORY),
+                Arguments.of(PoiType.THIRD_CATEGORY, ProtoPoiType.THIRD_CATEGORY),
+                Arguments.of(PoiType.SECOND_CATEGORY, ProtoPoiType.SECOND_CATEGORY),
+                Arguments.of(PoiType.FIRST_AID, ProtoPoiType.FIRST_AID),
+                Arguments.of(PoiType.HORS_CATEGORY, ProtoPoiType.HORS_CATEGORY),
+                Arguments.of(PoiType.RESIDENCE, ProtoPoiType.RESIDENCE),
+                Arguments.of(PoiType.SPRINT, ProtoPoiType.SPRINT),
+            )
+        }
+    }
 }
