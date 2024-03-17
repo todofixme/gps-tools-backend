@@ -23,6 +23,12 @@ object TcxTools {
     }
 }
 
+fun tcxToByteArrayOutputStream(tcx: TrainingCenterDatabase): ByteArrayOutputStream {
+    val out = ByteArrayOutputStream()
+    TcxTools.XML_MAPPER.writeValue(out, tcx)
+    return out
+}
+
 fun createTcxFromGpsContainer(gpsContainer: GpsContainer): TrainingCenterDatabase {
     val trainingCenterDatabase = TrainingCenterDatabase()
 
@@ -48,15 +54,15 @@ fun createTcxFromGpsContainer(gpsContainer: GpsContainer): TrainingCenterDatabas
     for (point in gpsContainer.track.wayPoints) {
         if (previous != null) {
             distance += Geoid.WGS84.distance(previous.toGpxPoint(), point.toGpxPoint()).toDouble()
-            track.addTrackpoint(
-                Trackpoint(
-                    ZonedDateTime.ofInstant(point.time, ZoneId.systemDefault()),
-                    Position(point.latitude, point.longitude),
-                    point.elevation!!.toDouble(),
-                    distance,
-                ),
-            )
         }
+        track.addTrackpoint(
+            Trackpoint(
+                ZonedDateTime.ofInstant(point.time, ZoneId.of("UTC")),
+                Position(point.latitude, point.longitude),
+                point.elevation!!.toDouble(),
+                distance,
+            ),
+        )
         previous = point
     }
     course.setTrack(track)
@@ -66,7 +72,7 @@ fun createTcxFromGpsContainer(gpsContainer: GpsContainer): TrainingCenterDatabas
             course.addCoursePoint(
                 CoursePoint(
                     wayPoint.name!!,
-                    wayPoint.time!!.atZone(ZoneId.systemDefault()),
+                    wayPoint.time!!.atZone(ZoneId.of("UTC")),
                     Position(wayPoint.latitude, wayPoint.longitude),
                     wayPoint.type!!.tcxType,
                 ),
@@ -77,10 +83,4 @@ fun createTcxFromGpsContainer(gpsContainer: GpsContainer): TrainingCenterDatabas
     trainingCenterDatabase.addCourse(course)
 
     return trainingCenterDatabase
-}
-
-fun tcxToByteArrayOutputStream(tcx: TrainingCenterDatabase): ByteArrayOutputStream {
-    val out = ByteArrayOutputStream()
-    TcxTools.XML_MAPPER.writeValue(out, tcx)
-    return out
 }

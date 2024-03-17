@@ -11,6 +11,7 @@ import org.devshred.gpstools.domain.IOService
 import org.devshred.gpstools.domain.NotFoundException
 import org.devshred.gpstools.domain.StoredFile
 import org.devshred.gpstools.domain.gpx.GpxService
+import org.devshred.gpstools.domain.proto.ProtoService
 import org.devshred.gpstools.domain.tcx.TcxService
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -42,6 +43,9 @@ class FileStorageControllerTest(
 
     @MockkBean
     lateinit var ioService: IOService
+
+    @MockkBean
+    lateinit var protoService: ProtoService
 
     @MockkBean
     lateinit var gpxService: GpxService

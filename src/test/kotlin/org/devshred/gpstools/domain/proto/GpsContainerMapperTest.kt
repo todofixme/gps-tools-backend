@@ -1,13 +1,7 @@
-package org.devshred.gpstools.domain
+package org.devshred.gpstools.domain.proto
 
 import org.assertj.core.api.Assertions.assertThat
 import org.devshred.gpstools.domain.gps.PoiType
-import org.devshred.gpstools.domain.proto.GpsContainerMapper
-import org.devshred.gpstools.domain.proto.ProtoGpsContainer
-import org.devshred.gpstools.domain.proto.ProtoPoiType
-import org.devshred.gpstools.domain.proto.protoGpsContainer
-import org.devshred.gpstools.domain.proto.protoTrack
-import org.devshred.gpstools.domain.proto.protoWayPoint
 import org.junit.jupiter.api.Test
 
 class GpsContainerMapperTest {
