@@ -3,80 +3,28 @@ package org.devshred.gpstools.domain.proto
 import com.google.protobuf.Timestamp
 import io.jenetics.jpx.GPX
 import io.jenetics.jpx.TrackSegment
-import org.devshred.gpstools.domain.common.orElse
 import org.devshred.gpstools.domain.gps.PoiType
 import org.devshred.gpstools.domain.gps.WayPoint
 import org.devshred.gpstools.domain.gpx.GPX_CREATOR
-import org.springframework.core.io.InputStreamResource
-import java.io.InputStream
 import java.time.Instant
-import java.util.Optional
 import io.jenetics.jpx.WayPoint as GpxWayPoint
 
-fun gpxToProtobufInputStream(gpx: GPX): InputStream {
-    val trackName: Optional<String> =
-        if (gpx.tracks.isNotEmpty() && gpx.tracks[0].name.isPresent) {
-            gpx.tracks[0].name
-        } else if (gpx.metadata.isPresent && gpx.metadata.get().name.isPresent) {
-            gpx.metadata.get().name
-        } else {
-            Optional.empty()
-        }
-
-    val container =
-        protoGpsContainer {
-            if (trackName.isPresent) {
-                name = trackName.get()
-            }
-            gpx.wayPoints.map(::toProtoBuf).forEach { wayPoints += it }
-            if (gpx.tracks.isNotEmpty()) {
-                track =
-                    protoTrack {
-                        gpx.tracks[0].segments[0].points.forEach { wayPoints += toProtoBuf(it) }
-                    }
-            }
-        }
-    return container.toByteArray().inputStream()
-}
-
-fun protoInputStreamResourceToProtoGpsContainer(inputStreamResource: InputStreamResource): ProtoGpsContainer =
-    ProtoGpsContainer.parseFrom(inputStreamResource.contentAsByteArray)
-
-fun protoInputStreamResourceToProtoGpsContainer(
-    inputStreamResource: InputStreamResource,
-    trackname: String?,
-): ProtoGpsContainer =
-    trackname?.let {
-        protoInputStreamResourceToProtoGpsContainer(inputStreamResource).toBuilder().setName(trackname).build()
-    }.orElse {
-        protoInputStreamResourceToProtoGpsContainer(inputStreamResource)
-    }
-
-fun protoInputStreamResourceToGpx(
-    inputStreamResource: InputStreamResource,
-    trackname: String?,
-): GPX {
-    val gpsContainer =
-        trackname?.let {
-            protoInputStreamResourceToProtoGpsContainer(inputStreamResource).toBuilder().setName(trackname).build()
-        }.orElse {
-            protoInputStreamResourceToProtoGpsContainer(inputStreamResource)
-        }
+fun ProtoGpsContainer.toGpx(): GPX {
     val gpxBuilder = GPX.builder().creator(GPX_CREATOR)
 
-    if (gpsContainer.hasName()) {
-        gpxBuilder.metadata { it.name(gpsContainer.name) }
+    if (hasName()) {
+        gpxBuilder.metadata { it.name(name) }
     }
 
-    if (gpsContainer.wayPointsCount > 0) {
-        gpsContainer.wayPointsList.forEach { gpxBuilder.addWayPoint(toGpx(it)) }
+    if (wayPointsCount > 0) {
+        wayPointsList.forEach { gpxBuilder.addWayPoint(it.toGpx()) }
     }
 
     val segmentBuilder = TrackSegment.builder()
-    gpsContainer.track.wayPointsList.forEach { segmentBuilder.addPoint(toGpx(it)) }
+    track.wayPointsList.forEach { segmentBuilder.addPoint(it.toGpx()) }
     gpxBuilder.addTrack {
-        if (gpsContainer.hasName()) {
-            it.name(gpsContainer.name)
+        if (hasName()) {
+            it.name(name)
         }
         it.addSegment(segmentBuilder.build())
     }
@@ -127,26 +75,26 @@ fun toGps(proto: ProtoWayPoint): WayPoint =
         type = if (proto.hasType()) toGps(proto.type) else null,
     )
 
-fun toGpx(proto: ProtoWayPoint): GpxWayPoint {
+fun ProtoWayPoint.toGpx(): GpxWayPoint {
     val builder =
         GpxWayPoint.builder()
-            .lat(proto.latitude)
-            .lon(proto.longitude)
+            .lat(latitude)
+            .lon(longitude)
 
-    if (proto.hasElevation()) {
-        builder.ele(proto.elevation)
+    if (hasElevation()) {
+        builder.ele(elevation)
     }
 
-    if (proto.hasTime()) {
-        builder.time(Instant.ofEpochSecond(proto.time.seconds))
+    if (hasTime()) {
+        builder.time(Instant.ofEpochSecond(time.seconds))
     }
 
-    if (proto.hasName()) {
-        builder.name(proto.name)
+    if (hasName()) {
+        builder.name(name)
     }
 
-    if (proto.hasType()) {
-        builder.sym(PoiType.fromString(proto.type.name).gpxSym)
+    if (hasType()) {
+        builder.sym(PoiType.fromString(type.name).gpxSym)
     }
 
     return builder.build()

@@ -1,26 +1,24 @@
 package org.devshred.gpstools.domain.gpx
 
-import org.devshred.gpstools.domain.IOService
-import org.devshred.gpstools.domain.proto.gpxToProtobufInputStream
-import org.devshred.gpstools.domain.proto.protoInputStreamResourceToGpx
+import org.devshred.gpstools.domain.proto.ProtoService
+import org.devshred.gpstools.domain.proto.toGpx
 import org.springframework.stereotype.Service
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 
 @Service
-class GpxService(private val ioService: IOService) {
+class GpxService(private val protoService: ProtoService) {
     fun protoFileToGpxInputStream(
         storageLocation: String,
         name: String?,
     ): ByteArrayInputStream {
-        val stream = ioService.getAsStream(storageLocation)
-        val gpx = protoInputStreamResourceToGpx(stream, name)
-        val outputStream = gpxToByteArrayOutputStream(gpx)
+        val protoGpsContainer = protoService.readProtoGpsContainer(storageLocation, name)
+        val outputStream = gpxToByteArrayOutputStream(protoGpsContainer.toGpx())
         return ByteArrayInputStream(outputStream.toByteArray())
     }
 
     fun protoInputStreamFromFileLocation(fileLocation: String): InputStream {
         val gpx = gpxFromFileLocation(fileLocation)
-        return gpxToProtobufInputStream(gpx)
+        return protoService.gpxToProtobufInputStream(gpx)
     }
 }
