@@ -57,6 +57,7 @@ class GpxMergeController(
                 trackName = protoGpsContainer.name
             }
         }
+        // TODO: 2021-10-14: [Refactor] remove useless GPX-conversion
         val gpx = buildGpx(trackName, allWayPoints, allTrackPoints)
         val protoStream = protoService.gpxToProtobufInputStream(gpx)
         val protoFile = ioService.createTempFile(protoStream, "merged.gpx")
