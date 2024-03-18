@@ -29,7 +29,12 @@ fun tcxToByteArrayOutputStream(tcx: TrainingCenterDatabase): ByteArrayOutputStre
     return out
 }
 
-fun createTcxFromGpsContainer(gpsContainer: GpsContainer): TrainingCenterDatabase {
+private const val MAX_DISTANCE_BETWEEN_TRACK_AND_WAYPOINT = 500
+
+fun createTcxFromGpsContainer(
+    gpsContainer: GpsContainer,
+    findNearest: Boolean = false,
+): TrainingCenterDatabase {
     val trainingCenterDatabase = TrainingCenterDatabase()
 
     val course = Course(gpsContainer.name!!)
@@ -69,14 +74,21 @@ fun createTcxFromGpsContainer(gpsContainer: GpsContainer): TrainingCenterDatabas
 
     gpsContainer.wayPoints.forEach(
         Consumer { wayPoint: WayPoint ->
-            course.addCoursePoint(
-                CoursePoint(
-                    wayPoint.name!!,
-                    wayPoint.time!!.atZone(ZoneId.of("UTC")),
-                    Position(wayPoint.latitude, wayPoint.longitude),
-                    wayPoint.type!!.tcxType,
-                ),
-            )
+            val pointToAdd =
+                when (findNearest) {
+                    true -> gpsContainer.findWayPointOnTrackNearestTo(wayPoint, MAX_DISTANCE_BETWEEN_TRACK_AND_WAYPOINT)
+                    false -> wayPoint
+                }
+            pointToAdd?.let {
+                course.addCoursePoint(
+                    CoursePoint(
+                        wayPoint.name!!,
+                        wayPoint.time!!.atZone(ZoneId.of("UTC")),
+                        Position(pointToAdd.latitude, pointToAdd.longitude),
+                        wayPoint.type!!.tcxType,
+                    ),
+                )
+            }
         },
     )
 
