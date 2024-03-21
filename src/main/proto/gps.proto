@@ -7,23 +7,23 @@ option java_multiple_files = true;
 package org.devshred.gpstools.domain.proto;
 
 enum ProtoPoiType {
-    GENERIC = 0;
-    SUMMIT = 1;
-    VALLEY = 2;
-    WATER = 3;
-    FOOD = 4;
-    DANGER = 5;
-    LEFT = 6;
-    RIGHT = 7;
-    STRAIGHT = 8;
-    FIRST_AID = 9;
-    FOURTH_CATEGORY = 10;
-    THIRD_CATEGORY = 11;
-    SECOND_CATEGORY = 12;
-    FIRST_CATEGORY = 13;
-    HORS_CATEGORY = 14;
-    RESIDENCE = 15;
-    SPRINT = 16;
+  GENERIC = 0;
+  SUMMIT = 1;
+  VALLEY = 2;
+  WATER = 3;
+  FOOD = 4;
+  DANGER = 5;
+  LEFT = 6;
+  RIGHT = 7;
+  STRAIGHT = 8;
+  FIRST_AID = 9;
+  FOURTH_CATEGORY = 10;
+  THIRD_CATEGORY = 11;
+  SECOND_CATEGORY = 12;
+  FIRST_CATEGORY = 13;
+  HORS_CATEGORY = 14;
+  RESIDENCE = 15;
+  SPRINT = 16;
 }
 
 message ProtoWayPoint {
@@ -35,6 +35,12 @@ message ProtoWayPoint {
 
   optional string name = 5;
   optional ProtoPoiType type = 6;
+
+  optional double speed = 7;
+  optional int32 power = 8;
+  optional int32 temperature = 9;
+  optional int32 heartrate = 10;
+  optional int32 cadence = 11;
 }
 
 message ProtoTrack {
