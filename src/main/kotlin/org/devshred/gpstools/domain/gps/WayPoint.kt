@@ -10,6 +10,11 @@ data class WayPoint(
     val time: Instant? = null,
     val name: String? = null,
     val type: PoiType? = null,
+    val speed: Double? = null,
+    val power: Double? = null,
+    val temperature: Double? = null,
+    val heartrate: Int? = null,
+    val cadance: Int? = null,
 ) {
     companion object {
         fun fromGpxPoint(gpxPoint: GpxWayPoint): WayPoint =

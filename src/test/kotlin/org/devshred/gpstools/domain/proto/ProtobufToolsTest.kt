@@ -77,4 +77,15 @@ class ProtobufToolsTest {
             )
         }
     }
+
+    @Test
+    fun `union ExtensionValues (B overrides A)`() {
+        val valuesA = ExtensionValues(1, 2, null, 4)
+        val valuesB = ExtensionValues(null, null, 7, 8)
+        val expected = ExtensionValues(1, 2, 7, 8)
+
+        val actual = valuesA.union(valuesB)
+
+        assertThat(actual).isEqualTo(expected)
+    }
 }
