@@ -1,13 +1,13 @@
 package org.devshred.gpstools.web
 
-import io.jenetics.jpx.WayPoint
 import org.devshred.gpstools.domain.FileStore
 import org.devshred.gpstools.domain.IOService
 import org.devshred.gpstools.domain.NotFoundException
 import org.devshred.gpstools.domain.StoredFile
-import org.devshred.gpstools.domain.gpx.buildGpx
 import org.devshred.gpstools.domain.proto.ProtoService
-import org.devshred.gpstools.domain.proto.toGpx
+import org.devshred.gpstools.domain.proto.ProtoWayPoint
+import org.devshred.gpstools.domain.proto.protoGpsContainer
+import org.devshred.gpstools.domain.proto.protoTrack
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.CrossOrigin
@@ -44,23 +44,26 @@ class GpxMergeController(
             return ResponseEntity.ok(store.get(fileIds[0]))
         }
 
-        val allWayPoints: MutableList<WayPoint> = mutableListOf()
-        val allTrackPoints: MutableList<WayPoint> = mutableListOf()
+        val allWayPoints: MutableList<ProtoWayPoint> = mutableListOf()
+        val allTrackPoints: MutableList<ProtoWayPoint> = mutableListOf()
         var trackName: String? = null
         fileIds.forEachIndexed { index, uuid ->
             log.info("About to merge $uuid.")
             val protoGpsContainer =
                 protoService.readProtoGpsContainer(store.get(uuid).storageLocation)
-            allWayPoints.addAll(protoGpsContainer.wayPointsList.map { it.toGpx() })
-            allTrackPoints.addAll(protoGpsContainer.track.wayPointsList.map { it.toGpx() })
+            allWayPoints.addAll(protoGpsContainer.wayPointsList)
+            allTrackPoints.addAll(protoGpsContainer.track.wayPointsList)
             if (index == 0 && protoGpsContainer.name.isNotEmpty()) {
                 trackName = protoGpsContainer.name
             }
         }
-        // TODO: 2021-10-14: [Refactor] remove useless GPX-conversion
-        val gpx = buildGpx(trackName, allWayPoints, allTrackPoints)
-        val protoStream = protoService.gpxToProtobufInputStream(gpx)
-        val protoFile = ioService.createTempFile(protoStream, "merged.gpx")
+        val mergedProto =
+            protoGpsContainer {
+                trackName?.run { name = this }
+                wayPoints.addAll(allWayPoints)
+                track = protoTrack { wayPoints.addAll(allTrackPoints) }
+            }
+        val protoFile = ioService.createTempFile(mergedProto.toByteArray().inputStream(), "merged.gpx")
         store.put(protoFile.id, protoFile)
 
         return ResponseEntity.ok(protoFile)
