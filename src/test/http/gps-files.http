@@ -19,16 +19,22 @@ Content-Disposition: form-data; name="file"; filename="file.gpx"
 
 
 ### get file
-GET {{baseUrl}}/files/{{fileId}}?type=tcx
+GET {{baseUrl}}/files/{{fileId}}
 #Accept: */*
 #Accept: application/vnd.garmin.tcx+xml
 #Accept: application/gpx+xml
 
+### get file as TCX
+GET {{baseUrl}}/files/{{fileId}}?type=tcx
+
 ### download file
-GET {{baseUrl}}/files/{{fileId}}?m=dl
-#Accept: */*
-#Accept: application/vnd.garmin.tcx+xml
-#Accept: application/gpx+xml
+GET {{baseUrl}}/files/{{fileId}}?mode=dl
+
+### get file with overwritten name
+GET {{baseUrl}}/files/{{fileId}}?name=Laufarena
+
+### get file with overwritten waypoints
+GET {{baseUrl}}/files/{{fileId}}?wp=ewogICJ0eXBlIjogIkZlYXR1cmVDb2xsZWN0aW9uIiwKICAiZmVhdHVyZXMiOiBbCiAgICB7CiAgICAgICJ0eXBlIjogIkZlYXR1cmUiLAogICAgICAicHJvcGVydGllcyI6IHsKICAgICAgICAibmFtZSI6ICJXYXlwb2ludCAxIiwKICAgICAgICAidHlwZSI6ICJTVU1NSVQiCiAgICAgIH0sCiAgICAgICJnZW9tZXRyeSI6IHsKICAgICAgICAidHlwZSI6ICJQb2ludCIsCiAgICAgICAgImNvb3JkaW5hdGVzIjogWzUzLjU0Mjc5OCwgMTAuMDU0MjY5XQogICAgICB9CiAgICB9CiAgXQp9Cg==
 
 ### delete file
 DELETE {{baseUrl}}/files/{{fileId}}

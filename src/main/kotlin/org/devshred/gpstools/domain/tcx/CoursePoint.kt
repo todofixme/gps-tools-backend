@@ -11,7 +11,7 @@ class CoursePoint(
     @JacksonXmlProperty(localName = "Name")
     private val name: String,
     @JacksonXmlProperty(localName = "Time")
-    private val time: ZonedDateTime,
+    private val time: ZonedDateTime? = null,
     @JacksonXmlProperty(localName = "Position")
     private val position: Position,
     @JacksonXmlProperty(localName = "PointType")
@@ -22,7 +22,7 @@ class CoursePoint(
 
     @JacksonXmlProperty(localName = "Time", namespace = TCX_NAMESPACE)
     @JsonSerialize(using = ZonedDateTimeSerializer::class)
-    fun getTime(): ZonedDateTime {
+    fun getTime(): ZonedDateTime? {
         return time
     }
 

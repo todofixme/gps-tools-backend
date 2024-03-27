@@ -54,20 +54,17 @@ fun toProtoBuf(gpx: GpxWayPoint): ProtoWayPoint =
     }
 
 fun exploreDocument(node: Node): ExtensionValues {
-    var extensionValues = ExtensionValues()
-    if (node.hasChildNodes()) {
-        var childNode = node.firstChild
-        while (childNode != null) {
-            when (childNode.nodeName) {
-                "power" -> extensionValues.power = childNode.textContent.toInt()
-                "gpxtpx:cad" -> extensionValues.cadence = childNode.textContent.toInt()
-                "gpxtpx:atemp" -> extensionValues.temperature = childNode.textContent.toInt()
-                "gpxtpx:hr" -> extensionValues.heartRate = childNode.textContent.toInt()
-            }
-            val newValues = exploreDocument(childNode)
-            extensionValues = extensionValues.union(newValues)
-            childNode = childNode.nextSibling
+    val extensionValues = ExtensionValues()
+    var childNode = node.firstChild
+    while (childNode != null) {
+        when (childNode.nodeName) {
+            "power" -> extensionValues.power = childNode.textContent.toInt()
+            "gpxtpx:cad" -> extensionValues.cadence = childNode.textContent.toInt()
+            "gpxtpx:atemp" -> extensionValues.temperature = childNode.textContent.toInt()
+            "gpxtpx:hr" -> extensionValues.heartRate = childNode.textContent.toInt()
         }
+        extensionValues.union(exploreDocument(childNode))
+        childNode = childNode.nextSibling
     }
     return extensionValues
 }
@@ -119,6 +116,11 @@ fun toGps(proto: ProtoWayPoint): WayPoint =
         name = if (proto.hasName()) proto.name else null,
         time = if (proto.hasTime()) Instant.ofEpochSecond(proto.time.seconds) else null,
         type = if (proto.hasType()) toGps(proto.type) else null,
+        speed = if (proto.hasSpeed()) proto.speed else null,
+        power = if (proto.hasPower()) proto.power else null,
+        temperature = if (proto.hasTemperature()) proto.temperature else null,
+        heartrate = if (proto.hasHeartrate()) proto.heartrate else null,
+        cadence = if (proto.hasCadence()) proto.cadence else null,
     )
 
 fun ProtoWayPoint.toGpx(): GpxWayPoint {

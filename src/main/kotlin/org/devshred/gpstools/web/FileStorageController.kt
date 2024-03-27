@@ -1,5 +1,6 @@
 package org.devshred.gpstools.web
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.http.HttpServletRequest
 import org.devshred.gpstools.domain.FileStore
 import org.devshred.gpstools.domain.IOService
@@ -7,6 +8,7 @@ import org.devshred.gpstools.domain.StoredFile
 import org.devshred.gpstools.domain.common.orElse
 import org.devshred.gpstools.domain.gpx.GpxService
 import org.devshred.gpstools.domain.tcx.TcxService
+import org.geojson.FeatureCollection
 import org.springframework.core.io.InputStreamResource
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpHeaders
@@ -28,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.server.ResponseStatusException
 import java.io.File
 import java.io.IOException
+import java.util.Base64
 import java.util.UUID
 
 private const val ERROR_MSG_NO_GPS_FILE = "Not a file format to hold GPS data."
@@ -47,9 +50,15 @@ class FileStorageController(
         @RequestParam("mode", required = false) mode: String?,
         @RequestParam("name", required = false) name: String?,
         @RequestParam("type", required = false) type: String?,
+        @RequestParam("wp", required = false) waypointsEncoded: String?,
         @RequestHeader headers: Map<String, String>,
     ): ResponseEntity<Resource> {
         val storedFile = store.get(UUID.fromString(id))
+
+        val waypoints: FeatureCollection? =
+            waypointsEncoded?.let {
+                ObjectMapper().readValue(String(Base64.getDecoder().decode(it)), FeatureCollection::class.java)
+            }?.orElse { null }
 
         val gpsType =
             type?.let {
@@ -66,8 +75,8 @@ class FileStorageController(
 
         val inputStream =
             when (gpsType) {
-                GpsType.GPX -> gpxService.protoFileToGpxInputStream(storedFile.storageLocation, name)
-                GpsType.TCX -> tcxService.protoFileToTcxInputStream(storedFile.storageLocation, name)
+                GpsType.GPX -> gpxService.protoFileToGpxInputStream(storedFile.storageLocation, name, waypoints)
+                GpsType.TCX -> tcxService.protoFileToTcxInputStream(storedFile.storageLocation, name, waypoints)
                 else -> {
                     throw IllegalArgumentException("$gpsType is not supported yet")
                 }

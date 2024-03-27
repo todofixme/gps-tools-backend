@@ -1,6 +1,7 @@
 package org.devshred.gpstools.domain.proto
 
 import org.assertj.core.api.Assertions.assertThat
+import org.devshred.gpstools.domain.gps.GpsContainerMapper
 import org.devshred.gpstools.domain.gps.PoiType
 import org.junit.jupiter.api.Test
 
@@ -30,7 +31,7 @@ class GpsContainerMapperTest {
                     }
             }
 
-        val domainGpsContainer = mapper.map(protoGpsContainer)
+        val domainGpsContainer = mapper.fromProto(protoGpsContainer)
 
         assertThat(domainGpsContainer.name).isEqualTo("My Track")
         assertThat(domainGpsContainer.wayPoints).hasSize(1)

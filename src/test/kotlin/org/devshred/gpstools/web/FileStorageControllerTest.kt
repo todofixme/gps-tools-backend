@@ -65,6 +65,7 @@ class FileStorageControllerTest(
             gpxService.protoFileToGpxInputStream(
                 storageLocation,
                 null,
+                null,
             )
         } returns ByteArrayInputStream(byteArrayOf())
 
@@ -76,7 +77,7 @@ class FileStorageControllerTest(
             )
 
         verify { fileStore.get(uuid) }
-        verify { gpxService.protoFileToGpxInputStream(storageLocation, null) }
+        verify { gpxService.protoFileToGpxInputStream(storageLocation, null, null) }
     }
 
     @Test
@@ -88,7 +89,7 @@ class FileStorageControllerTest(
 
         every { fileStore.get(uuid) } returns storedFile
         every { ioService.getAsStream(storageLocation) } returns InputStreamResource(InputStream.nullInputStream())
-        every { gpxService.protoFileToGpxInputStream(storageLocation, trackname) } returns
+        every { gpxService.protoFileToGpxInputStream(storageLocation, trackname, null) } returns
             ByteArrayInputStream(byteArrayOf())
 
         mockMvc.perform(get("/files/$uuid?mode=dl&name=$trackname").header("Accept", GpsType.GPX.mimeType))
@@ -99,7 +100,7 @@ class FileStorageControllerTest(
             )
 
         verify { fileStore.get(uuid) }
-        verify { gpxService.protoFileToGpxInputStream(storageLocation, trackname) }
+        verify { gpxService.protoFileToGpxInputStream(storageLocation, trackname, null) }
     }
 
     @Test
@@ -122,13 +123,13 @@ class FileStorageControllerTest(
         val storedFile = StoredFile(uuid, "test.gpx", TEXT_PLAIN_VALUE, "href", 123, storageLocation)
 
         every { fileStore.get(uuid) } returns storedFile
-        every { gpxService.protoFileToGpxInputStream(storageLocation, null) } throws NotFoundException("not found")
+        every { gpxService.protoFileToGpxInputStream(storageLocation, null, null) } throws NotFoundException("not found")
 
         mockMvc.perform(get("/files/$uuid").header("Accept", GpsType.GPX.mimeType))
             .andExpect(status().isNotFound)
 
         verify { fileStore.get(uuid) }
-        verify { gpxService.protoFileToGpxInputStream(storageLocation, null) }
+        verify { gpxService.protoFileToGpxInputStream(storageLocation, null, null) }
     }
 
     @Test
@@ -150,6 +151,7 @@ class FileStorageControllerTest(
             gpxService.protoFileToGpxInputStream(
                 storageLocation,
                 null,
+                null,
             )
         } returns ByteArrayInputStream(byteArrayOf())
 
@@ -161,7 +163,7 @@ class FileStorageControllerTest(
             )
 
         verify { fileStore.get(uuid) }
-        verify { gpxService.protoFileToGpxInputStream(storageLocation, null) }
+        verify { gpxService.protoFileToGpxInputStream(storageLocation, null, null) }
     }
 
     @Test

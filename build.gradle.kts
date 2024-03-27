@@ -39,6 +39,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.apache.tika:tika-core:2.9.1")
 
+    implementation("de.grundid.opendatalab:geojson-jackson:1.14")
     implementation("io.jenetics:jpx:3.1.0")
 
     implementation("com.google.protobuf:protobuf-kotlin:$protoBufVersion")
