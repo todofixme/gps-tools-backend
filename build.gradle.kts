@@ -7,7 +7,7 @@ plugins {
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.spring") version kotlinVersion
 
-    id("org.springframework.boot") version "3.2.3"
+    id("org.springframework.boot") version "3.2.4"
     id("io.spring.dependency-management") version "1.1.4"
 
     id("com.google.protobuf") version "0.9.4"
@@ -29,7 +29,7 @@ repositories {
     mavenCentral()
 }
 
-val protoBufVersion = "3.25.3"
+val protoBufVersion = "4.26.0"
 val jacksonVersion = "2.15.4"
 val xmlunitVersion = "2.9.1"
 
