@@ -1,4 +1,4 @@
-package org.devshred.gpstools.domain
+package org.devshred.gpstools.storage
 
 import org.springframework.stereotype.Service
 import java.util.UUID

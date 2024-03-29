@@ -1,13 +1,13 @@
-package org.devshred.gpstools.domain.gps
+package org.devshred.gpstools.formats.gps
 
 import io.jenetics.jpx.geom.Geoid
 
 data class GpsContainer(val name: String?, val wayPoints: List<WayPoint>, val track: Track?) {
     fun findWayPointOnTrackNearestTo(wayPoint: WayPoint): WayPoint {
-        val gpxPoint = wayPoint.toGpxPoint()
+        val gpxPoint = wayPoint.toGpx()
         val nearestGpxPoint =
             track?.wayPoints?.stream()
-                ?.map { it.toGpxPoint() }
+                ?.map { it.toGpx() }
                 ?.reduce { result: io.jenetics.jpx.WayPoint, current: io.jenetics.jpx.WayPoint ->
                     if (Geoid.WGS84.distance(current, gpxPoint).toInt()
                         < Geoid.WGS84.distance(result, gpxPoint).toInt()
@@ -18,7 +18,7 @@ data class GpsContainer(val name: String?, val wayPoints: List<WayPoint>, val tr
                     }
                 }?.get()
 
-        return WayPoint.fromGpxPoint(nearestGpxPoint!!)
+        return nearestGpxPoint!!.toGps()
     }
 
     fun findWayPointOnTrackNearestTo(
@@ -26,7 +26,7 @@ data class GpsContainer(val name: String?, val wayPoints: List<WayPoint>, val tr
         tolerance: Int,
     ): WayPoint? {
         val nearestWayPoint = findWayPointOnTrackNearestTo(wayPoint)
-        return if (Geoid.WGS84.distance(nearestWayPoint.toGpxPoint(), wayPoint.toGpxPoint()).toInt() > tolerance) {
+        return if (Geoid.WGS84.distance(nearestWayPoint.toGpx(), wayPoint.toGpx()).toInt() > tolerance) {
             null
         } else {
             nearestWayPoint

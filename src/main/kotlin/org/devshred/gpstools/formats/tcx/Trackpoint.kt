@@ -1,4 +1,4 @@
-package org.devshred.gpstools.domain.tcx
+package org.devshred.gpstools.formats.tcx
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty

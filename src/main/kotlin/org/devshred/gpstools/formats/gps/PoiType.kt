@@ -1,4 +1,4 @@
-package org.devshred.gpstools.domain.gps
+package org.devshred.gpstools.formats.gps
 
 enum class PoiType(val tcxType: String, val gpxSym: String) {
     GENERIC("Generic", "generic"),

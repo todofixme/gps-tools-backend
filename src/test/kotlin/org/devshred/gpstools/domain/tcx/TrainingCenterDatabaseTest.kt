@@ -1,6 +1,13 @@
 package org.devshred.gpstools.domain.tcx
 
-import org.devshred.gpstools.domain.tcx.TcxTools.XML_MAPPER
+import org.devshred.gpstools.formats.tcx.Course
+import org.devshred.gpstools.formats.tcx.CoursePoint
+import org.devshred.gpstools.formats.tcx.Lap
+import org.devshred.gpstools.formats.tcx.Position
+import org.devshred.gpstools.formats.tcx.TcxTools.XML_MAPPER
+import org.devshred.gpstools.formats.tcx.Track
+import org.devshred.gpstools.formats.tcx.Trackpoint
+import org.devshred.gpstools.formats.tcx.TrainingCenterDatabase
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.jupiter.api.Test
 import org.xmlunit.diff.DefaultNodeMatcher

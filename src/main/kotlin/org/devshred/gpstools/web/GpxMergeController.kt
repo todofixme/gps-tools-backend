@@ -1,13 +1,13 @@
 package org.devshred.gpstools.web
 
-import org.devshred.gpstools.domain.FileStore
-import org.devshred.gpstools.domain.IOService
-import org.devshred.gpstools.domain.NotFoundException
-import org.devshred.gpstools.domain.StoredFile
-import org.devshred.gpstools.domain.proto.ProtoService
-import org.devshred.gpstools.domain.proto.ProtoWayPoint
-import org.devshred.gpstools.domain.proto.protoGpsContainer
-import org.devshred.gpstools.domain.proto.protoTrack
+import org.devshred.gpstools.formats.proto.ProtoService
+import org.devshred.gpstools.formats.proto.protoContainer
+import org.devshred.gpstools.formats.proto.protoTrack
+import org.devshred.gpstools.storage.FileStore
+import org.devshred.gpstools.storage.Filename
+import org.devshred.gpstools.storage.IOService
+import org.devshred.gpstools.storage.NotFoundException
+import org.devshred.gpstools.storage.StoredFile
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.CrossOrigin
@@ -44,13 +44,13 @@ class GpxMergeController(
             return ResponseEntity.ok(store.get(fileIds[0]))
         }
 
-        val allWayPoints: MutableList<ProtoWayPoint> = mutableListOf()
-        val allTrackPoints: MutableList<ProtoWayPoint> = mutableListOf()
+        val allWayPoints: MutableList<org.devshred.gpstools.formats.proto.ProtoWayPoint> = mutableListOf()
+        val allTrackPoints: MutableList<org.devshred.gpstools.formats.proto.ProtoWayPoint> = mutableListOf()
         var trackName: String? = null
         fileIds.forEachIndexed { index, uuid ->
             log.info("About to merge $uuid.")
             val protoGpsContainer =
-                protoService.readProtoGpsContainer(store.get(uuid).storageLocation)
+                protoService.readProtoContainer(store.get(uuid).storageLocation)
             allWayPoints.addAll(protoGpsContainer.wayPointsList)
             allTrackPoints.addAll(protoGpsContainer.track.wayPointsList)
             if (index == 0 && protoGpsContainer.name.isNotEmpty()) {
@@ -58,12 +58,12 @@ class GpxMergeController(
             }
         }
         val mergedProto =
-            protoGpsContainer {
+            protoContainer {
                 trackName?.run { name = this }
                 wayPoints.addAll(allWayPoints)
                 track = protoTrack { wayPoints.addAll(allTrackPoints) }
             }
-        val protoFile = ioService.createTempFile(mergedProto.toByteArray().inputStream(), "merged.gpx")
+        val protoFile = ioService.createTempFile(mergedProto.toByteArray().inputStream(), Filename("merged.gpx"))
         store.put(protoFile.id, protoFile)
 
         return ResponseEntity.ok(protoFile)

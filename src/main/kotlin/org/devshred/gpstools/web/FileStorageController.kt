@@ -2,12 +2,14 @@ package org.devshred.gpstools.web
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.http.HttpServletRequest
-import org.devshred.gpstools.domain.FileStore
-import org.devshred.gpstools.domain.IOService
-import org.devshred.gpstools.domain.StoredFile
-import org.devshred.gpstools.domain.common.orElse
-import org.devshred.gpstools.domain.gpx.GpxService
-import org.devshred.gpstools.domain.tcx.TcxService
+import org.devshred.gpstools.common.orElse
+import org.devshred.gpstools.formats.gps.GpsContainerMapper
+import org.devshred.gpstools.formats.gpx.GpxService
+import org.devshred.gpstools.formats.tcx.TcxService
+import org.devshred.gpstools.storage.FileStore
+import org.devshred.gpstools.storage.Filename
+import org.devshred.gpstools.storage.IOService
+import org.devshred.gpstools.storage.StoredFile
 import org.geojson.FeatureCollection
 import org.springframework.core.io.InputStreamResource
 import org.springframework.core.io.Resource
@@ -33,7 +35,7 @@ import java.io.IOException
 import java.util.Base64
 import java.util.UUID
 
-private const val ERROR_MSG_NO_GPS_FILE = "Not a file format to hold GPS data."
+private const val ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED = "Not a supported file format (GPX)."
 
 @CrossOrigin(origins = ["*"], maxAge = 3600)
 @RestController
@@ -42,6 +44,7 @@ class FileStorageController(
     private val ioService: IOService,
     private val gpxService: GpxService,
     private val tcxService: TcxService,
+    private val gpsMapper: GpsContainerMapper,
 ) {
     @GetMapping("/files/{id}")
     @Throws(IOException::class)
@@ -85,7 +88,7 @@ class FileStorageController(
 
         val responseHeaders = HttpHeaders()
         if (StringUtils.hasText(mode) && mode == "dl") {
-            val basename = name.orElse { storedFile.filename }
+            val basename = name.orElse { storedFile.filename.value }
             val file = File(basename)
             val filename =
                 file.nameWithoutExtension
@@ -109,29 +112,32 @@ class FileStorageController(
     @Throws(IOException::class)
     fun uploadFile(
         request: HttpServletRequest,
-        @RequestParam filename: String,
+        @RequestParam filename: Filename,
     ): ResponseEntity<StoredFile> {
-        if (!isGpsFile(filename)) {
-            throw IllegalArgumentException(ERROR_MSG_NO_GPS_FILE)
-        }
+        if (isGpsFile(filename.value)) {
+            val uploadedFile: StoredFile = ioService.createTempFile(request.inputStream, filename)
 
-        val uploadedFile: StoredFile = ioService.createTempFile(request.inputStream, filename)
+            if (uploadedFile.mimeType != org.apache.tika.mime.MediaType.APPLICATION_XML.toString()) {
+                ioService.delete(storageLocation = uploadedFile.storageLocation)
+                throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
+            }
 
-        if (uploadedFile.mimeType != org.apache.tika.mime.MediaType.APPLICATION_XML.toString()) {
-            ioService.delete(storageLocation = uploadedFile.storageLocation)
-            throw IllegalArgumentException(ERROR_MSG_NO_GPS_FILE)
-        }
+            try {
+                val gpx = gpxService.gpxFromFileLocation(uploadedFile.storageLocation)
+                val gpsContainer = gpsMapper.fromGpx(gpx)
+                val protoContainer = gpsMapper.toProto(gpsContainer)
+                val inputStream = protoContainer.toByteArray().inputStream()
+                val protoFile = ioService.createTempFile(inputStream, filename)
+                store.put(protoFile.id, protoFile)
 
-        try {
-            val inputStream = gpxService.protoInputStreamFromFileLocation(uploadedFile.storageLocation)
-            val protoFile = ioService.createTempFile(inputStream, filename)
-            store.put(protoFile.id, protoFile)
-
-            ioService.delete(uploadedFile.storageLocation)
-            return ResponseEntity.ok(protoFile)
-        } catch (ex: IOException) {
-            ioService.delete(storageLocation = uploadedFile.storageLocation)
-            throw IllegalArgumentException(ERROR_MSG_NO_GPS_FILE)
+                ioService.delete(uploadedFile.storageLocation)
+                return ResponseEntity.ok(protoFile)
+            } catch (ex: IOException) {
+                ioService.delete(storageLocation = uploadedFile.storageLocation)
+                throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
+            }
+        } else {
+            throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
         }
     }
 
@@ -145,24 +151,24 @@ class FileStorageController(
     ): ResponseEntity<List<StoredFile>> {
         val results = ArrayList<StoredFile>()
         file
-            .filter { isGpsFile(it.originalFilename!!) }
+            .filter { isGpsFile(it.originalFilename) }
             .forEach {
-                val uploadedFile: StoredFile = ioService.createTempFile(it.inputStream, it.originalFilename!!)
+                val uploadedFile: StoredFile = ioService.createTempFile(it.inputStream, Filename(it.originalFilename!!))
 
                 try {
                     if (uploadedFile.mimeType != org.apache.tika.mime.MediaType.APPLICATION_XML.toString()) {
                         ioService.delete(storageLocation = uploadedFile.storageLocation)
-                        throw IllegalArgumentException(ERROR_MSG_NO_GPS_FILE)
+                        throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
                     }
 
                     val inputStream = gpxService.protoInputStreamFromFileLocation(uploadedFile.storageLocation)
-                    val protoFile = ioService.createTempFile(inputStream, it.originalFilename!!)
+                    val protoFile = ioService.createTempFile(inputStream, Filename(it.originalFilename!!))
                     store.put(protoFile.id, protoFile)
                     ioService.delete(uploadedFile.storageLocation)
                     results.add(protoFile)
                 } catch (ex: IOException) {
                     ioService.delete(storageLocation = uploadedFile.storageLocation)
-                    throw IllegalArgumentException(ERROR_MSG_NO_GPS_FILE)
+                    throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
                 }
             }
         if (results.isEmpty()) {
@@ -183,7 +189,9 @@ class FileStorageController(
     }
 }
 
-private fun isGpsFile(filename: String) = filename.endsWith(".gpx")
+private fun isGpxFile(filename: String?) = filename?.endsWith(".gpx").orElse { false }
+
+private fun isGpsFile(filename: String?) = isGpxFile(filename)
 
 private val notAllowedCharacters = "[^a-zA-Z0-9\\p{L}\\p{M}*\\p{N}.\\-]".toRegex()
 private val moreThan2UnderscoresInARow = "_{3,}".toRegex()

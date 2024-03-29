@@ -3,6 +3,8 @@ package org.devshred.gpstools.domain.gps
 import io.jenetics.jpx.Length.Unit.METER
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
+import org.devshred.gpstools.formats.gps.Track
+import org.devshred.gpstools.formats.gps.WayPoint
 import org.junit.jupiter.api.Test
 
 class TrackTest {

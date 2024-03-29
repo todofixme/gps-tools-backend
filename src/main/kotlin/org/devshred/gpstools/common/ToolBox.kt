@@ -1,4 +1,4 @@
-package org.devshred.gpstools.domain.common
+package org.devshred.gpstools.common
 
 inline fun <R> R?.orElse(block: () -> R): R {
     return this ?: block()

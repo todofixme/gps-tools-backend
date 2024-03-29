@@ -4,7 +4,7 @@ import "google/protobuf/timestamp.proto";
 
 option java_multiple_files = true;
 
-package org.devshred.gpstools.domain.proto;
+package org.devshred.gpstools.formats.proto;
 
 enum ProtoPoiType {
   GENERIC = 0;
@@ -39,7 +39,7 @@ message ProtoWayPoint {
   optional double speed = 7;
   optional int32 power = 8;
   optional int32 temperature = 9;
-  optional int32 heartrate = 10;
+  optional int32 heartRate = 10;
   optional int32 cadence = 11;
 }
 
@@ -47,7 +47,7 @@ message ProtoTrack {
   repeated ProtoWayPoint wayPoints = 1;
 }
 
-message ProtoGpsContainer {
+message ProtoContainer {
   optional string name = 1;
   repeated ProtoWayPoint wayPoints = 2;
   ProtoTrack track = 3;

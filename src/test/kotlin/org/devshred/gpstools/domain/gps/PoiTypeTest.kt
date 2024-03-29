@@ -1,9 +1,10 @@
 package org.devshred.gpstools.domain.gps
 
 import org.assertj.core.api.Assertions.assertThat
-import org.devshred.gpstools.domain.gps.PoiType.Factory.fromGpxSym
-import org.devshred.gpstools.domain.gps.PoiType.Factory.fromString
-import org.devshred.gpstools.domain.gps.PoiType.Factory.fromTcxType
+import org.devshred.gpstools.formats.gps.PoiType
+import org.devshred.gpstools.formats.gps.PoiType.Factory.fromGpxSym
+import org.devshred.gpstools.formats.gps.PoiType.Factory.fromString
+import org.devshred.gpstools.formats.gps.PoiType.Factory.fromTcxType
 import org.junit.jupiter.api.Test
 
 class PoiTypeTest {

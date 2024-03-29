@@ -1,6 +1,6 @@
 package org.devshred.gpstools.web
 
-import org.devshred.gpstools.domain.NotFoundException
+import org.devshred.gpstools.storage.NotFoundException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail

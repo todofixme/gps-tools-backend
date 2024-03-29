@@ -1,14 +1,16 @@
-package org.devshred.gpstools.domain.gpx
+package org.devshred.gpstools.formats.gpx
 
-import org.devshred.gpstools.domain.gps.GpsContainerMapper
-import org.devshred.gpstools.domain.gps.PoiType
-import org.devshred.gpstools.domain.proto.ProtoService
+import io.jenetics.jpx.GPX
+import org.devshred.gpstools.formats.gps.GpsContainerMapper
+import org.devshred.gpstools.formats.gps.PoiType
+import org.devshred.gpstools.formats.proto.ProtoService
 import org.geojson.FeatureCollection
 import org.geojson.Point
 import org.springframework.stereotype.Service
 import java.io.ByteArrayInputStream
 import java.io.InputStream
-import org.devshred.gpstools.domain.gps.WayPoint as GpsWaypoint
+import java.nio.file.Path
+import org.devshred.gpstools.formats.gps.WayPoint as GpsWaypoint
 
 @Service
 class GpxService(private val protoService: ProtoService, private val mapper: GpsContainerMapper) {
@@ -17,7 +19,7 @@ class GpxService(private val protoService: ProtoService, private val mapper: Gps
         name: String?,
         featureCollection: FeatureCollection? = null,
     ): ByteArrayInputStream {
-        val protoGpsContainer = protoService.readProtoGpsContainer(storageLocation, name)
+        val protoGpsContainer = protoService.readProtoContainer(storageLocation, name)
 
         val gpsContainer =
             if (featureCollection != null) {
@@ -44,6 +46,10 @@ class GpxService(private val protoService: ProtoService, private val mapper: Gps
 
     fun protoInputStreamFromFileLocation(fileLocation: String): InputStream {
         val gpx = gpxFromFileLocation(fileLocation)
-        return protoService.gpxToProtobufInputStream(gpx)
+        val gpsContainer = mapper.fromGpx(gpx)
+        val protoContainer = mapper.toProto(gpsContainer)
+        return protoContainer.toByteArray().inputStream()
     }
+
+    fun gpxFromFileLocation(location: String): GPX = GPX.read(Path.of(location))
 }

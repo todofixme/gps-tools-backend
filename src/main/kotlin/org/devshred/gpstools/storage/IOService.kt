@@ -1,4 +1,4 @@
-package org.devshred.gpstools.domain
+package org.devshred.gpstools.storage
 
 import org.apache.tika.Tika
 import org.slf4j.LoggerFactory
@@ -33,7 +33,7 @@ class IOService {
 
     fun createTempFile(
         inputStream: InputStream,
-        filename: String,
+        filename: Filename,
     ): StoredFile {
         val uuid = UUID.randomUUID()
         val tempFile = File.createTempFile(uuid.toString(), ".tmp")

@@ -1,18 +1,23 @@
 package org.devshred.gpstools.web
 
 import com.ninjasquad.springmockk.MockkBean
+import io.jenetics.jpx.GPX
 import io.mockk.called
 import io.mockk.every
 import io.mockk.verify
 import org.apache.commons.io.input.NullInputStream
 import org.assertj.core.api.Assertions.assertThat
-import org.devshred.gpstools.domain.FileStore
-import org.devshred.gpstools.domain.IOService
-import org.devshred.gpstools.domain.NotFoundException
-import org.devshred.gpstools.domain.StoredFile
-import org.devshred.gpstools.domain.gpx.GpxService
-import org.devshred.gpstools.domain.proto.ProtoService
-import org.devshred.gpstools.domain.tcx.TcxService
+import org.devshred.gpstools.formats.gps.GpsContainer
+import org.devshred.gpstools.formats.gps.GpsContainerMapper
+import org.devshred.gpstools.formats.gpx.GpxService
+import org.devshred.gpstools.formats.proto.ProtoService
+import org.devshred.gpstools.formats.proto.protoContainer
+import org.devshred.gpstools.formats.tcx.TcxService
+import org.devshred.gpstools.storage.FileStore
+import org.devshred.gpstools.storage.Filename
+import org.devshred.gpstools.storage.IOService
+import org.devshred.gpstools.storage.NotFoundException
+import org.devshred.gpstools.storage.StoredFile
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
@@ -53,11 +58,14 @@ class FileStorageControllerTest(
     @MockkBean
     lateinit var tcxService: TcxService
 
+    @MockkBean
+    lateinit var gpsMapper: GpsContainerMapper
+
     @Test
     fun `download file as GPX`() {
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
-        val storedFile = StoredFile(uuid, "test.gpx", APPLICATION_XML_VALUE, "href", 123, storageLocation)
+        val storedFile = StoredFile(uuid, Filename("test.gpx"), APPLICATION_XML_VALUE, "href", 123, storageLocation)
 
         every { fileStore.get(uuid) } returns storedFile
         every { ioService.getAsStream(storageLocation) } returns InputStreamResource(InputStream.nullInputStream())
@@ -84,7 +92,7 @@ class FileStorageControllerTest(
     fun `download file with trackname as GPX`() {
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
-        val storedFile = StoredFile(uuid, "test.gpx", APPLICATION_XML_VALUE, "href", 123, storageLocation)
+        val storedFile = StoredFile(uuid, Filename("test.gpx"), APPLICATION_XML_VALUE, "href", 123, storageLocation)
         val trackname = "My Track"
 
         every { fileStore.get(uuid) } returns storedFile
@@ -120,10 +128,16 @@ class FileStorageControllerTest(
     fun `trying to download file that does not exist in filesystem`() {
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
-        val storedFile = StoredFile(uuid, "test.gpx", TEXT_PLAIN_VALUE, "href", 123, storageLocation)
+        val storedFile = StoredFile(uuid, Filename("test.gpx"), TEXT_PLAIN_VALUE, "href", 123, storageLocation)
 
         every { fileStore.get(uuid) } returns storedFile
-        every { gpxService.protoFileToGpxInputStream(storageLocation, null, null) } throws NotFoundException("not found")
+        every {
+            gpxService.protoFileToGpxInputStream(
+                storageLocation,
+                null,
+                null,
+            )
+        } throws NotFoundException("not found")
 
         mockMvc.perform(get("/files/$uuid").header("Accept", GpsType.GPX.mimeType))
             .andExpect(status().isNotFound)
@@ -144,7 +158,7 @@ class FileStorageControllerTest(
     fun `get file as GPX`() {
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
-        val storedFile = StoredFile(uuid, "test.txt", TEXT_PLAIN_VALUE, "href", 123, storageLocation)
+        val storedFile = StoredFile(uuid, Filename("test.txt"), TEXT_PLAIN_VALUE, "href", 123, storageLocation)
 
         every { fileStore.get(uuid) } returns storedFile
         every {
@@ -171,10 +185,16 @@ class FileStorageControllerTest(
         val filename = "test.gpx"
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
-        val storedFile = StoredFile(uuid, filename, APPLICATION_XML_VALUE, "href", 123, storageLocation)
+        val storedFile = StoredFile(uuid, Filename(filename), APPLICATION_XML_VALUE, "href", 123, storageLocation)
+        val gpx = GPX.builder().build()
+        val gpsContainer = GpsContainer(null, emptyList(), null)
+        val proto = protoContainer { }
 
-        every { ioService.createTempFile(any(), filename) } returns storedFile
+        every { ioService.createTempFile(any(), Filename(filename)) } returns storedFile
         every { gpxService.protoInputStreamFromFileLocation(storageLocation) } returns NullInputStream()
+        every { gpxService.gpxFromFileLocation(storageLocation) } returns gpx
+        every { gpsMapper.fromGpx(gpx) } returns gpsContainer
+        every { gpsMapper.toProto(gpsContainer) } returns proto
         every { fileStore.put(uuid, storedFile) } returns Unit
         every { ioService.delete(storageLocation) } returns Unit
 
@@ -185,7 +205,7 @@ class FileStorageControllerTest(
         )
             .andExpect(status().isOk)
 
-        verify(exactly = 2) { ioService.createTempFile(any(), filename) }
+        verify(exactly = 2) { ioService.createTempFile(any(), Filename(filename)) }
         verify { fileStore.put(uuid, storedFile) }
         verify { ioService.delete(storageLocation) }
     }
@@ -194,7 +214,7 @@ class FileStorageControllerTest(
     fun `uploading single file fails due wrong file-suffix`() {
         val filename = "test.txt"
 
-        every { ioService.createTempFile(any(), filename) } throws IOException()
+        every { ioService.createTempFile(any(), Filename(filename)) } throws IOException()
 
         mockMvc.perform(
             post("/file")
@@ -203,7 +223,7 @@ class FileStorageControllerTest(
         )
             .andExpect(status().isBadRequest)
 
-        verify(exactly = 0) { ioService.createTempFile(any(), filename) }
+        verify(exactly = 0) { ioService.createTempFile(any(), Filename(filename)) }
         verify(exactly = 0) { fileStore.put(any(), any()) }
     }
 
@@ -211,7 +231,7 @@ class FileStorageControllerTest(
     fun `uploading single file fails due to IO issues`() {
         val filename = "test.gpx"
 
-        every { ioService.createTempFile(any(), filename) } throws IOException()
+        every { ioService.createTempFile(any(), Filename(filename)) } throws IOException()
 
         mockMvc.perform(
             post("/file")
@@ -220,7 +240,7 @@ class FileStorageControllerTest(
         )
             .andExpect(status().isInternalServerError)
 
-        verify { ioService.createTempFile(any(), filename) }
+        verify { ioService.createTempFile(any(), Filename(filename)) }
         verify(exactly = 0) { fileStore.put(any(), any()) }
     }
 
@@ -232,7 +252,7 @@ class FileStorageControllerTest(
         val storedFile =
             StoredFile(
                 uuid,
-                filename,
+                Filename(filename),
                 APPLICATION_XML_VALUE,
                 "href",
                 123,
@@ -247,7 +267,7 @@ class FileStorageControllerTest(
                 "some data".byteInputStream(),
             )
 
-        every { ioService.createTempFile(any(), filename) } returns storedFile
+        every { ioService.createTempFile(any(), Filename(filename)) } returns storedFile
         every { ioService.delete(any()) } returns Unit
         every { fileStore.put(uuid, storedFile) } returns Unit
         every { gpxService.protoInputStreamFromFileLocation(storageLocation) } returns emptyByteArrayInputStream()
@@ -258,7 +278,7 @@ class FileStorageControllerTest(
         )
             .andExpect(status().isOk)
 
-        verify { ioService.createTempFile(any(), filename) }
+        verify { ioService.createTempFile(any(), Filename(filename)) }
         verify { fileStore.put(uuid, storedFile) }
         verify { gpxService.protoInputStreamFromFileLocation(storageLocation) }
     }
@@ -269,11 +289,11 @@ class FileStorageControllerTest(
 
         val filename1 = "test1.gpx"
         val uuid1 = UUID.randomUUID()
-        val storedFile1 = StoredFile(uuid1, filename1, APPLICATION_XML_VALUE, "href", 123, storageLocation)
+        val storedFile1 = StoredFile(uuid1, Filename(filename1), APPLICATION_XML_VALUE, "href", 123, storageLocation)
 
         val filename2 = "test2.gpx"
         val uuid2 = UUID.randomUUID()
-        val storedFile2 = StoredFile(uuid2, filename2, APPLICATION_XML_VALUE, "href", 123, storageLocation)
+        val storedFile2 = StoredFile(uuid2, Filename(filename2), APPLICATION_XML_VALUE, "href", 123, storageLocation)
 
         val multipartFile1 =
             MockMultipartFile(
@@ -290,8 +310,8 @@ class FileStorageControllerTest(
                 "some data".byteInputStream(),
             )
 
-        every { ioService.createTempFile(any(), filename1) } returns storedFile1
-        every { ioService.createTempFile(any(), filename2) } returns storedFile2
+        every { ioService.createTempFile(any(), Filename(filename1)) } returns storedFile1
+        every { ioService.createTempFile(any(), Filename(filename2)) } returns storedFile2
         every { ioService.delete(any()) } returns Unit
         every { fileStore.put(any(), any()) } returns Unit
         every { gpxService.protoInputStreamFromFileLocation(any()) } returns ByteArrayInputStream(byteArrayOf())
@@ -303,8 +323,8 @@ class FileStorageControllerTest(
         )
             .andExpect(status().isOk)
 
-        verify { ioService.createTempFile(any(), filename1) }
-        verify { ioService.createTempFile(any(), filename2) }
+        verify { ioService.createTempFile(any(), Filename(filename1)) }
+        verify { ioService.createTempFile(any(), Filename(filename2)) }
         verify { fileStore.put(uuid1, storedFile1) }
         verify { fileStore.put(uuid2, storedFile2) }
         verify(exactly = 2) { ioService.delete(any()) }
@@ -317,7 +337,7 @@ class FileStorageControllerTest(
     fun `delete file`() {
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
-        val storedFile = StoredFile(uuid, "test.txt", TEXT_PLAIN_VALUE, "href", 123, storageLocation)
+        val storedFile = StoredFile(uuid, Filename("test.txt"), TEXT_PLAIN_VALUE, "href", 123, storageLocation)
 
         every { fileStore.delete(uuid) } returns storedFile
         every { ioService.delete(storageLocation) } returns Unit
@@ -347,7 +367,7 @@ class FileStorageControllerTest(
     fun `delete file fails since file is in store but not in filesystem`() {
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
-        val storedFile = StoredFile(uuid, "test.txt", TEXT_PLAIN_VALUE, "href", 123, storageLocation)
+        val storedFile = StoredFile(uuid, Filename("test.txt"), TEXT_PLAIN_VALUE, "href", 123, storageLocation)
 
         every { fileStore.delete(uuid) } returns storedFile
         every { ioService.delete(storageLocation) } throws NotFoundException("not found in filesystem")

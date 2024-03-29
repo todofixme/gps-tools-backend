@@ -1,4 +1,4 @@
-package org.devshred.gpstools.domain.gps
+package org.devshred.gpstools.formats.gps
 
 import io.jenetics.jpx.Length
 import io.jenetics.jpx.geom.Geoid
@@ -6,7 +6,7 @@ import io.jenetics.jpx.geom.Geoid
 data class Track(val wayPoints: List<WayPoint>) {
     fun calculateLength(): Length {
         return wayPoints
-            .map(WayPoint::toGpxPoint)
+            .map(WayPoint::toGpx)
             .stream()
             .collect(Geoid.WGS84.toPathLength())
     }

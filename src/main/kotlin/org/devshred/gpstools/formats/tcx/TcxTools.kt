@@ -1,12 +1,13 @@
-package org.devshred.gpstools.domain.tcx
+package org.devshred.gpstools.formats.tcx
 
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator
 import io.jenetics.jpx.geom.Geoid
-import org.devshred.gpstools.domain.common.orElse
-import org.devshred.gpstools.domain.gps.GpsContainer
-import org.devshred.gpstools.domain.gps.WayPoint
+import org.devshred.gpstools.common.orElse
+import org.devshred.gpstools.formats.gps.GpsContainer
+import org.devshred.gpstools.formats.gps.WayPoint
+import org.devshred.gpstools.formats.gps.toGpx
 import java.io.ByteArrayOutputStream
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -58,7 +59,7 @@ fun createTcxFromGpsContainer(
     var previous: WayPoint? = null
     for (point in gpsContainer.track.wayPoints) {
         if (previous != null) {
-            distance += Geoid.WGS84.distance(previous.toGpxPoint(), point.toGpxPoint()).toDouble()
+            distance += Geoid.WGS84.distance(previous.toGpx(), point.toGpx()).toDouble()
         }
         track.addTrackpoint(
             Trackpoint(

@@ -1,10 +1,11 @@
 package org.devshred.gpstools.domain.tcx
 
-import org.devshred.gpstools.domain.gps.GpsContainer
-import org.devshred.gpstools.domain.gps.PoiType
-import org.devshred.gpstools.domain.gps.Track
-import org.devshred.gpstools.domain.gps.WayPoint
-import org.devshred.gpstools.domain.tcx.TcxTools.XML_MAPPER
+import org.devshred.gpstools.formats.gps.GpsContainer
+import org.devshred.gpstools.formats.gps.PoiType
+import org.devshred.gpstools.formats.gps.Track
+import org.devshred.gpstools.formats.gps.WayPoint
+import org.devshred.gpstools.formats.tcx.TcxTools.XML_MAPPER
+import org.devshred.gpstools.formats.tcx.createTcxFromGpsContainer
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.hasSize
 import org.junit.jupiter.api.Test

@@ -1,8 +1,8 @@
-package org.devshred.gpstools.domain.tcx
+package org.devshred.gpstools.formats.tcx
 
-import org.devshred.gpstools.domain.gps.GpsContainerMapper
-import org.devshred.gpstools.domain.gps.WayPoint
-import org.devshred.gpstools.domain.proto.ProtoService
+import org.devshred.gpstools.formats.gps.GpsContainerMapper
+import org.devshred.gpstools.formats.gps.WayPoint
+import org.devshred.gpstools.formats.proto.ProtoService
 import org.geojson.FeatureCollection
 import org.geojson.Point
 import org.springframework.stereotype.Service
@@ -15,7 +15,7 @@ class TcxService(private val protoService: ProtoService, private val mapper: Gps
         name: String?,
         featureCollection: FeatureCollection?,
     ): ByteArrayInputStream {
-        val proto = protoService.readProtoGpsContainer(storageLocation, name)
+        val proto = protoService.readProtoContainer(storageLocation, name)
 
         val gpsContainer =
             if (featureCollection != null) {
