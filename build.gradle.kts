@@ -41,6 +41,7 @@ dependencies {
 
     implementation("de.grundid.opendatalab:geojson-jackson:1.14")
     implementation("io.jenetics:jpx:3.1.0")
+    implementation("com.garmin:fit:21.135.0")
 
     implementation("com.google.protobuf:protobuf-kotlin:$protoBufVersion")
     implementation("com.google.protobuf:protobuf-java-util:$protoBufVersion")

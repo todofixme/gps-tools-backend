@@ -4,12 +4,12 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator
 import io.jenetics.jpx.geom.Geoid
+import org.devshred.gpstools.common.Constants.DEFAULT_TIMEZONE
 import org.devshred.gpstools.common.orElse
 import org.devshred.gpstools.formats.gps.GpsContainer
 import org.devshred.gpstools.formats.gps.WayPoint
 import org.devshred.gpstools.formats.gps.toGpx
 import java.io.ByteArrayOutputStream
-import java.time.ZoneId
 import java.time.ZonedDateTime
 
 object TcxTools {
@@ -63,7 +63,7 @@ fun createTcxFromGpsContainer(
         }
         track.addTrackpoint(
             Trackpoint(
-                ZonedDateTime.ofInstant(point.time, ZoneId.of("UTC")),
+                ZonedDateTime.ofInstant(point.time, DEFAULT_TIMEZONE),
                 Position(point.latitude, point.longitude),
                 point.elevation!!.toDouble(),
                 distance,
@@ -83,7 +83,7 @@ fun createTcxFromGpsContainer(
             course.addCoursePoint(
                 CoursePoint(
                     name = wayPoint.name.orElse { "unnamed" },
-                    time = wayPoint.time?.atZone(ZoneId.of("UTC")),
+                    time = wayPoint.time?.atZone(DEFAULT_TIMEZONE),
                     position = Position(pointToAdd.latitude, pointToAdd.longitude),
                     pointType = wayPoint.type?.tcxType,
                 ),

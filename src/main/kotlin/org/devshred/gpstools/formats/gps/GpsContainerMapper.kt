@@ -1,8 +1,11 @@
 package org.devshred.gpstools.formats.gps
 
+import com.garmin.fit.FitMessages
+import com.garmin.fit.RecordMesg
 import com.google.protobuf.Timestamp
 import io.jenetics.jpx.GPX
 import org.devshred.gpstools.common.orElse
+import org.devshred.gpstools.formats.gps.GpsContainerMapper.Constants.SEMICIRCLES_TO_DEGREES
 import org.devshred.gpstools.formats.gpx.GPX_CREATOR
 import org.devshred.gpstools.formats.proto.ProtoContainer
 import org.devshred.gpstools.formats.proto.ProtoPoiType
@@ -15,11 +18,16 @@ import org.w3c.dom.Node
 import java.time.Instant
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.jvm.optionals.getOrNull
+import kotlin.math.pow
 import io.jenetics.jpx.WayPoint as GpxWayPoint
 import org.devshred.gpstools.formats.gps.WayPoint as GpsWayPoint
 
 @Component
 class GpsContainerMapper {
+    object Constants {
+        val SEMICIRCLES_TO_DEGREES = 180 / 2.0.pow(31.0)
+    }
+
     fun toProto(gpsContainer: GpsContainer): ProtoContainer =
         protoContainer {
             gpsContainer.name?.let { name = it }
@@ -75,6 +83,24 @@ class GpsContainerMapper {
         return GpsContainer(
             name = trackName,
             wayPoints = wayPoints,
+            track = track,
+        )
+    }
+
+    fun fromFit(fitMessages: FitMessages?): GpsContainer {
+        val track: Track? =
+            fitMessages?.let { fit ->
+                Track(
+                    fit.recordMesgs
+                        .filter { it.positionLat != null && it.positionLong != null }
+                        .map { records -> records.toGps() },
+                )
+                    .orElse { null }
+            }
+
+        return GpsContainer(
+            name = "Activity",
+            wayPoints = emptyList(),
             track = track,
         )
     }
@@ -248,3 +274,21 @@ data class ExtensionValues(
         )
     }
 }
+
+fun RecordMesg.toGps(): GpsWayPoint {
+    return GpsWayPoint(
+        latitude = this.getLatDegrees(),
+        longitude = this.getLongDegrees(),
+        elevation = this.altitude?.toDouble(),
+        time = Instant.ofEpochSecond(this.timestamp.timestamp),
+        speed = this.speed?.toDouble(),
+        power = this.power,
+        cadence = this.cadence?.toInt(),
+        temperature = this.temperature?.toInt(),
+        heartRate = this.heartRate?.toInt(),
+    )
+}
+
+private fun RecordMesg.getLatDegrees() = this.positionLat * SEMICIRCLES_TO_DEGREES
+
+private fun RecordMesg.getLongDegrees() = this.positionLong * SEMICIRCLES_TO_DEGREES

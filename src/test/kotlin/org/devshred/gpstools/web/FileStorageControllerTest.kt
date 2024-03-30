@@ -1,18 +1,15 @@
 package org.devshred.gpstools.web
 
 import com.ninjasquad.springmockk.MockkBean
-import io.jenetics.jpx.GPX
 import io.mockk.called
 import io.mockk.every
 import io.mockk.verify
 import org.apache.commons.io.input.NullInputStream
 import org.assertj.core.api.Assertions.assertThat
-import org.devshred.gpstools.formats.gps.GpsContainer
 import org.devshred.gpstools.formats.gps.GpsContainerMapper
 import org.devshred.gpstools.formats.gpx.GpxService
 import org.devshred.gpstools.formats.proto.ProtoService
-import org.devshred.gpstools.formats.proto.protoContainer
-import org.devshred.gpstools.formats.tcx.TcxService
+import org.devshred.gpstools.storage.FileService
 import org.devshred.gpstools.storage.FileStore
 import org.devshred.gpstools.storage.Filename
 import org.devshred.gpstools.storage.IOService
@@ -50,13 +47,13 @@ class FileStorageControllerTest(
     lateinit var ioService: IOService
 
     @MockkBean
+    lateinit var fileService: FileService
+
+    @MockkBean
     lateinit var protoService: ProtoService
 
     @MockkBean
     lateinit var gpxService: GpxService
-
-    @MockkBean
-    lateinit var tcxService: TcxService
 
     @MockkBean
     lateinit var gpsMapper: GpsContainerMapper
@@ -70,12 +67,12 @@ class FileStorageControllerTest(
         every { fileStore.get(uuid) } returns storedFile
         every { ioService.getAsStream(storageLocation) } returns InputStreamResource(InputStream.nullInputStream())
         every {
-            gpxService.protoFileToGpxInputStream(
+            fileService.getGpxInputStream(
                 storageLocation,
                 null,
                 null,
             )
-        } returns ByteArrayInputStream(byteArrayOf())
+        } returns emptyByteArrayInputStream()
 
         mockMvc.perform(get("/files/$uuid?mode=dl").header("Accept", GpsType.GPX.mimeType)) //
             .andExpectAll(
@@ -85,7 +82,6 @@ class FileStorageControllerTest(
             )
 
         verify { fileStore.get(uuid) }
-        verify { gpxService.protoFileToGpxInputStream(storageLocation, null, null) }
     }
 
     @Test
@@ -97,8 +93,13 @@ class FileStorageControllerTest(
 
         every { fileStore.get(uuid) } returns storedFile
         every { ioService.getAsStream(storageLocation) } returns InputStreamResource(InputStream.nullInputStream())
-        every { gpxService.protoFileToGpxInputStream(storageLocation, trackname, null) } returns
-            ByteArrayInputStream(byteArrayOf())
+        every {
+            fileService.getGpxInputStream(
+                storageLocation,
+                trackname,
+                null,
+            )
+        } returns emptyByteArrayInputStream()
 
         mockMvc.perform(get("/files/$uuid?mode=dl&name=$trackname").header("Accept", GpsType.GPX.mimeType))
             .andExpectAll(
@@ -108,7 +109,6 @@ class FileStorageControllerTest(
             )
 
         verify { fileStore.get(uuid) }
-        verify { gpxService.protoFileToGpxInputStream(storageLocation, trackname, null) }
     }
 
     @Test
@@ -132,7 +132,7 @@ class FileStorageControllerTest(
 
         every { fileStore.get(uuid) } returns storedFile
         every {
-            gpxService.protoFileToGpxInputStream(
+            fileService.getGpxInputStream(
                 storageLocation,
                 null,
                 null,
@@ -143,7 +143,6 @@ class FileStorageControllerTest(
             .andExpect(status().isNotFound)
 
         verify { fileStore.get(uuid) }
-        verify { gpxService.protoFileToGpxInputStream(storageLocation, null, null) }
     }
 
     @Test
@@ -162,12 +161,12 @@ class FileStorageControllerTest(
 
         every { fileStore.get(uuid) } returns storedFile
         every {
-            gpxService.protoFileToGpxInputStream(
+            fileService.getGpxInputStream(
                 storageLocation,
                 null,
                 null,
             )
-        } returns ByteArrayInputStream(byteArrayOf())
+        } returns emptyByteArrayInputStream()
 
         mockMvc.perform(get("/files/$uuid").header("Accept", GpsType.GPX.mimeType))
             .andExpectAll(
@@ -177,7 +176,6 @@ class FileStorageControllerTest(
             )
 
         verify { fileStore.get(uuid) }
-        verify { gpxService.protoFileToGpxInputStream(storageLocation, null, null) }
     }
 
     @Test
@@ -186,17 +184,11 @@ class FileStorageControllerTest(
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
         val storedFile = StoredFile(uuid, Filename(filename), APPLICATION_XML_VALUE, "href", 123, storageLocation)
-        val gpx = GPX.builder().build()
-        val gpsContainer = GpsContainer(null, emptyList(), null)
-        val proto = protoContainer { }
 
         every { ioService.createTempFile(any(), Filename(filename)) } returns storedFile
-        every { gpxService.protoInputStreamFromFileLocation(storageLocation) } returns NullInputStream()
-        every { gpxService.gpxFromFileLocation(storageLocation) } returns gpx
-        every { gpsMapper.fromGpx(gpx) } returns gpsContainer
-        every { gpsMapper.toProto(gpsContainer) } returns proto
         every { fileStore.put(uuid, storedFile) } returns Unit
         every { ioService.delete(storageLocation) } returns Unit
+        every { fileService.getProtoStreamFromGpxFile(storageLocation) } returns NullInputStream()
 
         mockMvc.perform(
             post("/file")
@@ -270,7 +262,7 @@ class FileStorageControllerTest(
         every { ioService.createTempFile(any(), Filename(filename)) } returns storedFile
         every { ioService.delete(any()) } returns Unit
         every { fileStore.put(uuid, storedFile) } returns Unit
-        every { gpxService.protoInputStreamFromFileLocation(storageLocation) } returns emptyByteArrayInputStream()
+        every { fileService.getProtoStreamFromGpxFile(storageLocation) } returns emptyByteArrayInputStream()
 
         mockMvc.perform(
             multipart("/files")
@@ -280,7 +272,6 @@ class FileStorageControllerTest(
 
         verify { ioService.createTempFile(any(), Filename(filename)) }
         verify { fileStore.put(uuid, storedFile) }
-        verify { gpxService.protoInputStreamFromFileLocation(storageLocation) }
     }
 
     @Test
@@ -314,7 +305,7 @@ class FileStorageControllerTest(
         every { ioService.createTempFile(any(), Filename(filename2)) } returns storedFile2
         every { ioService.delete(any()) } returns Unit
         every { fileStore.put(any(), any()) } returns Unit
-        every { gpxService.protoInputStreamFromFileLocation(any()) } returns ByteArrayInputStream(byteArrayOf())
+        every { fileService.getProtoStreamFromGpxFile(any()) } returns emptyByteArrayInputStream()
 
         mockMvc.perform(
             multipart("/files")
@@ -328,10 +319,7 @@ class FileStorageControllerTest(
         verify { fileStore.put(uuid1, storedFile1) }
         verify { fileStore.put(uuid2, storedFile2) }
         verify(exactly = 2) { ioService.delete(any()) }
-        verify(exactly = 2) { gpxService.protoInputStreamFromFileLocation(any()) }
     }
-
-    private fun emptyByteArrayInputStream() = ByteArrayInputStream(byteArrayOf())
 
     @Test
     fun `delete file`() {
@@ -438,4 +426,6 @@ class FileStorageControllerTest(
         assertThat(mapOf("foo" to "bar").getIgnoringCase("foo")).isEqualTo("bar")
         assertThat(mapOf("foo" to "bar").getIgnoringCase("BAR")).isNull()
     }
+
+    private fun emptyByteArrayInputStream() = ByteArrayInputStream(byteArrayOf())
 }
