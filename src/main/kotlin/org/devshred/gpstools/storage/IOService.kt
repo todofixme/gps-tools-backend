@@ -42,7 +42,7 @@ class IOService {
             inputStream.use {
                 Files.copy(it, tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
             }
-            log.info("Copied $filename to ${tempFile.absoluteFile}")
+            log.info("Copied ${filename.value} to ${tempFile.absoluteFile}")
         } catch (ioe: IOException) {
             throw IOException("Could not save file: " + tempFile.getName(), ioe)
         }

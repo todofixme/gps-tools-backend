@@ -17,4 +17,6 @@ class FileStore {
     }
 
     fun delete(id: UUID) = store.remove(id)
+
+    fun list() = store.values.toList()
 }
