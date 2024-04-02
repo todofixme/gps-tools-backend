@@ -15,7 +15,7 @@ class CleanupStoreJob(
 
     @Scheduled(fixedRate = 60_000) // schedules the method to run every 60 seconds
     fun reportCurrentTime() {
-        fileStore.list()
+        fileStore.list().toList() // creates a copy of the list to avoid race conditions
             .filter { it.createdAt.isBefore(LocalDateTime.now().minusMinutes(maxAge)) }
             .forEach {
                 log.info("Deleting file {} ({}).", it.id, it.filename)
