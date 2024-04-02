@@ -23,6 +23,7 @@ GET {{baseUrl}}/files/{{fileId}}
 #Accept: */*
 #Accept: application/vnd.garmin.tcx+xml
 #Accept: application/gpx+xml
+#Accept: application/geo+json
 
 ### get file as TCX
 GET {{baseUrl}}/files/{{fileId}}?type=tcx

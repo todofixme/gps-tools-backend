@@ -2,6 +2,9 @@ package org.devshred.gpstools.storage
 
 import com.garmin.fit.FitDecoder
 import com.garmin.fit.FitRuntimeException
+import mil.nga.sf.geojson.FeatureCollection
+import mil.nga.sf.geojson.FeatureConverter
+import mil.nga.sf.geojson.Point
 import org.devshred.gpstools.formats.gps.GpsContainer
 import org.devshred.gpstools.formats.gps.GpsContainerMapper
 import org.devshred.gpstools.formats.gps.PoiType
@@ -12,8 +15,6 @@ import org.devshred.gpstools.formats.proto.ProtoService
 import org.devshred.gpstools.formats.tcx.TrainingCenterDatabase
 import org.devshred.gpstools.formats.tcx.createTcxFromGpsContainer
 import org.devshred.gpstools.formats.tcx.tcxToByteArrayOutputStream
-import org.geojson.FeatureCollection
-import org.geojson.Point
 import org.springframework.stereotype.Service
 import java.io.ByteArrayInputStream
 import java.io.FileInputStream
@@ -77,8 +78,8 @@ class FileService(
                 featureCollection.features.map { feature ->
                     val point = feature.geometry as Point
                     WayPoint(
-                        latitude = point.coordinates.latitude,
-                        longitude = point.coordinates.longitude,
+                        latitude = point.position.y,
+                        longitude = point.position.x,
                         name = feature.properties["name"] as String?,
                         type = PoiType.fromString((feature.properties["type"] as String?) ?: "GENERIC"),
                     )
@@ -89,5 +90,16 @@ class FileService(
         } else {
             return gpsMapper.fromProto(protoGpsContainer)
         }
+    }
+
+    fun getGeoJsonInputStream(
+        storageLocation: String,
+        name: String?,
+        waypoints: FeatureCollection?,
+    ): InputStream {
+        val gpsContainer: GpsContainer = getGpsContainer(storageLocation, name, waypoints)
+        val geoJson = gpsMapper.toGeoJson(gpsContainer)
+        val jsonString = FeatureConverter.toStringValue(geoJson)
+        return ByteArrayInputStream(jsonString.toByteArray())
     }
 }

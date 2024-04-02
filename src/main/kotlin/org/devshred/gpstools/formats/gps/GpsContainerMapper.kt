@@ -4,6 +4,11 @@ import com.garmin.fit.FitMessages
 import com.garmin.fit.RecordMesg
 import com.google.protobuf.Timestamp
 import io.jenetics.jpx.GPX
+import mil.nga.sf.geojson.Feature
+import mil.nga.sf.geojson.FeatureCollection
+import mil.nga.sf.geojson.LineString
+import mil.nga.sf.geojson.Point
+import mil.nga.sf.geojson.Position
 import org.devshred.gpstools.common.orElse
 import org.devshred.gpstools.formats.gps.GpsContainerMapper.Constants.SEMICIRCLES_TO_DEGREES
 import org.devshred.gpstools.formats.gpx.GPX_CREATOR
@@ -103,6 +108,45 @@ class GpsContainerMapper {
             wayPoints = emptyList(),
             track = track,
         )
+    }
+
+    /**
+     * Converts a [GpsContainer] to a GeoJson [FeatureCollection].
+     * To reduce the amount of data to be transferred, only the properties that are used by the frontend to visualize the track are converted.
+     *
+     * The track is represented as a [LineString] feature.
+     * The wayPoints are represented as [Point] features.
+     */
+    fun toGeoJson(gpsContainer: GpsContainer): FeatureCollection {
+        val geoTrackPoints =
+            gpsContainer.track?.wayPoints?.map {
+                val position = Position(it.longitude, it.latitude)
+                val point = Point(position)
+                point
+            }
+        val lineString = LineString(geoTrackPoints)
+        val lineStringFeature = Feature(lineString)
+        lineStringFeature.properties["name"] = gpsContainer.name
+
+        val featureCollection = FeatureCollection()
+        featureCollection.addFeature(lineStringFeature)
+
+        gpsContainer.wayPoints.forEach { wayPoint ->
+            val position = Position(wayPoint.latitude, wayPoint.longitude)
+            val point = Point(position)
+            val feature = Feature(point)
+
+            wayPoint.name?.let { feature.properties["name"] = wayPoint.name.toString() }
+            wayPoint.type?.let { feature.properties["type"] = wayPoint.type.toString() }
+
+            featureCollection.addFeature(feature)
+        }
+
+        return featureCollection
+    }
+
+    fun fromGeoJson(featureCollection: FeatureCollection): GpsContainer {
+        throw UnsupportedOperationException("Not yet implemented")
     }
 }
 

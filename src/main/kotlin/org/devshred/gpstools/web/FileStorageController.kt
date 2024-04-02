@@ -2,13 +2,13 @@ package org.devshred.gpstools.web
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.http.HttpServletRequest
+import mil.nga.sf.geojson.FeatureCollection
 import org.devshred.gpstools.common.orElse
 import org.devshred.gpstools.storage.FileService
 import org.devshred.gpstools.storage.FileStore
 import org.devshred.gpstools.storage.Filename
 import org.devshred.gpstools.storage.IOService
 import org.devshred.gpstools.storage.StoredFile
-import org.geojson.FeatureCollection
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.InputStreamResource
 import org.springframework.core.io.Resource
@@ -80,6 +80,7 @@ class FileStorageController(
             when (gpsType) {
                 GpsType.GPX -> fileService.getGpxInputStream(storedFile.storageLocation, name, waypoints)
                 GpsType.TCX -> fileService.getTcxInputStream(storedFile.storageLocation, name, waypoints)
+                GpsType.JSON -> fileService.getGeoJsonInputStream(storedFile.storageLocation, name, waypoints)
                 else -> {
                     throw IllegalArgumentException("$gpsType is not supported yet")
                 }

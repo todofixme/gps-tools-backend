@@ -20,7 +20,7 @@ class GpsTypeTest {
         assertThat(GpsType.fromMimeType("application/vnd.garmin.tcx+xml")).isEqualTo(GpsType.TCX)
         assertThat(GpsType.fromMimeType("application/gpx+xml")).isEqualTo(GpsType.GPX)
         assertThat(GpsType.fromMimeType("application/fit")).isEqualTo(GpsType.FIT)
-        assertThat(GpsType.fromMimeType("application/json")).isEqualTo(GpsType.JSON)
+        assertThat(GpsType.fromMimeType("application/geo+json")).isEqualTo(GpsType.JSON)
 
         assertThat(GpsType.fromMimeType("application/something")).isNull()
     }

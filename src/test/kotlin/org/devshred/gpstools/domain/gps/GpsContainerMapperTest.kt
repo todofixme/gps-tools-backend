@@ -1,12 +1,18 @@
 package org.devshred.gpstools.domain.gps
 
 import io.jenetics.jpx.GPX
+import mil.nga.sf.geojson.FeatureCollection
+import mil.nga.sf.geojson.Point
+import mil.nga.sf.geojson.Position
 import org.apache.commons.lang3.RandomStringUtils
 import org.apache.commons.math3.random.RandomDataGenerator
 import org.assertj.core.api.Assertions.assertThat
 import org.devshred.gpstools.formats.gps.ExtensionValues
+import org.devshred.gpstools.formats.gps.GpsContainer
 import org.devshred.gpstools.formats.gps.GpsContainerMapper
 import org.devshred.gpstools.formats.gps.PoiType
+import org.devshred.gpstools.formats.gps.Track
+import org.devshred.gpstools.formats.gps.WayPoint
 import org.devshred.gpstools.formats.gps.toGps
 import org.devshred.gpstools.formats.gps.toProto
 import org.devshred.gpstools.formats.proto.protoContainer
@@ -166,6 +172,56 @@ class GpsContainerMapperTest {
         val actual = valuesA.union(valuesB)
 
         assertThat(actual).isEqualTo(expected)
+    }
+
+    @Test
+    fun `maps to GeoJSON`() {
+        val trackPoints =
+            listOf(
+                WayPoint(11.0, 12.0),
+                WayPoint(21.0, 22.0),
+                WayPoint(31.0, 32.0),
+                WayPoint(41.0, 42.0),
+                WayPoint(51.0, 52.0),
+            )
+        val wayPoints =
+            listOf(
+                WayPoint(11.0, 12.0, type = PoiType.RESIDENCE),
+                WayPoint(31.0, 32.0, type = PoiType.FOOD),
+                WayPoint(51.0, 52.0, type = PoiType.SPRINT),
+            )
+        val track = Track(trackPoints)
+        val gpsContainer = GpsContainer("TestTrack", wayPoints, track)
+
+        val actual: FeatureCollection = mapper.toGeoJson(gpsContainer)
+
+        // 1 track and 3 wayPoints
+        assertThat(actual.features).hasSize(4)
+
+        // the track (of type LineString)
+        assertThat(actual.features.filter { it.geometry.type == "LineString" }).hasSize(1)
+        assertThat(
+            actual.features
+                .filter { it.geometry.type == "LineString" }
+                .flatMap { f -> (f.geometry as mil.nga.sf.geojson.LineString).coordinates },
+        )
+            .containsExactly(
+                Position(12.0, 11.0),
+                Position(22.0, 21.0),
+                Position(32.0, 31.0),
+                Position(42.0, 41.0),
+                Position(52.0, 51.0),
+            )
+
+        // the wayPoints (of type Point)
+        assertThat(actual.features.filter { it.geometry.type == "Point" }).hasSize(3)
+        assertThat(
+            actual.features
+                .filter { it.geometry.type == "Point" }
+                .filter { it.properties["type"] == "FOOD" }
+                .map { (it.geometry as Point).point },
+        )
+            .isEqualTo(listOf(mil.nga.sf.Point(31.0, 32.0)))
     }
 
     private fun randomWayPoint(): GpxWayPoint =
