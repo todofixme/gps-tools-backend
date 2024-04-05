@@ -5,6 +5,7 @@ import io.mockk.called
 import io.mockk.every
 import io.mockk.verify
 import org.apache.commons.io.input.NullInputStream
+import org.apache.tomcat.util.http.fileupload.impl.SizeLimitExceededException
 import org.assertj.core.api.Assertions.assertThat
 import org.devshred.gpstools.formats.gps.GpsContainerMapper
 import org.devshred.gpstools.formats.gpx.GpxService
@@ -231,6 +232,28 @@ class FileStorageControllerTest(
                 .content("123"),
         )
             .andExpect(status().isInternalServerError)
+
+        verify { ioService.createTempFile(any(), Filename(filename)) }
+        verify(exactly = 0) { fileStore.put(any(), any()) }
+    }
+
+    @Test
+    fun `uploading large file fails`() {
+        val filename = "test.gpx"
+
+        every {
+            ioService.createTempFile(
+                any(),
+                Filename(filename),
+            )
+        } throws SizeLimitExceededException("file too large", 2, 1)
+
+        mockMvc.perform(
+            post("/file")
+                .param("filename", filename)
+                .content("123"),
+        )
+            .andExpect(status().isPayloadTooLarge)
 
         verify { ioService.createTempFile(any(), Filename(filename)) }
         verify(exactly = 0) { fileStore.put(any(), any()) }
