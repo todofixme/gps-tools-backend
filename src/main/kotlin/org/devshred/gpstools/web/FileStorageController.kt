@@ -16,7 +16,6 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
-import org.springframework.util.StringUtils
 import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -50,7 +49,7 @@ class FileStorageController(
     @Throws(IOException::class)
     fun download(
         @PathVariable id: String,
-        @RequestParam("mode", required = false) mode: String?,
+        @RequestParam("mode", required = false) mode: Array<String>?,
         @RequestParam("name", required = false) name: String?,
         @RequestParam("type", required = false) type: String?,
         @RequestParam("wp", required = false) waypointsEncoded: String?,
@@ -76,10 +75,12 @@ class FileStorageController(
                 }
             }
 
+        val optimize: Boolean = mode?.contains("opt") ?: false
+
         val inputStream =
             when (gpsType) {
-                GpsType.GPX -> fileService.getGpxInputStream(storedFile.storageLocation, name, waypoints)
-                GpsType.TCX -> fileService.getTcxInputStream(storedFile.storageLocation, name, waypoints)
+                GpsType.GPX -> fileService.getGpxInputStream(storedFile.storageLocation, name, waypoints, optimize)
+                GpsType.TCX -> fileService.getTcxInputStream(storedFile.storageLocation, name, waypoints, optimize)
                 GpsType.JSON -> fileService.getGeoJsonInputStream(storedFile.storageLocation, name, waypoints)
                 else -> {
                     throw IllegalArgumentException("$gpsType is not supported yet")
@@ -88,7 +89,7 @@ class FileStorageController(
         val inputStreamResource = InputStreamResource(inputStream)
 
         val responseHeaders = HttpHeaders()
-        if (StringUtils.hasText(mode) && mode == "dl") {
+        if (mode != null && mode.contains("dl")) {
             val basename = name.orElse { storedFile.filename.value }
             val file = File(basename)
             val filename =

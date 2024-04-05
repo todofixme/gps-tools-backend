@@ -13,7 +13,6 @@ import org.devshred.gpstools.formats.gpx.GpxService
 import org.devshred.gpstools.formats.gpx.gpxToByteArrayOutputStream
 import org.devshred.gpstools.formats.proto.ProtoService
 import org.devshred.gpstools.formats.tcx.TrainingCenterDatabase
-import org.devshred.gpstools.formats.tcx.createTcxFromGpsContainer
 import org.devshred.gpstools.formats.tcx.tcxToByteArrayOutputStream
 import org.springframework.stereotype.Service
 import java.io.ByteArrayInputStream
@@ -30,8 +29,13 @@ class FileService(
         storageLocation: String,
         name: String?,
         featureCollection: FeatureCollection? = null,
+        optimizeWaypoints: Boolean = false,
     ): InputStream {
-        val gpsContainer: GpsContainer = getGpsContainer(storageLocation, name, featureCollection)
+        val gpsContainer: GpsContainer =
+            getGpsContainer(storageLocation, name, featureCollection)
+                .let {
+                    it.takeIf { optimizeWaypoints }?.withOptimizedWayPoints() ?: it
+                }
         val outputStream = gpxToByteArrayOutputStream(gpsMapper.toGpx(gpsContainer))
         return ByteArrayInputStream(outputStream.toByteArray())
     }
@@ -40,9 +44,14 @@ class FileService(
         storageLocation: String,
         name: String?,
         featureCollection: FeatureCollection?,
+        optimizeWaypoints: Boolean = false,
     ): InputStream {
-        val gpsContainer: GpsContainer = getGpsContainer(storageLocation, name, featureCollection)
-        val tcx: TrainingCenterDatabase = createTcxFromGpsContainer(gpsContainer)
+        val gpsContainer: GpsContainer =
+            getGpsContainer(storageLocation, name, featureCollection)
+                .let {
+                    it.takeIf { optimizeWaypoints }?.withOptimizedWayPoints() ?: it
+                }
+        val tcx: TrainingCenterDatabase = gpsMapper.toTcx(gpsContainer)
         val outputStream = tcxToByteArrayOutputStream(tcx)
         return ByteArrayInputStream(outputStream.toByteArray())
     }

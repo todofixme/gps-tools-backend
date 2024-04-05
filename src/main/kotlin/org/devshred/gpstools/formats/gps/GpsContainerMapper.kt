@@ -4,6 +4,7 @@ import com.garmin.fit.FitMessages
 import com.garmin.fit.RecordMesg
 import com.google.protobuf.Timestamp
 import io.jenetics.jpx.GPX
+import io.jenetics.jpx.geom.Geoid
 import mil.nga.sf.geojson.Feature
 import mil.nga.sf.geojson.FeatureCollection
 import mil.nga.sf.geojson.LineString
@@ -18,9 +19,15 @@ import org.devshred.gpstools.formats.proto.ProtoWayPoint
 import org.devshred.gpstools.formats.proto.protoContainer
 import org.devshred.gpstools.formats.proto.protoTrack
 import org.devshred.gpstools.formats.proto.protoWayPoint
+import org.devshred.gpstools.formats.tcx.Course
+import org.devshred.gpstools.formats.tcx.CoursePoint
+import org.devshred.gpstools.formats.tcx.Lap
+import org.devshred.gpstools.formats.tcx.Trackpoint
+import org.devshred.gpstools.formats.tcx.TrainingCenterDatabase
 import org.springframework.stereotype.Component
 import org.w3c.dom.Node
 import java.time.Instant
+import java.time.ZonedDateTime
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.jvm.optionals.getOrNull
 import kotlin.math.pow
@@ -147,6 +154,64 @@ class GpsContainerMapper {
 
     fun fromGeoJson(featureCollection: FeatureCollection): GpsContainer {
         throw UnsupportedOperationException("Not yet implemented")
+    }
+
+    fun toTcx(gpsContainer: GpsContainer): TrainingCenterDatabase {
+        val trainingCenterDatabase = TrainingCenterDatabase()
+
+        val course = Course(gpsContainer.name!!)
+        val wayPoints = gpsContainer.track!!.wayPoints
+        val lap =
+            Lap(
+                totalTimeSeconds = (wayPoints[wayPoints.size - 1].time!!.epochSecond - wayPoints[0].time!!.epochSecond).toDouble(),
+                distanceMeters = gpsContainer.track.calculateLength().toDouble(),
+                beginPosition =
+                    org.devshred.gpstools.formats.tcx.Position(
+                        wayPoints[0].latitude,
+                        wayPoints[0].longitude,
+                    ),
+                endPosition =
+                    org.devshred.gpstools.formats.tcx.Position(
+                        wayPoints[wayPoints.size - 1].latitude,
+                        wayPoints[wayPoints.size - 1].longitude,
+                    ),
+                intensity = "Active",
+            )
+        course.setLap(lap)
+
+        val track = org.devshred.gpstools.formats.tcx.Track()
+        var distance = 0.0
+        var previous: GpsWayPoint? = null
+        for (point in gpsContainer.track.wayPoints) {
+            if (previous != null) {
+                distance += Geoid.WGS84.distance(previous.toGpx(), point.toGpx()).toDouble()
+            }
+            track.addTrackpoint(
+                Trackpoint(
+                    ZonedDateTime.ofInstant(point.time, org.devshred.gpstools.common.Constants.DEFAULT_TIMEZONE),
+                    org.devshred.gpstools.formats.tcx.Position(point.latitude, point.longitude),
+                    point.elevation!!.toDouble(),
+                    distance,
+                ),
+            )
+            previous = point
+        }
+        course.setTrack(track)
+
+        gpsContainer.wayPoints.forEach { wayPoint: GpsWayPoint ->
+            course.addCoursePoint(
+                CoursePoint(
+                    name = wayPoint.name.orElse { "unnamed" },
+                    time = wayPoint.time?.atZone(org.devshred.gpstools.common.Constants.DEFAULT_TIMEZONE),
+                    position = org.devshred.gpstools.formats.tcx.Position(wayPoint.latitude, wayPoint.longitude),
+                    pointType = wayPoint.type?.tcxType,
+                ),
+            )
+        }
+
+        trainingCenterDatabase.addCourse(course)
+
+        return trainingCenterDatabase
     }
 }
 

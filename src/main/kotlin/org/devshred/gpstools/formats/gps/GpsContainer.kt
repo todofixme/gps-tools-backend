@@ -3,7 +3,16 @@ package org.devshred.gpstools.formats.gps
 import io.jenetics.jpx.geom.Geoid
 
 data class GpsContainer(val name: String?, val wayPoints: List<WayPoint>, val track: Track?) {
-    fun findWayPointOnTrackNearestTo(wayPoint: WayPoint): WayPoint {
+    fun withOptimizedWayPoints(tolerance: Int = MAX_DISTANCE_BETWEEN_TRACK_AND_WAYPOINT): GpsContainer {
+        val optimizedWayPoints =
+            wayPoints.map {
+                findWayPointOnTrackNearestTo(it, tolerance) ?: it
+            }
+
+        return GpsContainer(name, optimizedWayPoints, track)
+    }
+
+    private fun findWayPointOnTrackNearestTo(wayPoint: WayPoint): WayPoint {
         val gpxPoint = wayPoint.toGpx()
         val nearestGpxPoint =
             track?.wayPoints?.stream()
@@ -21,7 +30,7 @@ data class GpsContainer(val name: String?, val wayPoints: List<WayPoint>, val tr
         return nearestGpxPoint!!.toGps()
     }
 
-    fun findWayPointOnTrackNearestTo(
+    private fun findWayPointOnTrackNearestTo(
         wayPoint: WayPoint,
         tolerance: Int,
     ): WayPoint? {
@@ -29,7 +38,9 @@ data class GpsContainer(val name: String?, val wayPoints: List<WayPoint>, val tr
         return if (Geoid.WGS84.distance(nearestWayPoint.toGpx(), wayPoint.toGpx()).toInt() > tolerance) {
             null
         } else {
-            nearestWayPoint
+            wayPoint.copy(latitude = nearestWayPoint.latitude, longitude = nearestWayPoint.longitude)
         }
     }
 }
+
+private const val MAX_DISTANCE_BETWEEN_TRACK_AND_WAYPOINT = 500

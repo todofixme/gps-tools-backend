@@ -1,20 +1,14 @@
-package org.devshred.gpstools.domain.tcx
+package org.devshred.gpstools.domain.gps
 
+import org.assertj.core.api.Assertions.assertThat
 import org.devshred.gpstools.formats.gps.GpsContainer
 import org.devshred.gpstools.formats.gps.PoiType
 import org.devshred.gpstools.formats.gps.Track
 import org.devshred.gpstools.formats.gps.WayPoint
-import org.devshred.gpstools.formats.tcx.TcxTools.XML_MAPPER
-import org.devshred.gpstools.formats.tcx.createTcxFromGpsContainer
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.hasSize
 import org.junit.jupiter.api.Test
-import org.xmlunit.diff.DefaultNodeMatcher
-import org.xmlunit.diff.ElementSelectors
-import org.xmlunit.matchers.CompareMatcher
 import java.time.Instant
 
-class TcxToolsTest {
+class GpsContainerTest {
     private val gpsContainer =
         GpsContainer(
             name = "Happy Path Example",
@@ -54,24 +48,8 @@ class TcxToolsTest {
                 ),
         )
 
-    private val expectedTcx = this::class.java.classLoader.getResource("data/full.tcx").readText()
-
     @Test
-    fun `test createTcxFromGpsContainer`() {
-        val tcx = createTcxFromGpsContainer(gpsContainer)
-
-        val actualTcx = XML_MAPPER.writeValueAsString(tcx)
-
-        assertThat(
-            actualTcx,
-            CompareMatcher.isSimilarTo(expectedTcx)
-                .withNodeMatcher(DefaultNodeMatcher(ElementSelectors.byName))
-                .ignoreWhitespace(),
-        )
-    }
-
-    @Test
-    fun `test createTcxFromGpsContainer with wayPoint not on track`() {
+    fun `optimized wayPoint - put on track`() {
         val containerToTest =
             gpsContainer.copy(
                 wayPoints =
@@ -86,21 +64,13 @@ class TcxToolsTest {
                     ),
             )
 
-        val tcx = createTcxFromGpsContainer(containerToTest, true)
-        val actualTcx = XML_MAPPER.writeValueAsString(tcx)
+        val actual = containerToTest.withOptimizedWayPoints()
 
-        assertThat(tcx.getCourse().first().getCoursePoints(), hasSize(1))
-
-        assertThat(
-            actualTcx,
-            CompareMatcher.isSimilarTo(expectedTcx)
-                .withNodeMatcher(DefaultNodeMatcher(ElementSelectors.byName))
-                .ignoreWhitespace(),
-        )
+        assertThat(actual.wayPoints[0].latitude).isEqualTo(36.74881700)
     }
 
     @Test
-    fun `test createTcxFromGpsContainer with wayPoint not on track and to far away`() {
+    fun `optimize wayPoint - not on track since too far away`() {
         val containerToTest =
             gpsContainer.copy(
                 wayPoints =
@@ -115,8 +85,8 @@ class TcxToolsTest {
                     ),
             )
 
-        val tcx = createTcxFromGpsContainer(containerToTest, true)
+        val actual = containerToTest.withOptimizedWayPoints()
 
-        assertThat(tcx.getCourse().first().getCoursePoints(), hasSize(0))
+        assertThat(actual.wayPoints[0].latitude).isEqualTo(36.74181700)
     }
 }
