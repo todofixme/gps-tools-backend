@@ -429,6 +429,13 @@ class FileStorageControllerTest(
     }
 
     @Test
+    fun `remove leading and trailing underscores and hyphens`() {
+        assertThat("__foo_bar--".sanitize()).isEqualTo("foo_bar")
+        assertThat("--foo_bar__".sanitize()).isEqualTo("foo_bar")
+        assertThat("-_foo_bar_-".sanitize()).isEqualTo("foo_bar")
+    }
+
+    @Test
     fun `test containsKeyIgnoringCase`() {
         assertThat(mapOf("FOO" to "bar").containsKeyIgnoringCase("FOO")).isTrue()
         assertThat(mapOf("FOO" to "bar").containsKeyIgnoringCase("foo")).isTrue()

@@ -222,6 +222,8 @@ private fun isGpsFile(filename: String?) = isGpxFile(filename) || isFitFile(file
 
 private val notAllowedCharacters = "[^a-zA-Z0-9\\p{L}\\p{M}*\\p{N}.\\-]".toRegex()
 private val moreThan2UnderscoresInARow = "_{3,}".toRegex()
+private val leadingUnderscoresAndHyphens = "^[-_]+".toRegex()
+private val trailingUnderscoresAndHyphens = "[-_]+$".toRegex()
 private const val TWO_UNDERSCORES = "__"
 private val DEFAULT_GPS_TYPE = GpsType.GPX
 
@@ -230,6 +232,8 @@ fun String.sanitize(): String {
         .trim()
         .replace(notAllowedCharacters, "_")
         .replace(moreThan2UnderscoresInARow, TWO_UNDERSCORES)
+        .replace(leadingUnderscoresAndHyphens, "")
+        .replace(trailingUnderscoresAndHyphens, "")
 }
 
 fun Map<String, Any>.containsKeyIgnoringCase(other: String): Boolean {
