@@ -5,9 +5,9 @@ import io.jenetics.jpx.geom.Geoid
 data class GpsContainer(val name: String?, val wayPoints: List<WayPoint>, val track: Track?) {
     fun withOptimizedWayPoints(tolerance: Int = MAX_DISTANCE_BETWEEN_TRACK_AND_WAYPOINT): GpsContainer {
         val optimizedWayPoints =
-            wayPoints.map {
-                findWayPointOnTrackNearestTo(it, tolerance) ?: it
-            }
+            wayPoints
+                .map { findWayPointOnTrackNearestTo(it, tolerance) ?: it }
+                .sortedBy { it.time }
 
         return GpsContainer(name, optimizedWayPoints, track)
     }
@@ -38,7 +38,11 @@ data class GpsContainer(val name: String?, val wayPoints: List<WayPoint>, val tr
         return if (Geoid.WGS84.distance(nearestWayPoint.toGpx(), wayPoint.toGpx()).toInt() > tolerance) {
             null
         } else {
-            wayPoint.copy(latitude = nearestWayPoint.latitude, longitude = nearestWayPoint.longitude)
+            wayPoint.copy(
+                latitude = nearestWayPoint.latitude,
+                longitude = nearestWayPoint.longitude,
+                time = nearestWayPoint.time,
+            )
         }
     }
 }

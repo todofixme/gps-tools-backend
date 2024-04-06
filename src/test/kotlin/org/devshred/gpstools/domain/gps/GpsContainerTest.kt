@@ -89,4 +89,34 @@ class GpsContainerTest {
 
         assertThat(actual.wayPoints[0].latitude).isEqualTo(36.74181700)
     }
+
+    @Test
+    fun `optimized wayPoint - order waypoints by time`() {
+        val containerToTest =
+            gpsContainer.copy(
+                wayPoints =
+                    listOf(
+                        WayPoint(
+                            latitude = 36.732,
+                            longitude = -3.688,
+                            type = PoiType.RESIDENCE,
+                            name = "Finish",
+                        ),
+                        WayPoint(
+                            latitude = 36.722,
+                            longitude = -4.410,
+                            type = PoiType.STRAIGHT,
+                            name = "Start",
+                        ),
+                    ),
+            )
+
+        val actual = containerToTest.withOptimizedWayPoints()
+
+        assertThat(actual.wayPoints[0].name).isEqualTo("Start")
+        assertThat(actual.wayPoints[0].latitude).isEqualTo(36.72100500)
+
+        assertThat(actual.wayPoints[1].name).isEqualTo("Finish")
+        assertThat(actual.wayPoints[1].latitude).isEqualTo(36.73361890)
+    }
 }
