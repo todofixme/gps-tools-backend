@@ -30,6 +30,7 @@ import org.xmlunit.matchers.CompareMatcher
 import java.time.Instant
 import java.util.stream.Stream
 import io.jenetics.jpx.WayPoint as GpxWayPoint
+import org.xmlunit.assertj.XmlAssert.assertThat as xmlAssertThat
 
 class GpsContainerMapperTest {
     private val randomGenerator = RandomDataGenerator().randomGenerator
@@ -233,6 +234,49 @@ class GpsContainerMapperTest {
                 .withNodeMatcher(DefaultNodeMatcher(ElementSelectors.byName))
                 .ignoreWhitespace(),
         )
+    }
+
+    @Test
+    fun `convert to TCX even if trackPoints does not contain time`() {
+        val tcx =
+            mapper.toTcx(
+                gpsContainer.copy(
+                    wayPoints =
+                        listOf(
+                            WayPoint(
+                                latitude = 36.74881700,
+                                longitude = -4.07262399,
+                                type = PoiType.FOOD,
+                                name = "Highlight",
+                            ),
+                        ),
+                    track =
+                        Track(
+                            wayPoints =
+                                listOf(
+                                    WayPoint(
+                                        latitude = 36.72100500,
+                                        longitude = -4.41088200,
+                                        elevation = 14.000000,
+                                    ),
+                                    WayPoint(
+                                        latitude = 36.74881700,
+                                        longitude = -4.07262399,
+                                        elevation = 3.0000000,
+                                    ),
+                                ),
+                        ),
+                ),
+            )
+
+        val actualTcx = TcxTools.XML_MAPPER.writeValueAsString(tcx)
+
+        val tcxNs = mapOf("tcx" to "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2")
+
+        xmlAssertThat(actualTcx)
+            .withNamespaceContext(tcxNs)
+            .valueByXPath("//tcx:TrainingCenterDatabase/tcx:Courses/tcx:Course/tcx:Lap/tcx:TotalTimeSeconds/text()")
+            .isEqualTo("0.0")
     }
 
     @Test

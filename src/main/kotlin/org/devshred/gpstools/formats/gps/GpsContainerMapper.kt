@@ -10,6 +10,7 @@ import mil.nga.sf.geojson.FeatureCollection
 import mil.nga.sf.geojson.LineString
 import mil.nga.sf.geojson.Point
 import mil.nga.sf.geojson.Position
+import org.devshred.gpstools.common.Constants.DEFAULT_TIMEZONE
 import org.devshred.gpstools.common.orElse
 import org.devshred.gpstools.formats.gps.GpsContainerMapper.Constants.SEMICIRCLES_TO_DEGREES
 import org.devshred.gpstools.formats.gpx.GPX_CREATOR
@@ -33,6 +34,8 @@ import kotlin.jvm.optionals.getOrNull
 import kotlin.math.pow
 import io.jenetics.jpx.WayPoint as GpxWayPoint
 import org.devshred.gpstools.formats.gps.WayPoint as GpsWayPoint
+import org.devshred.gpstools.formats.tcx.Position as TcxPosition
+import org.devshred.gpstools.formats.tcx.Track as TcxTrack
 
 @Component
 class GpsContainerMapper {
@@ -160,50 +163,63 @@ class GpsContainerMapper {
         val trainingCenterDatabase = TrainingCenterDatabase()
 
         val course = Course(gpsContainer.name!!)
-        val wayPoints = gpsContainer.track!!.wayPoints
-        val lap =
-            Lap(
-                totalTimeSeconds = (wayPoints[wayPoints.size - 1].time!!.epochSecond - wayPoints[0].time!!.epochSecond).toDouble(),
-                distanceMeters = gpsContainer.track.calculateLength().toDouble(),
-                beginPosition =
-                    org.devshred.gpstools.formats.tcx.Position(
-                        wayPoints[0].latitude,
-                        wayPoints[0].longitude,
-                    ),
-                endPosition =
-                    org.devshred.gpstools.formats.tcx.Position(
-                        wayPoints[wayPoints.size - 1].latitude,
-                        wayPoints[wayPoints.size - 1].longitude,
-                    ),
-                intensity = "Active",
-            )
-        course.setLap(lap)
+        gpsContainer.track?.let { track ->
+            val wayPoints = track.wayPoints
+            val firstWayPoint = wayPoints[0]
+            val lastWayPoint = wayPoints[wayPoints.size - 1]
+            val durationInSeconds =
+                if (firstWayPoint.time != null && lastWayPoint.time != null && firstWayPoint.time < lastWayPoint.time) {
+                    (lastWayPoint.time.epochSecond - firstWayPoint.time.epochSecond).toDouble()
+                } else {
+                    0.0
+                }
+            val lap =
+                Lap(
+                    totalTimeSeconds = durationInSeconds,
+                    distanceMeters = track.calculateLength().toDouble(),
+                    beginPosition =
+                        TcxPosition(
+                            firstWayPoint.latitude,
+                            firstWayPoint.longitude,
+                        ),
+                    endPosition =
+                        TcxPosition(
+                            lastWayPoint.latitude,
+                            lastWayPoint.longitude,
+                        ),
+                    intensity = "Active",
+                )
+            course.setLap(lap)
 
-        val track = org.devshred.gpstools.formats.tcx.Track()
-        var distance = 0.0
-        var previous: GpsWayPoint? = null
-        for (point in gpsContainer.track.wayPoints) {
-            if (previous != null) {
-                distance += Geoid.WGS84.distance(previous.toGpx(), point.toGpx()).toDouble()
+            val tcxTrack = TcxTrack()
+            var distance = 0.0
+            var previous: GpsWayPoint? = null
+            val timeFallback = ZonedDateTime.now(DEFAULT_TIMEZONE)
+            for (point in track.wayPoints) {
+                if (previous != null) {
+                    distance += Geoid.WGS84.distance(previous.toGpx(), point.toGpx()).toDouble()
+                }
+                tcxTrack.addTrackpoint(
+                    Trackpoint(
+                        point.time
+                            ?.let { ZonedDateTime.ofInstant(point.time, DEFAULT_TIMEZONE) }
+                            .orElse { timeFallback },
+                        TcxPosition(point.latitude, point.longitude),
+                        point.elevation!!.toDouble(),
+                        distance,
+                    ),
+                )
+                previous = point
             }
-            track.addTrackpoint(
-                Trackpoint(
-                    ZonedDateTime.ofInstant(point.time, org.devshred.gpstools.common.Constants.DEFAULT_TIMEZONE),
-                    org.devshred.gpstools.formats.tcx.Position(point.latitude, point.longitude),
-                    point.elevation!!.toDouble(),
-                    distance,
-                ),
-            )
-            previous = point
+            course.setTrack(tcxTrack)
         }
-        course.setTrack(track)
 
         gpsContainer.wayPoints.forEach { wayPoint: GpsWayPoint ->
             course.addCoursePoint(
                 CoursePoint(
                     name = wayPoint.name.orElse { "unnamed" },
-                    time = wayPoint.time?.atZone(org.devshred.gpstools.common.Constants.DEFAULT_TIMEZONE),
-                    position = org.devshred.gpstools.formats.tcx.Position(wayPoint.latitude, wayPoint.longitude),
+                    time = wayPoint.time?.atZone(DEFAULT_TIMEZONE),
+                    position = TcxPosition(wayPoint.latitude, wayPoint.longitude),
                     pointType = wayPoint.type?.tcxType,
                 ),
             )
