@@ -7,7 +7,7 @@ plugins {
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.spring") version kotlinVersion
 
-    id("org.springframework.boot") version "3.2.4"
+    id("org.springframework.boot") version "3.2.5"
     id("io.spring.dependency-management") version "1.1.4"
 
     id("com.google.protobuf") version "0.9.4"
@@ -29,7 +29,7 @@ repositories {
     mavenCentral()
 }
 
-val protoBufVersion = "4.26.0"
+val protoBufVersion = "4.26.1"
 val jacksonVersion = "2.15.4"
 val xmlunitVersion = "2.9.1"
 
@@ -37,12 +37,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.apache.tika:tika-core:2.9.1")
+    implementation("org.apache.tika:tika-core:2.9.2")
 
     implementation("io.jenetics:jpx:3.1.0")
     implementation("com.garmin:fit:21.135.0")
-    implementation("mil.nga:sf:2.2.1")
-    implementation("mil.nga.sf:sf-geojson:3.3.2")
+    implementation("mil.nga:sf:2.2.2")
+    implementation("mil.nga.sf:sf-geojson:3.3.3")
 
     implementation("com.google.protobuf:protobuf-kotlin:$protoBufVersion")
     implementation("com.google.protobuf:protobuf-java-util:$protoBufVersion")
