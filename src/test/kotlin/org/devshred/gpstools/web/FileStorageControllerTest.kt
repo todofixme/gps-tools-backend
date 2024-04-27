@@ -91,6 +91,7 @@ class FileStorageControllerTest(
         val storageLocation = "/path/to/file"
         val storedFile = StoredFile(uuid, Filename("test.gpx"), APPLICATION_XML_VALUE, "href", 123, storageLocation)
         val trackname = "My Track"
+        val encodedTrackname = "TXkgVHJhY2s="
 
         every { fileStore.get(uuid) } returns storedFile
         every { ioService.getAsStream(storageLocation) } returns InputStreamResource(InputStream.nullInputStream())
@@ -102,7 +103,7 @@ class FileStorageControllerTest(
             )
         } returns emptyByteArrayInputStream()
 
-        mockMvc.perform(get("/files/$uuid?mode=dl&name=$trackname").header("Accept", GpsType.GPX.mimeType))
+        mockMvc.perform(get("/files/$uuid?mode=dl&name=$encodedTrackname").header("Accept", GpsType.GPX.mimeType))
             .andExpectAll(
                 status().isOk,
                 content().contentType(GpsType.GPX.mimeType),

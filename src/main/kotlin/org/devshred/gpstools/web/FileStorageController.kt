@@ -77,11 +77,13 @@ class FileStorageController(
 
         val optimize: Boolean = mode?.contains("opt") ?: false
 
+        val trackName = name?.let { String(Base64.getDecoder().decode(name)) }
+
         val inputStream =
             when (gpsType) {
-                GpsType.GPX -> fileService.getGpxInputStream(storedFile.storageLocation, name, waypoints, optimize)
-                GpsType.TCX -> fileService.getTcxInputStream(storedFile.storageLocation, name, waypoints, optimize)
-                GpsType.JSON -> fileService.getGeoJsonInputStream(storedFile.storageLocation, name, waypoints)
+                GpsType.GPX -> fileService.getGpxInputStream(storedFile.storageLocation, trackName, waypoints, optimize)
+                GpsType.TCX -> fileService.getTcxInputStream(storedFile.storageLocation, trackName, waypoints, optimize)
+                GpsType.JSON -> fileService.getGeoJsonInputStream(storedFile.storageLocation, trackName, waypoints)
                 else -> {
                     throw IllegalArgumentException("$gpsType is not supported yet")
                 }
@@ -90,7 +92,7 @@ class FileStorageController(
 
         val responseHeaders = HttpHeaders()
         if (mode != null && mode.contains("dl")) {
-            val basename = name.orElse { storedFile.filename.value }
+            val basename = trackName.orElse { storedFile.filename.value }
             val file = File(basename)
             val filename =
                 file.nameWithoutExtension
