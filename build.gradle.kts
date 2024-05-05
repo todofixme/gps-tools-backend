@@ -8,7 +8,7 @@ plugins {
     kotlin("plugin.spring") version kotlinVersion
 
     id("org.springframework.boot") version "3.2.5"
-    id("io.spring.dependency-management") version "1.1.4"
+    id("io.spring.dependency-management") version "1.1.5"
 
     id("com.google.protobuf") version "0.9.4"
 
@@ -29,13 +29,12 @@ repositories {
     mavenCentral()
 }
 
-val protoBufVersion = "4.26.0"
+val protoBufVersion = "4.26.1"
 val jacksonVersion = "2.15.4"
-val xmlunitVersion = "2.9.1"
+val xmlunitVersion = "2.10.0"
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.apache.tika:tika-core:2.9.2")
 
@@ -49,6 +48,8 @@ dependencies {
 
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:$jacksonVersion")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
+
     implementation("org.apache.commons:commons-lang3:3.14.0")
 
     testImplementation(kotlin("test-junit5"))
