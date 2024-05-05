@@ -2,5 +2,19 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
-  ]
+  ],
+  "timezone": "Europe/Berlin",
+  "schedule": [
+    "before 7am on Saturday"
+  ],
+  "matchUpdateTypes": [
+    "minor",
+    "patch",
+    "pin",
+    "digest"
+  ],
+  "automerge": false,
+  "reviewersFromCodeOwners": true,
+  "ignoreDeps": ["jackson-module-kotlin", "jackson-datatype-jsr310", "jackson-dataformat-xml"],
+  "enabled": true
 }
