@@ -7,11 +7,11 @@
   "schedule": [
     "before 7am on Saturday"
   ],
-  "matchUpdateTypes": [
-    "minor",
-    "patch",
-    "pin",
-    "digest"
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    }
   ],
   "automerge": false,
   "reviewersFromCodeOwners": true,
