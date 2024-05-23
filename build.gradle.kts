@@ -3,13 +3,13 @@ import net.researchgate.release.ReleaseExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    val kotlinVersion = "1.9.23"
+    val kotlinVersion = "2.0.0"
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.spring") version kotlinVersion
 
-    id("org.springframework.boot") version "3.2.5"
+    id("org.springframework.boot") version "3.3.0"
     id("io.spring.dependency-management") version "1.1.5"
-    id("org.openapi.generator") version "7.5.0"
+    id("org.openapi.generator") version "7.6.0"
 
     id("com.google.protobuf") version "0.9.4"
 
@@ -17,7 +17,7 @@ plugins {
     id("com.palantir.git-version") version "3.0.0"
 
     id("com.github.ben-manes.versions") version "0.51.0"
-    id("org.jlleitschuh.gradle.ktlint") version "12.1.0"
+    id("org.jlleitschuh.gradle.ktlint") version "12.1.1"
 }
 
 group = "org.devshred"
@@ -42,7 +42,7 @@ dependencies {
     implementation("jakarta.validation:jakarta.validation-api")
 
     implementation("io.jenetics:jpx:3.1.0")
-    implementation("com.garmin:fit:21.135.0")
+    implementation("com.garmin:fit:21.141.0")
     implementation("mil.nga:sf:2.2.2")
     implementation("mil.nga.sf:sf-geojson:3.3.3")
 
