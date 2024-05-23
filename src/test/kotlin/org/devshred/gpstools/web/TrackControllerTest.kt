@@ -37,8 +37,12 @@ import java.io.IOException
 import java.io.InputStream
 import java.util.UUID
 
+private const val API_PATH_VERSION = "/api/v1"
+private const val API_PATH_TRACK = "$API_PATH_VERSION/track"
+private const val API_PATH_TRACKS = "$API_PATH_VERSION/tracks"
+
 @WebMvcTest
-class FileStorageControllerTest(
+class TrackControllerTest(
     @Autowired val mockMvc: MockMvc,
 ) {
     @MockkBean
@@ -75,7 +79,7 @@ class FileStorageControllerTest(
             )
         } returns emptyByteArrayInputStream()
 
-        mockMvc.perform(get("/files/$uuid?mode=dl").header("Accept", GpsType.GPX.mimeType)) //
+        mockMvc.perform(get("$API_PATH_TRACKS/$uuid?mode=dl").header("Accept", GpsType.GPX.mimeType)) //
             .andExpectAll(
                 status().isOk,
                 content().contentType(GpsType.GPX.mimeType),
@@ -103,7 +107,7 @@ class FileStorageControllerTest(
             )
         } returns emptyByteArrayInputStream()
 
-        mockMvc.perform(get("/files/$uuid?mode=dl&name=$encodedTrackname").header("Accept", GpsType.GPX.mimeType))
+        mockMvc.perform(get("$API_PATH_TRACKS/$uuid?mode=dl&name=$encodedTrackname").header("Accept", GpsType.GPX.mimeType))
             .andExpectAll(
                 status().isOk,
                 content().contentType(GpsType.GPX.mimeType),
@@ -119,7 +123,7 @@ class FileStorageControllerTest(
 
         every { fileStore.get(uuid) } throws NotFoundException("not found")
 
-        mockMvc.perform(get("/files/$uuid").header("Accept", GpsType.GPX.mimeType))
+        mockMvc.perform(get("$API_PATH_TRACKS/$uuid").header("Accept", GpsType.GPX.mimeType))
             .andExpect(status().isNotFound)
 
         verify { fileStore.get(uuid) }
@@ -141,7 +145,7 @@ class FileStorageControllerTest(
             )
         } throws NotFoundException("not found")
 
-        mockMvc.perform(get("/files/$uuid").header("Accept", GpsType.GPX.mimeType))
+        mockMvc.perform(get("$API_PATH_TRACKS/$uuid").header("Accept", GpsType.GPX.mimeType))
             .andExpect(status().isNotFound)
 
         verify { fileStore.get(uuid) }
@@ -151,7 +155,7 @@ class FileStorageControllerTest(
     fun `trying to download file with invalid UUID`() {
         val uuid = "not a UUID"
 
-        mockMvc.perform(get("/files/$uuid")) //
+        mockMvc.perform(get("$API_PATH_TRACKS/$uuid")) //
             .andExpect(status().isBadRequest)
     }
 
@@ -170,7 +174,7 @@ class FileStorageControllerTest(
             )
         } returns emptyByteArrayInputStream()
 
-        mockMvc.perform(get("/files/$uuid").header("Accept", GpsType.GPX.mimeType))
+        mockMvc.perform(get("$API_PATH_TRACKS/$uuid").header("Accept", GpsType.GPX.mimeType))
             .andExpectAll(
                 status().isOk,
                 content().contentType(GpsType.GPX.mimeType),
@@ -193,7 +197,7 @@ class FileStorageControllerTest(
         every { fileService.getProtoStreamFromGpxFile(storageLocation) } returns NullInputStream()
 
         mockMvc.perform(
-            post("/file")
+            post(API_PATH_TRACK)
                 .param("filename", filename)
                 .content("123"),
         )
@@ -211,7 +215,7 @@ class FileStorageControllerTest(
         every { ioService.createTempFile(any(), Filename(filename)) } throws IOException()
 
         mockMvc.perform(
-            post("/file")
+            post(API_PATH_TRACK)
                 .param("filename", filename)
                 .content("123"),
         )
@@ -228,7 +232,7 @@ class FileStorageControllerTest(
         every { ioService.createTempFile(any(), Filename(filename)) } throws IOException()
 
         mockMvc.perform(
-            post("/file")
+            post(API_PATH_TRACK)
                 .param("filename", filename)
                 .content("123"),
         )
@@ -250,7 +254,7 @@ class FileStorageControllerTest(
         } throws SizeLimitExceededException("file too large", 2, 1)
 
         mockMvc.perform(
-            post("/file")
+            post(API_PATH_TRACK)
                 .param("filename", filename)
                 .content("123"),
         )
@@ -289,7 +293,7 @@ class FileStorageControllerTest(
         every { fileService.getProtoStreamFromGpxFile(storageLocation) } returns emptyByteArrayInputStream()
 
         mockMvc.perform(
-            multipart("/files")
+            multipart(API_PATH_TRACKS)
                 .file(multipartFile),
         )
             .andExpect(status().isOk)
@@ -332,7 +336,7 @@ class FileStorageControllerTest(
         every { fileService.getProtoStreamFromGpxFile(any()) } returns emptyByteArrayInputStream()
 
         mockMvc.perform(
-            multipart("/files")
+            multipart(API_PATH_TRACKS)
                 .file(multipartFile1)
                 .file(multipartFile2),
         )
@@ -354,7 +358,7 @@ class FileStorageControllerTest(
         every { fileStore.delete(uuid) } returns storedFile
         every { ioService.delete(storageLocation) } returns Unit
 
-        mockMvc.perform(delete("/files/$uuid")) //
+        mockMvc.perform(delete("$API_PATH_TRACKS/$uuid")) //
             .andExpect(status().isNoContent)
 
         verify { fileStore.delete(uuid) }
@@ -368,7 +372,7 @@ class FileStorageControllerTest(
 
         every { fileStore.delete(uuid) } returns null
 
-        mockMvc.perform(delete("/files/$uuid")) //
+        mockMvc.perform(delete("$API_PATH_TRACKS/$uuid")) //
             .andExpect(status().isNotFound)
 
         verify { fileStore.delete(uuid) }
@@ -384,7 +388,7 @@ class FileStorageControllerTest(
         every { fileStore.delete(uuid) } returns storedFile
         every { ioService.delete(storageLocation) } throws NotFoundException("not found in filesystem")
 
-        mockMvc.perform(delete("/files/$uuid")) //
+        mockMvc.perform(delete("$API_PATH_TRACKS/$uuid")) //
             .andExpect(status().isNotFound)
 
         verify { fileStore.delete(uuid) }

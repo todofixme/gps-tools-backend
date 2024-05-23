@@ -1,2 +1,2 @@
 ### get version
-GET {{baseUrl}}/version
+GET {{baseUrl}}/api/v1/version

@@ -9,6 +9,7 @@ plugins {
 
     id("org.springframework.boot") version "3.2.5"
     id("io.spring.dependency-management") version "1.1.5"
+    id("org.openapi.generator") version "7.5.0"
 
     id("com.google.protobuf") version "0.9.4"
 
@@ -38,6 +39,8 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.apache.tika:tika-core:2.9.2")
 
+    implementation("jakarta.validation:jakarta.validation-api")
+
     implementation("io.jenetics:jpx:3.1.0")
     implementation("com.garmin:fit:21.135.0")
     implementation("mil.nga:sf:2.2.2")
@@ -63,11 +66,41 @@ dependencies {
     testImplementation("org.xmlunit:xmlunit-assertj:$xmlunitVersion")
 }
 
+val generatedOpenApiSourcesDir = "${layout.buildDirectory.get()}/generated-openapi"
+
+openApiGenerate {
+    generatorName.set("kotlin-spring")
+
+    inputSpec.set("src/main/spec/api-spec.yaml")
+    outputDir.set(generatedOpenApiSourcesDir)
+
+    configFile.set("src/main/spec/api-config.json")
+
+    // MultipartFile definition due to bug in OAG
+    // https://github.com/OpenAPITools/openapi-generator/issues/8333
+    typeMappings.set(
+        mapOf(
+            "string+filename" to "Filename",
+            "file+multipart" to "MultipartFile",
+        ),
+    )
+
+    importMappings.set(
+        mapOf(
+            "Filename" to "org.devshred.gpstools.storage.Filename",
+            "MultipartFile" to "org.springframework.web.multipart.MultipartFile",
+        ),
+    )
+}
+
+java.sourceSets["main"].java.srcDir(generatedOpenApiSourcesDir)
+
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
         freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
         jvmTarget = "17"
+        dependsOn(tasks.openApiGenerate)
     }
 }
 
@@ -132,3 +165,5 @@ ktlint {
         exclude { entry -> entry.file.toString().contains("generated") }
     }
 }
+
+tasks.named("runKtlintCheckOverMainSourceSet").configure { dependsOn("openApiGenerate") }

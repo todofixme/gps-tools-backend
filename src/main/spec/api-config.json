@@ -1,0 +1,13 @@
+{
+  "apiPackage": "org.devshred.gpstools.api",
+  "modelPackage": "org.devshred.gpstools.api.model",
+  "sourceFolder": "src/main/kotlin",
+  "documentationProvider": "none",
+  "openApiNullable": "false",
+  "useSwaggerAnnotations": "false",
+  "dateLibrary": "java8",
+  "useTags": "true",
+  "interfaceOnly": "true",
+  "useSpringBoot3": "true",
+  "modelNameSuffix": "DTO"
+}

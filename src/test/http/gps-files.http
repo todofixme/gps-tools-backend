@@ -1,14 +1,14 @@
 ### upload single file
-POST {{baseUrl}}/file?filename=test.gpx
+POST {{baseUrl}}/api/v1/track?filename=test.gpx
 Accept: application/json
-Content-Type: text/plain
+Content-Type: application/xml
 
 < data/test.gpx
 
-> {% client.global.set("fileId", response.body.id) %}
+> {% client.global.set("trackId", response.body.id) %}
 
 ### upload multipart
-POST {{baseUrl}}/files
+POST {{baseUrl}}/api/v1/tracks
 Content-Type: multipart/form-data; boundary=WebAppBoundary
 
 --WebAppBoundary
@@ -17,31 +17,32 @@ Content-Disposition: form-data; name="file"; filename="file.gpx"
 < data/test.gpx
 --WebAppBoundary--
 
+> {% client.global.set("trackId", response.body[0].id) %}
 
 ### get file
-GET {{baseUrl}}/files/{{fileId}}
+GET {{baseUrl}}/api/v1/tracks/{{trackId}}
 #Accept: */*
 #Accept: application/vnd.garmin.tcx+xml
 #Accept: application/gpx+xml
 #Accept: application/geo+json
 
 ### get file as TCX
-GET {{baseUrl}}/files/{{fileId}}?type=tcx
+GET {{baseUrl}}/api/v1/tracks/{{trackId}}?type=tcx
 
 ### download file
-GET {{baseUrl}}/files/{{fileId}}?mode=dl
+GET {{baseUrl}}/api/v1/tracks/{{trackId}}?mode=dl
 
-### get file with overwritten name
-GET {{baseUrl}}/files/{{fileId}}?name=Laufarena
+### get file with overwritten name (Base64 encoded)
+GET {{baseUrl}}/api/v1/tracks/{{trackId}}?name=TGF1ZmFyZW5h
 
 ### get file with overwritten waypoints
-GET {{baseUrl}}/files/{{fileId}}?wp=ewogICJ0eXBlIjogIkZlYXR1cmVDb2xsZWN0aW9uIiwKICAiZmVhdHVyZXMiOiBbCiAgICB7CiAgICAgICJ0eXBlIjogIkZlYXR1cmUiLAogICAgICAicHJvcGVydGllcyI6IHsKICAgICAgICAibmFtZSI6ICJXYXlwb2ludCAxIiwKICAgICAgICAidHlwZSI6ICJTVU1NSVQiCiAgICAgIH0sCiAgICAgICJnZW9tZXRyeSI6IHsKICAgICAgICAidHlwZSI6ICJQb2ludCIsCiAgICAgICAgImNvb3JkaW5hdGVzIjogWzUzLjU0Mjc5OCwgMTAuMDU0MjY5XQogICAgICB9CiAgICB9CiAgXQp9Cg==
+GET {{baseUrl}}/api/v1/tracks/{{trackId}}?wp=ewogICJ0eXBlIjogIkZlYXR1cmVDb2xsZWN0aW9uIiwKICAiZmVhdHVyZXMiOiBbCiAgICB7CiAgICAgICJ0eXBlIjogIkZlYXR1cmUiLAogICAgICAicHJvcGVydGllcyI6IHsKICAgICAgICAibmFtZSI6ICJXYXlwb2ludCAxIiwKICAgICAgICAidHlwZSI6ICJTVU1NSVQiCiAgICAgIH0sCiAgICAgICJnZW9tZXRyeSI6IHsKICAgICAgICAidHlwZSI6ICJQb2ludCIsCiAgICAgICAgImNvb3JkaW5hdGVzIjogWzEwLjA1NDI2OSwgNTMuNTQyNzk4XQogICAgICB9CiAgICB9CiAgXQp9Cg==
 
 ### delete file
-DELETE {{baseUrl}}/files/{{fileId}}
+DELETE {{baseUrl}}/api/v1/tracks/{{trackId}}
 Accept: */*
 
 ### merge files
-POST {{baseUrl}}/merge?fileId={{fileId}}
+POST {{baseUrl}}/api/v1/merge?trackIds={{trackId}}&trackIds=727206e4-dc8a-4294-9d06-4c7c24345909
 
-> {% client.global.set("fileId", response.body.id) %}
+> {% client.global.set("trackId", response.body.id) %}

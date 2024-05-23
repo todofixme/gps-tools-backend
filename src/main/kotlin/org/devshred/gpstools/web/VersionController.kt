@@ -1,15 +1,17 @@
 package org.devshred.gpstools.web
 
 import jakarta.annotation.PostConstruct
+import org.devshred.gpstools.api.ServerApi
+import org.devshred.gpstools.api.model.VersionDTO
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.CrossOrigin
-import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @CrossOrigin(origins = ["*"], maxAge = 3600)
-class VersionController {
+class VersionController : ServerApi {
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Value("\${app.version}")
@@ -24,10 +26,7 @@ class VersionController {
         log.info("[GIT_VERSION] {}", gitVersion)
     }
 
-    @GetMapping("/version")
-    fun version(): Version {
-        return Version(appVersion, gitVersion)
+    override fun version(): ResponseEntity<VersionDTO> {
+        return ResponseEntity.ok(VersionDTO(appVersion, gitVersion))
     }
 }
-
-data class Version(val app: String, val git: String)

@@ -1,0 +1,338 @@
+openapi: 3.0.3
+info:
+  description: |-
+    This defines the API of the GPS-Tools backend based on the OpenAPI 3.0 specification.
+
+    Used by these applications:
+    - [GPS-Tools backend](https://github.com/devshred/gps-tools-backend)
+    - [GPS-Tools frontend](https://github.com/devshred/gps-tools-frontend)
+  version: 1.0.0
+  title: GPS-Tools API - OpenAPI 3.0
+servers:
+  - url: 'http://localhost:7001/api/v1'
+    description: local
+tags:
+  - name: tracks
+    description: API to work on GPS-tracks.
+  - name: server
+    description: Server-related info.
+paths:
+  /tracks/{id}:
+    get:
+      tags:
+        - tracks
+      summary: Get a track by UUID.
+      operationId: download
+      parameters:
+        - name: id
+          in: path
+          description: The UUID of the track you are looking for.
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: mode
+          in: query
+          description: >
+            Available Modes:
+             * `dl` - Forcing download (via Content-Disposition)
+             * `opt` - Optimize waypoints
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - dl
+                - opt
+        - name: name
+          in: query
+          description: >
+            Name of the track (Base64 encoded!):
+             * used as filename
+             * used as trackname in GPS-data
+          schema:
+            type: string
+            example: U2FtcGxlIFRyYWNr
+        - name: type
+          in: query
+          description: >
+            Available types:
+             * `gpx` - GPX (GPS Exchange Format)
+             * `tcx` - TCX (Training Center XML)
+             * `fit` - FIT (Flexible and Interoperable Data Transfer)
+             * `json` - GeoJSON
+          schema:
+            type: string
+            enum:
+              - gpx
+              - tcx
+              - fit
+              - json
+        - name: wp
+          in: query
+          description: Waypoints as GeoJSON/FeatureCollection, Base64-encoded
+          schema:
+            type: string
+        - name: accept
+          in: header
+          description: Requested track type. Can be used instead of `type`.
+          schema:
+            type: string
+      responses:
+        200:
+          description: Successful operation.
+          content:
+            application/gpx+xml:
+              schema:
+                type: string
+                format: binary
+            application/vnd.garmin.tcx+xml:
+              schema:
+                type: string
+                format: binary
+            application/geo+json:
+              schema:
+                type: string
+                format: binary
+        400:
+          description: Bad request.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        404:
+          description: Track not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        500:
+          description: Server error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    delete:
+      tags:
+        - tracks
+      summary: Delete a GPS track by UUID.
+      operationId: delete
+      parameters:
+        - name: id
+          in: path
+          description: The UUID of the track to be deleted.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        204:
+          description: Successful operation.
+        404:
+          description: Track not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        500:
+          description: Server error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /track:
+    post:
+      tags:
+        - tracks
+      summary: Upload a single GPS file.
+      operationId: uploadFile
+      parameters:
+        - name: filename
+          in: query
+          description: Name of the uploaded file.
+          required: true
+          schema:
+            type: string+filename
+      requestBody:
+        description: The file to be uploaded.
+        required: true
+        content:
+          '*/*':
+            schema:
+              type: string
+              format: binary
+      responses:
+        201:
+          description: Stored the uploaded track successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Track'
+        400:
+          description: Bad request.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        413:
+          description: Uploaded file too large.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        500:
+          description: Server error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /tracks:
+    post:
+      tags:
+        - tracks
+      summary: Upload multiple GPS files.
+      operationId: uploadFiles
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              properties:
+                file:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/MultipartFile'
+      responses:
+        201:
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Track'
+        400:
+          description: Bad request.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        413:
+          description: Uploaded file too large.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        500:
+          description: Server error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /merge:
+    post:
+      tags:
+        - tracks
+      summary: Merge the given tracks.
+      operationId: merge
+      parameters:
+        - name: trackIds
+          in: query
+          description: The UUIDs of the tracks you want to merge.
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+              format: uuid
+      responses:
+        201:
+          description: Merged the given tracks successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Track'
+        400:
+          description: Bad request.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        404:
+          description: Track not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        500:
+          description: Server error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /version:
+    get:
+      tags:
+        - server
+      summary: Returns the version of the backend application the server is currently running on.
+      operationId: version
+      responses:
+        200:
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Version'
+components:
+  schemas:
+    Version:
+      type: object
+      properties:
+        app:
+          type: string
+          example: 0.9.2
+          description: Version of the backend application.
+        git:
+          type: string
+          example: 0.9.2-5-g250de68
+          description: Local version plus Git hash of the last commit.
+    Track:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        mimeType:
+          type: string
+        href:
+          type: string
+        size:
+          type: integer
+          format: int64
+    MultipartFile:
+      type: file+multipart
+    Problem:
+      required:
+        - type
+        - title
+        - status
+        - detail
+      type: object
+      properties:
+        type:
+          type: string
+          example: 'about:blank'
+        title:
+          type: string
+          example: 'Error class'
+        status:
+          type: integer
+          example: 404
+        detail:
+          type: string
+          example: 'Failure message.'
+
+      description: > 
+        Used when an error was thrown, typically with a HTTP error response-code.
+        Based on RFC 7807 (Problem Details for HTTP APIs).

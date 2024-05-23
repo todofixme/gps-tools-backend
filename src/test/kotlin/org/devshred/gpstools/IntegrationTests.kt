@@ -2,6 +2,7 @@ package org.devshred.gpstools
 
 import org.apache.commons.lang3.RandomStringUtils.randomAlphabetic
 import org.assertj.core.api.Assertions.assertThat
+import org.devshred.gpstools.api.model.TrackDTO
 import org.devshred.gpstools.web.GpsType
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -13,23 +14,22 @@ import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.MediaType.APPLICATION_XML
 import org.springframework.http.RequestEntity.get
 import org.springframework.http.RequestEntity.post
-import java.util.UUID
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class IntegrationTests(
     @Autowired val restTemplate: TestRestTemplate,
 ) {
     @Test
-    fun `storedFile lifecycle`() {
+    fun `trackFile lifecycle`() {
         val filename = randomAlphabetic(8) + ".gpx"
         val fileContent = this::class.java.classLoader.getResource("data/test.gpx")!!.readText(Charsets.UTF_8)
 
         // upload a file
         val createRequest =
-            post("/file?filename=$filename")
+            post("/api/v1/track?filename=$filename")
                 .contentType(APPLICATION_XML)
                 .body(fileContent)
-        val createResponse = restTemplate.exchange<StoredFileDto>(createRequest)
+        val createResponse = restTemplate.exchange<TrackDTO>(createRequest)
 
         assertThat(createResponse.statusCode).isEqualTo(HttpStatus.OK)
         assertThat(createResponse.body).isNotNull
@@ -52,12 +52,4 @@ class IntegrationTests(
         val downloadResponse2 = restTemplate.exchange<String>(downloadRequest)
         assertThat(downloadResponse2.statusCode).isEqualTo(NOT_FOUND)
     }
-
-    data class StoredFileDto(
-        val id: UUID,
-        val filename: String,
-        val mimeType: String,
-        val href: String,
-        val size: Long,
-    )
 }

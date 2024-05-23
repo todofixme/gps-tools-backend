@@ -1,33 +1,34 @@
 package org.devshred.gpstools.web
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import jakarta.servlet.http.HttpServletRequest
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotNull
 import mil.nga.sf.geojson.FeatureCollection
+import org.devshred.gpstools.api.TracksApi
+import org.devshred.gpstools.api.model.TrackDTO
 import org.devshred.gpstools.common.orElse
+import org.devshred.gpstools.formats.proto.ProtoService
+import org.devshred.gpstools.formats.proto.protoContainer
+import org.devshred.gpstools.formats.proto.protoTrack
 import org.devshred.gpstools.storage.FileService
 import org.devshred.gpstools.storage.FileStore
 import org.devshred.gpstools.storage.Filename
 import org.devshred.gpstools.storage.IOService
+import org.devshred.gpstools.storage.NotFoundException
 import org.devshred.gpstools.storage.StoredFile
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.InputStreamResource
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.CrossOrigin
-import org.springframework.web.bind.annotation.DeleteMapping
-import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.ResponseBody
-import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
-import org.springframework.web.server.ResponseStatusException
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -38,27 +39,26 @@ private const val ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED = "Not a supported file fo
 
 @CrossOrigin(origins = ["*"], maxAge = 3600)
 @RestController
-class FileStorageController(
+class TrackController(
     private val store: FileStore,
     private val ioService: IOService,
     private val fileService: FileService,
-) {
+    private val protoService: ProtoService,
+) : TracksApi {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    @GetMapping("/files/{id}")
-    @Throws(IOException::class)
-    fun download(
-        @PathVariable id: String,
-        @RequestParam("mode", required = false) mode: Array<String>?,
-        @RequestParam("name", required = false) name: String?,
-        @RequestParam("type", required = false) type: String?,
-        @RequestParam("wp", required = false) waypointsEncoded: String?,
-        @RequestHeader headers: Map<String, String>,
+    override fun download(
+        @PathVariable(value = "id") id: UUID,
+        @Valid @RequestParam(required = false, value = "mode") mode: List<String>?,
+        @Valid @RequestParam(required = false, value = "name") name: String?,
+        @Valid @RequestParam(required = false, value = "type") type: String?,
+        @Valid @RequestParam(required = false, value = "wp") wp: String?,
+        @RequestHeader(required = false, value = "accept") accept: String?,
     ): ResponseEntity<Resource> {
-        val storedFile = store.get(UUID.fromString(id))
+        val storedFile = store.get(id)
 
         val waypoints: FeatureCollection? =
-            waypointsEncoded?.let {
+            wp?.let {
                 ObjectMapper().readValue(String(Base64.getDecoder().decode(it)), FeatureCollection::class.java)
             }?.orElse { null }
 
@@ -66,11 +66,15 @@ class FileStorageController(
             type?.let {
                 GpsType.fromTypeString(it).orElse { throw IllegalArgumentException("unknown type $it") }
             }.orElse {
-                if (headers.containsKeyIgnoringCase("accept")) {
-                    headers.getIgnoringCase("accept")?.let {
-                        GpsType.fromMimeType(it).orElse { throw IllegalArgumentException("invalid accept header $it") }
+                accept?.let {
+                    GpsType.fromMimeType(it).orElse {
+                        if (it == "*/*") {
+                            DEFAULT_GPS_TYPE
+                        } else {
+                            throw IllegalArgumentException("invalid accept header $it")
+                        }
                     }
-                } else {
+                }.orElse {
                     DEFAULT_GPS_TYPE
                 }
             }
@@ -111,15 +115,12 @@ class FileStorageController(
             .body(inputStreamResource)
     }
 
-    @ResponseBody
-    @PostMapping(path = ["/file"])
-    @Throws(IOException::class)
-    fun uploadFile(
-        request: HttpServletRequest,
-        @RequestParam filename: Filename,
-    ): ResponseEntity<StoredFile> {
+    override fun uploadFile(
+        @NotNull @Valid @RequestParam(required = true, value = "filename") filename: Filename,
+        @Valid @RequestBody body: Resource,
+    ): ResponseEntity<TrackDTO> {
         if (isGpsFile(filename.value)) {
-            val uploadedFile: StoredFile = ioService.createTempFile(request.inputStream, filename)
+            val uploadedFile: StoredFile = ioService.createTempFile(body.inputStream, filename)
 
             if (isGpxFile(filename.value)) {
                 if (uploadedFile.mimeType != org.apache.tika.mime.MediaType.APPLICATION_XML.toString()) {
@@ -133,7 +134,7 @@ class FileStorageController(
                     store.put(protoFile.id, protoFile)
 
                     ioService.delete(uploadedFile.storageLocation)
-                    return ResponseEntity.ok(protoFile)
+                    return ResponseEntity.ok(protoFile.toTrackDTO())
                 } catch (ex: IOException) {
                     ioService.delete(storageLocation = uploadedFile.storageLocation)
                     throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
@@ -144,7 +145,7 @@ class FileStorageController(
                 store.put(protoFile.id, protoFile)
 
                 ioService.delete(uploadedFile.storageLocation)
-                return ResponseEntity.ok(protoFile)
+                return ResponseEntity.ok(protoFile.toTrackDTO())
             }
         } else {
             throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
@@ -153,19 +154,19 @@ class FileStorageController(
         throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
     }
 
-    @ResponseBody
-    @PostMapping(
-        path = ["/files"],
-    )
-    @Throws(IOException::class)
-    fun uploadFiles(
-        @RequestParam file: List<MultipartFile>,
-    ): ResponseEntity<List<StoredFile>> {
-        val results = ArrayList<StoredFile>()
+    override fun uploadFiles(
+        @RequestParam(
+            required = false,
+            value = "file",
+        ) file: List<MultipartFile>?,
+    ): ResponseEntity<List<TrackDTO>> {
+        val results = ArrayList<TrackDTO>()
+
         file
-            .filter { isGpsFile(it.originalFilename) }
-            .forEach {
-                val uploadedFile: StoredFile = ioService.createTempFile(it.inputStream, Filename(it.originalFilename!!))
+            ?.filter { isGpsFile(it.originalFilename) }
+            ?.forEach {
+                val uploadedFile: StoredFile =
+                    ioService.createTempFile(it.inputStream, Filename(it.originalFilename!!))
 
                 if (isGpxFile(it.originalFilename)) {
                     try {
@@ -178,7 +179,7 @@ class FileStorageController(
                         val protoFile = ioService.createTempFile(inputStream, Filename(it.originalFilename!!))
                         store.put(protoFile.id, protoFile)
                         ioService.delete(uploadedFile.storageLocation)
-                        results.add(protoFile)
+                        results.add(protoFile.toTrackDTO())
                     } catch (ex: IOException) {
                         ioService.delete(storageLocation = uploadedFile.storageLocation)
                         throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
@@ -190,7 +191,7 @@ class FileStorageController(
                         val protoFile = ioService.createTempFile(inputStream, Filename(it.originalFilename!!))
                         store.put(protoFile.id, protoFile)
                         ioService.delete(uploadedFile.storageLocation)
-                        results.add(protoFile)
+                        results.add(protoFile.toTrackDTO())
                     } catch (e: Exception) {
                         log.warn("Failed to process FIT file.", e)
                         ioService.delete(storageLocation = uploadedFile.storageLocation)
@@ -204,15 +205,47 @@ class FileStorageController(
         return ResponseEntity.ok(results)
     }
 
-    @DeleteMapping("/files/{id}")
-    @Throws(IOException::class)
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun delete(
-        @PathVariable id: String,
-    ) {
-        store.delete(UUID.fromString(id))?.let {
+    override fun delete(id: UUID): ResponseEntity<Unit> {
+        store.delete(id)?.let {
             ioService.delete(it.storageLocation)
-        } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        } ?: throw NotFoundException("File with ID $id not found.")
+
+        return ResponseEntity.noContent().build()
+    }
+
+    override fun merge(trackIds: List<UUID>): ResponseEntity<TrackDTO> {
+        if (trackIds.isEmpty()) {
+            throw NotFoundException("No fileId provided.")
+        }
+
+        if (trackIds.size == 1) {
+            log.info("No need to merge.")
+            return ResponseEntity.ok(store.get(trackIds[0]).toTrackDTO())
+        }
+
+        val allWayPoints: MutableList<org.devshred.gpstools.formats.proto.ProtoWayPoint> = mutableListOf()
+        val allTrackPoints: MutableList<org.devshred.gpstools.formats.proto.ProtoWayPoint> = mutableListOf()
+        var trackName: String? = null
+        trackIds.forEachIndexed { index, uuid ->
+            log.info("About to merge $uuid.")
+            val protoGpsContainer =
+                protoService.readProtoContainer(store.get(uuid).storageLocation)
+            allWayPoints.addAll(protoGpsContainer.wayPointsList)
+            allTrackPoints.addAll(protoGpsContainer.track.wayPointsList)
+            if (index == 0 && protoGpsContainer.name.isNotEmpty()) {
+                trackName = protoGpsContainer.name
+            }
+        }
+        val mergedProto =
+            protoContainer {
+                trackName?.run { name = this }
+                wayPoints.addAll(allWayPoints)
+                track = protoTrack { wayPoints.addAll(allTrackPoints) }
+            }
+        val protoFile = ioService.createTempFile(mergedProto.toByteArray().inputStream(), Filename("merged.gpx"))
+        store.put(protoFile.id, protoFile)
+
+        return ResponseEntity.ok(protoFile.toTrackDTO())
     }
 }
 
