@@ -35,6 +35,9 @@ GET {{baseUrl}}/api/v1/tracks/{{trackId}}?mode=dl
 ### get file with overwritten name (Base64 encoded)
 GET {{baseUrl}}/api/v1/tracks/{{trackId}}?name=TGF1ZmFyZW5h
 
+### get file with optimized waypoints
+GET {{baseUrl}}/api/v1/tracks/{{trackId}}?mode=opt
+
 ### get file with overwritten waypoints
 GET {{baseUrl}}/api/v1/tracks/{{trackId}}?wp=ewogICJ0eXBlIjogIkZlYXR1cmVDb2xsZWN0aW9uIiwKICAiZmVhdHVyZXMiOiBbCiAgICB7CiAgICAgICJ0eXBlIjogIkZlYXR1cmUiLAogICAgICAicHJvcGVydGllcyI6IHsKICAgICAgICAibmFtZSI6ICJXYXlwb2ludCAxIiwKICAgICAgICAidHlwZSI6ICJTVU1NSVQiCiAgICAgIH0sCiAgICAgICJnZW9tZXRyeSI6IHsKICAgICAgICAidHlwZSI6ICJQb2ludCIsCiAgICAgICAgImNvb3JkaW5hdGVzIjogWzEwLjA1NDI2OSwgNTMuNTQyNzk4XQogICAgICB9CiAgICB9CiAgXQp9Cg==
 
@@ -46,3 +49,60 @@ Accept: */*
 POST {{baseUrl}}/api/v1/merge?trackIds={{trackId}}&trackIds=727206e4-dc8a-4294-9d06-4c7c24345909
 
 > {% client.global.set("trackId", response.body.id) %}
+
+### change wayPoints
+PUT {{baseUrl}}/api/v1/tracks/{{trackId}}/points
+Content-Type: application/geo+json
+
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          53.545505,
+          10.060718
+        ]
+      },
+      "properties": {
+        "name": "Brücke",
+        "type": "STRAIGHT"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          53.544225,
+          10.064383
+        ]
+      },
+      "properties": {
+        "name": "Berg",
+        "type": "DANGER"
+      }
+    }
+  ]
+}
+
+### add wayPoint
+PATCH {{baseUrl}}/api/v1/tracks/{{trackId}}/points?mode=opt
+Content-Type: application/geo+json
+
+{
+  "type": "Feature",
+  "geometry": {
+    "type": "Point",
+    "coordinates": [
+      53.544225,
+      10.064383
+    ]
+  },
+  "properties": {
+    "name": "Berg",
+    "type": "DANGER"
+  }
+}

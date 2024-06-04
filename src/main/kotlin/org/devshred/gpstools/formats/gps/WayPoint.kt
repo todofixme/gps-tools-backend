@@ -1,6 +1,7 @@
 package org.devshred.gpstools.formats.gps
 
 import java.time.Instant
+import java.util.UUID
 
 data class WayPoint(
     val latitude: Double,
@@ -14,4 +15,14 @@ data class WayPoint(
     val temperature: Int? = null,
     val heartRate: Int? = null,
     val cadence: Int? = null,
+    val uuid: UUID? = null,
 )
+
+fun mergeWaypoints(
+    existing: List<WayPoint>,
+    newWayPoints: List<WayPoint>,
+): List<WayPoint> {
+    val mapOfPoints = existing.associateBy { it.uuid }.toMutableMap()
+    newWayPoints.forEach { mapOfPoints[it.uuid] = it }
+    return mapOfPoints.values.toList()
+}

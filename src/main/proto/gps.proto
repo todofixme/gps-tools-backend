@@ -41,6 +41,8 @@ message ProtoWayPoint {
   optional int32 temperature = 9;
   optional int32 heartRate = 10;
   optional int32 cadence = 11;
+
+  optional string uuid = 12;
 }
 
 message ProtoTrack {
