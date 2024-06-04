@@ -9,5 +9,6 @@
   "useTags": "true",
   "interfaceOnly": "true",
   "useSpringBoot3": "true",
-  "modelNameSuffix": "DTO"
+  "modelNameSuffix": "DTO",
+  "useOneOfDiscriminatorLookup": true
 }

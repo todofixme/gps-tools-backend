@@ -3,10 +3,18 @@ package org.devshred.gpstools.web
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotNull
+import mil.nga.sf.geojson.Feature
 import mil.nga.sf.geojson.FeatureCollection
+import mil.nga.sf.geojson.GeometryType
+import mil.nga.sf.geojson.Point
 import org.devshred.gpstools.api.TracksApi
+import org.devshred.gpstools.api.model.FeatureCollectionDTO
+import org.devshred.gpstools.api.model.FeatureDTO
+import org.devshred.gpstools.api.model.GeoJsonObjectDTO
+import org.devshred.gpstools.api.model.PointDTO
 import org.devshred.gpstools.api.model.TrackDTO
 import org.devshred.gpstools.common.orElse
+import org.devshred.gpstools.formats.gps.GpsContainerMapper
 import org.devshred.gpstools.formats.proto.ProtoService
 import org.devshred.gpstools.formats.proto.protoContainer
 import org.devshred.gpstools.formats.proto.protoTrack
@@ -32,6 +40,7 @@ import org.springframework.web.multipart.MultipartFile
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.math.BigDecimal
 import java.util.Base64
 import java.util.UUID
 
@@ -44,6 +53,7 @@ class TrackController(
     private val ioService: IOService,
     private val fileService: FileService,
     private val protoService: ProtoService,
+    private val gpsContainerMapper: GpsContainerMapper,
 ) : TracksApi {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -247,6 +257,22 @@ class TrackController(
 
         return ResponseEntity.ok(protoFile.toTrackDTO())
     }
+
+    override fun changePoints(
+        id: UUID,
+        geoJsonObjectDTO: GeoJsonObjectDTO,
+        mode: List<String>?,
+    ): ResponseEntity<GeoJsonObjectDTO> {
+        return ResponseEntity.ok(fileService.handleWayPointUpdate(id, geoJsonObjectDTO, mode, false).toDto())
+    }
+
+    override fun addPoints(
+        id: UUID,
+        geoJsonObjectDTO: GeoJsonObjectDTO,
+        mode: List<String>?,
+    ): ResponseEntity<GeoJsonObjectDTO> {
+        return ResponseEntity.ok(fileService.handleWayPointUpdate(id, geoJsonObjectDTO, mode, true).toDto())
+    }
 }
 
 private fun isGpxFile(filename: String?) = filename?.endsWith(".gpx").orElse { false }
@@ -282,4 +308,29 @@ fun <V> Map<String, V>.getIgnoringCase(other: String): V? {
         .asSequence().firstOrNull()
         ?.value
         .orElse { null }
+}
+
+fun FeatureCollection.toDto(): FeatureCollectionDTO {
+    return FeatureCollectionDTO(
+        features = this.features.map { it.toDto() },
+        type = "FeatureCollection",
+    )
+}
+
+fun Feature.toDto(): FeatureDTO {
+    if (geometryType == GeometryType.POINT) {
+        val point = geometry as Point
+        val pointDTO =
+            PointDTO(
+                coordinates = listOf(BigDecimal.valueOf(point.coordinates.x), BigDecimal.valueOf(point.coordinates.y)),
+                type = "Point",
+            )
+        return FeatureDTO(
+            geometry = pointDTO,
+            properties = properties,
+            type = "Feature",
+        )
+    }
+
+    throw UnsupportedOperationException("Geometry $geometryType not implemented yet.")
 }

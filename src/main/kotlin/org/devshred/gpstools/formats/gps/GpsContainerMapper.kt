@@ -141,22 +141,28 @@ class GpsContainerMapper {
         val featureCollection = FeatureCollection()
         featureCollection.addFeature(lineStringFeature)
 
-        gpsContainer.wayPoints.forEach { wayPoint ->
-            val position = Position(wayPoint.latitude, wayPoint.longitude)
-            val point = Point(position)
-            val feature = Feature(point)
-
-            wayPoint.name?.let { feature.properties["name"] = wayPoint.name.toString() }
-            wayPoint.type?.let { feature.properties["type"] = wayPoint.type.toString() }
-
-            featureCollection.addFeature(feature)
-        }
+        toGeoJsonPoints(gpsContainer.wayPoints)
+            .forEach { feature -> featureCollection.addFeature(feature) }
 
         return featureCollection
     }
 
     fun fromGeoJson(featureCollection: FeatureCollection): GpsContainer {
         throw UnsupportedOperationException("Not yet implemented")
+    }
+
+    fun toGeoJsonPoints(wayPoints: List<GpsWayPoint>): List<Feature> {
+        return wayPoints.map { wayPoint ->
+            val position = Position(wayPoint.latitude, wayPoint.longitude)
+            val point = Point(position)
+            val feature = Feature(point)
+
+            wayPoint.name?.let { feature.properties["name"] = wayPoint.name.toString() }
+            wayPoint.type?.let { feature.properties["type"] = wayPoint.type.toString() }
+            wayPoint.uuid?.let { feature.properties["uuid"] = wayPoint.uuid.toString() }
+
+            feature
+        }
     }
 
     fun toTcx(gpsContainer: GpsContainer): TrainingCenterDatabase {

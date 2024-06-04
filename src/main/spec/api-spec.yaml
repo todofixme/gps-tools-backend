@@ -140,6 +140,81 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /tracks/{id}/points:
+    put:
+      tags:
+        - tracks
+      summary: Replaces the waypoints of the given track.
+      operationId: changePoints
+      parameters:
+        - name: id
+          in: path
+          description: The UUID of the track to be changed.
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: mode
+          in: query
+          description: >
+            Available Mode:
+             * `opt` - Optimize waypoints
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - opt
+      requestBody:
+        required: true
+        content:
+          'application/geo+json':
+            schema:
+              $ref: '#/components/schemas/GeoJsonObject'
+      responses:
+        200:
+          description: Points have been replaced. Returns all waypoints of the track.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeoJsonObject'
+    patch:
+      tags:
+        - tracks
+      summary: Merges the waypoints with the existing ones based on UUIDs of the waypoints.
+      operationId: addPoints
+      parameters:
+        - name: id
+          in: path
+          description: The UUID of the track to be changed.
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: mode
+          in: query
+          description: >
+            Available Mode:
+             * `opt` - Optimize waypoints
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - opt
+      requestBody:
+        required: true
+        content:
+          'application/geo+json':
+            schema:
+              $ref: '#/components/schemas/GeoJsonObject'
+      responses:
+        200:
+          description: Points have been replaced. Returns all waypoints of the track.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeoJsonObject'
   /track:
     post:
       tags:
@@ -310,6 +385,144 @@ components:
         size:
           type: integer
           format: int64
+
+    GeoJsonObject:
+      description: GeoJSON base object
+      externalDocs:
+        url: 'https://tools.ietf.org/html/rfc7946#section-3'
+      type: object
+      discriminator:
+        propertyName: type
+      properties:
+        type:
+          type: string
+      required:
+        - type
+
+    FeatureGeometry:
+      description: Abstract type for all GeoJSON Geometry object.
+      externalDocs:
+        url: 'https://tools.ietf.org/html/rfc7946#section-3'
+      type: object
+      discriminator:
+        propertyName: type
+      properties:
+        type:
+          type: string
+      required:
+        - type
+
+    Feature:
+      description: GeoJSON Feature object
+      externalDocs:
+        url: 'https://tools.ietf.org/html/rfc7946#section-3.2'
+      allOf:
+        - $ref: '#/components/schemas/GeoJsonObject'
+      type: object
+      required:
+        - geometry
+        - properties
+      properties:
+        geometry:
+          $ref: '#/components/schemas/FeatureGeometry'
+        properties:
+          type: object
+          nullable: true
+
+    FeatureCollection:
+      description: GeoJSON FeatureCollection object
+      externalDocs:
+        url: 'https://tools.ietf.org/html/rfc7946#section-3.3'
+      allOf:
+        - $ref: '#/components/schemas/GeoJsonObject'
+      type: object
+      required:
+        - features
+      properties:
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/Feature'
+
+    Position:
+      description: >
+        A position is an array of numbers. There MUST be two or more elements.
+        The first two elements are longitude and latitude precisely in that 
+        order and using decimal numbers. Altitude or elevation MAY be included
+        as an optional third element.
+      externalDocs:
+        url: 'https://tools.ietf.org/html/rfc7946#section-3.1.1'
+      type: array
+      minItems: 2
+      maxItems: 3
+      items:
+        type: number
+
+    LineStringCoordinates:
+      description: GeoJSon fundamental geometry construct, array of two or more positions.
+      externalDocs:
+        url: 'https://tools.ietf.org/html/rfc7946#section-3.1.4'
+      type: array
+      items:
+        $ref: '#/components/schemas/Position'
+      minItems: 2
+
+    Point:
+      description: GeoJSON geometry
+      externalDocs:
+        url: 'https://tools.ietf.org/html/rfc7946#section-3.1.2'
+      allOf:
+        - $ref: '#/components/schemas/FeatureGeometry'
+      type: object
+      required:
+        - coordinates
+      properties:
+        coordinates:
+          $ref: '#/components/schemas/Position'
+
+    MultiPoint:
+      description: GeoJSON geometry
+      externalDocs:
+        url: 'https://tools.ietf.org/html/rfc7946#section-3.1.3'
+      allOf:
+        - $ref: '#/components/schemas/FeatureGeometry'
+      type: object
+      required:
+        - coordinates
+      properties:
+        coordinates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Position'
+
+    LineString:
+      description: GeoJSON geometry
+      externalDocs:
+        url: 'https://tools.ietf.org/html/rfc7946#section-3.1.4'
+      allOf:
+        - $ref: '#/components/schemas/FeatureGeometry'
+      type: object
+      required:
+        - coordinates
+      properties:
+        coordinates:
+          $ref: '#/components/schemas/LineStringCoordinates'
+
+    MultiLineString:
+      description: GeoJSON geometry
+      externalDocs:
+        url: 'https://tools.ietf.org/html/rfc7946#section-3.1.5'
+      allOf:
+        - $ref: '#/components/schemas/FeatureGeometry'
+      type: object
+      required:
+        - coordinates
+      properties:
+        coordinates:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineStringCoordinates'
+
     MultipartFile:
       type: file+multipart
     Problem:
@@ -333,6 +546,6 @@ components:
           type: string
           example: 'Failure message.'
 
-      description: > 
+      description: >
         Used when an error was thrown, typically with a HTTP error response-code.
         Based on RFC 7807 (Problem Details for HTTP APIs).
