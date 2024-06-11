@@ -228,4 +228,21 @@ class FileService(
         store.put(trackId, protoFile)
         ioService.delete(originalFile.storageLocation)
     }
+
+    fun changeTrackName(
+        trackId: UUID,
+        trackName: String,
+    ) {
+        val originalFile = store.get(trackId)
+        val originalProto = protoService.readProtoContainer(originalFile.storageLocation)
+        val originalGpsContainer = gpsMapper.fromProto(originalProto)
+
+        val newGpsContainer = originalGpsContainer.copy(name = trackName)
+
+        val newProto = gpsMapper.toProto(newGpsContainer)
+        val protoFile = ioService.createTempFile(newProto.toByteArray().inputStream(), Filename("$trackName.gps"))
+
+        store.put(trackId, protoFile)
+        ioService.delete(originalFile.storageLocation)
+    }
 }

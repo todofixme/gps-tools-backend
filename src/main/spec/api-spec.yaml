@@ -114,6 +114,55 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+    patch:
+      tags:
+        - tracks
+      summary: Changes the name of a track.
+      description: >
+        To change the name of a track, you must send a valid GeoJSON object,
+        even if only the name is processed.
+      operationId: changeName
+      parameters:
+        - name: trackId
+          in: path
+          description: The UUID of the track to be deleted.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          'application/geo+json':
+            schema:
+              $ref: '#/components/schemas/GeoJsonObject'
+            example: >
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "LineString",
+                  "coordinates": []
+                },
+                "properties": {
+                  "name": "new name of the track"
+                }
+              }
+      responses:
+        204:
+          description: Successful operation.
+        404:
+          description: Track not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        500:
+          description: Server error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
     delete:
       tags:
         - tracks

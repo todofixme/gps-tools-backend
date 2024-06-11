@@ -32,14 +32,8 @@ GET {{baseUrl}}/api/v1/tracks/{{trackId}}?type=tcx
 ### download file
 GET {{baseUrl}}/api/v1/tracks/{{trackId}}?mode=dl
 
-### get file with overwritten name (Base64 encoded)
-GET {{baseUrl}}/api/v1/tracks/{{trackId}}?name=TGF1ZmFyZW5h
-
 ### get file with optimized waypoints
 GET {{baseUrl}}/api/v1/tracks/{{trackId}}?mode=opt
-
-### get file with overwritten waypoints
-GET {{baseUrl}}/api/v1/tracks/{{trackId}}?wp=ewogICJ0eXBlIjogIkZlYXR1cmVDb2xsZWN0aW9uIiwKICAiZmVhdHVyZXMiOiBbCiAgICB7CiAgICAgICJ0eXBlIjogIkZlYXR1cmUiLAogICAgICAicHJvcGVydGllcyI6IHsKICAgICAgICAibmFtZSI6ICJXYXlwb2ludCAxIiwKICAgICAgICAidHlwZSI6ICJTVU1NSVQiCiAgICAgIH0sCiAgICAgICJnZW9tZXRyeSI6IHsKICAgICAgICAidHlwZSI6ICJQb2ludCIsCiAgICAgICAgImNvb3JkaW5hdGVzIjogWzEwLjA1NDI2OSwgNTMuNTQyNzk4XQogICAgICB9CiAgICB9CiAgXQp9Cg==
 
 ### delete file
 DELETE {{baseUrl}}/api/v1/tracks/{{trackId}}
@@ -57,7 +51,7 @@ Content-Type: application/geo+json
 {
   "type": "Feature",
   "properties": {
-    "name": "Better Name 2"
+    "name": "Better Name"
   }
 }
 
