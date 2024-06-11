@@ -5,6 +5,10 @@ import jakarta.validation.Valid
 import jakarta.validation.constraints.NotNull
 import mil.nga.sf.geojson.FeatureCollection
 import org.devshred.gpstools.api.TracksApi
+import org.devshred.gpstools.api.model.FeatureCollectionDTO
+import org.devshred.gpstools.api.model.FeatureDTO
+import org.devshred.gpstools.api.model.GeoJsonObjectDTO
+import org.devshred.gpstools.api.model.LineStringDTO
 import org.devshred.gpstools.api.model.TrackDTO
 import org.devshred.gpstools.common.orElse
 import org.devshred.gpstools.formats.proto.ProtoService
@@ -16,6 +20,7 @@ import org.devshred.gpstools.storage.Filename
 import org.devshred.gpstools.storage.IOService
 import org.devshred.gpstools.storage.NotFoundException
 import org.devshred.gpstools.storage.StoredFile
+import org.devshred.gpstools.web.TrackLocker.Companion.trackLocker
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.InputStreamResource
 import org.springframework.core.io.Resource
@@ -246,6 +251,45 @@ class TrackController(
         store.put(protoFile.id, protoFile)
 
         return ResponseEntity.ok(protoFile.toTrackDTO())
+    }
+
+    override fun changeName(
+        @PathVariable(value = "trackId") trackId: UUID,
+        @Valid @RequestBody geoJsonObjectDTO: GeoJsonObjectDTO,
+    ): ResponseEntity<Unit> {
+        trackLocker().lock(trackId)
+        try {
+            val trackName: String = getTrackNameFromDto(geoJsonObjectDTO)
+            fileService.changeTrackName(trackId, trackName)
+            return ResponseEntity.noContent().build()
+        } finally {
+            trackLocker().unlock(trackId)
+        }
+    }
+
+    private fun getTrackNameFromDto(geoJsonObjectDTO: GeoJsonObjectDTO): String {
+        val trackNames =
+            when (geoJsonObjectDTO) {
+                is FeatureDTO -> getTrackName(geoJsonObjectDTO)
+                is FeatureCollectionDTO -> geoJsonObjectDTO.features.flatMap { getTrackName(it) }
+                else -> throw IllegalArgumentException("Unknown GeoJsonObjectDTO")
+            }
+        if (trackNames.isEmpty()) {
+            throw IllegalArgumentException("Request contains no trackname.")
+        } else if (trackNames.size > 1) {
+            throw IllegalArgumentException("Too many tracknames found.")
+        }
+        return trackNames.first()
+    }
+
+    private fun getTrackName(featureDTO: FeatureDTO): List<String> {
+        if (featureDTO.geometry is LineStringDTO) {
+            val propertiesMap = featureDTO.properties as Map<*, *>
+            if (propertiesMap.containsKey("name")) {
+                return listOf(propertiesMap["name"] as String)
+            }
+        }
+        return emptyList()
     }
 }
 
