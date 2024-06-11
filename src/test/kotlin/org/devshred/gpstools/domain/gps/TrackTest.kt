@@ -4,7 +4,7 @@ import io.jenetics.jpx.Length.Unit.METER
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
 import org.devshred.gpstools.formats.gps.Track
-import org.devshred.gpstools.formats.gps.WayPoint
+import org.devshred.gpstools.formats.gps.TrackPoint
 import org.junit.jupiter.api.Test
 
 class TrackTest {
@@ -13,9 +13,9 @@ class TrackTest {
         val track =
             Track(
                 listOf(
-                    WayPoint(1.0, 1.0),
-                    WayPoint(2.0, 2.0),
-                    WayPoint(3.0, 3.0),
+                    TrackPoint(1.0, 1.0),
+                    TrackPoint(2.0, 2.0),
+                    TrackPoint(3.0, 3.0),
                 ),
             )
 

@@ -12,8 +12,8 @@ import org.devshred.gpstools.api.model.PointDTO
 import org.devshred.gpstools.formats.gps.GpsContainer
 import org.devshred.gpstools.formats.gps.GpsContainerMapper
 import org.devshred.gpstools.formats.gps.PoiType
-import org.devshred.gpstools.formats.gps.WayPoint
-import org.devshred.gpstools.formats.gps.mergeWaypoints
+import org.devshred.gpstools.formats.gps.PointOfInterest
+import org.devshred.gpstools.formats.gps.mergePoints
 import org.devshred.gpstools.formats.gpx.GpxService
 import org.devshred.gpstools.formats.gpx.gpxToByteArrayOutputStream
 import org.devshred.gpstools.formats.proto.ProtoService
@@ -42,7 +42,7 @@ class FileService(
         val gpsContainer: GpsContainer =
             getGpsContainer(storageLocation, name, featureCollection)
                 .let {
-                    it.takeIf { optimizeWaypoints }?.withOptimizedWayPoints() ?: it
+                    it.takeIf { optimizeWaypoints }?.withOptimizedPointsOfInterest() ?: it
                 }
         val outputStream = gpxToByteArrayOutputStream(gpsMapper.toGpx(gpsContainer))
         return ByteArrayInputStream(outputStream.toByteArray())
@@ -57,7 +57,7 @@ class FileService(
         val gpsContainer: GpsContainer =
             getGpsContainer(storageLocation, name, featureCollection)
                 .let {
-                    it.takeIf { optimizeWaypoints }?.withOptimizedWayPoints() ?: it
+                    it.takeIf { optimizeWaypoints }?.withOptimizedPointsOfInterest() ?: it
                 }
         val tcx: TrainingCenterDatabase = gpsMapper.toTcx(gpsContainer)
         val outputStream = tcxToByteArrayOutputStream(tcx)
@@ -91,10 +91,11 @@ class FileService(
         val protoGpsContainer = protoService.readProtoContainer(storageLocation, name)
 
         if (featureCollection != null) {
-            val wayPoints =
+            val pointsOfInterest =
                 featureCollection.features.map { feature ->
                     val point = feature.geometry as Point
-                    WayPoint(
+                    PointOfInterest(
+                        uuid = UUID.fromString(feature.properties["uuid"] as String?) ?: UUID.randomUUID(),
                         latitude = point.position.y,
                         longitude = point.position.x,
                         name = feature.properties["name"] as String?,
@@ -102,7 +103,7 @@ class FileService(
                     )
                 }
             return gpsMapper.fromProto(protoGpsContainer).copy(
-                wayPoints = wayPoints,
+                pointsOfInterest = pointsOfInterest,
             )
         } else {
             return gpsMapper.fromProto(protoGpsContainer)
@@ -120,45 +121,53 @@ class FileService(
         return ByteArrayInputStream(jsonString.toByteArray())
     }
 
+    fun getWaypoints(trackId: UUID): FeatureCollection {
+        val file = store.get(trackId)
+        val proto = protoService.readProtoContainer(file.storageLocation)
+        val gpsContainer = gpsMapper.fromProto(proto)
+
+        return FeatureCollection(gpsMapper.toGeoJsonPoints(gpsContainer.pointsOfInterest))
+    }
+
     fun handleWayPointUpdate(
-        id: UUID,
+        trackId: UUID,
         geoJsonObjectDTO: GeoJsonObjectDTO,
         mode: List<String>?,
         merge: Boolean,
     ): FeatureCollection {
         val optimize: Boolean = mode?.contains("opt") ?: false
-        val wayPoints: List<WayPoint> = getWayPointsFromDto(geoJsonObjectDTO)
-        val originalFile = store.get(id)
+        val pointsOfInterest: List<PointOfInterest> = getPointsOfInterestFromDto(geoJsonObjectDTO)
+        val originalFile = store.get(trackId)
         val originalProto = protoService.readProtoContainer(originalFile.storageLocation)
         val originalGpsContainer = gpsMapper.fromProto(originalProto)
 
         val updatedWaiPoints =
             if (merge) {
-                mergeWaypoints(originalGpsContainer.wayPoints, wayPoints)
+                mergePoints(originalGpsContainer.pointsOfInterest, pointsOfInterest)
             } else {
-                wayPoints
+                pointsOfInterest
             }
 
         val newGpsContainer =
-            originalGpsContainer.copy(wayPoints = wayPoints)
-                .let { it.takeIf { optimize }?.withOptimizedWayPoints() ?: it }
+            originalGpsContainer.copy(pointsOfInterest = updatedWaiPoints)
+                .let { it.takeIf { optimize }?.withOptimizedPointsOfInterest() ?: it }
         val newProto = gpsMapper.toProto(newGpsContainer)
         val protoFile = ioService.createTempFile(newProto.toByteArray().inputStream(), originalFile.filename)
 
-        store.put(originalFile.id, protoFile)
+        store.put(trackId, protoFile)
         ioService.delete(originalFile.storageLocation)
 
         return FeatureCollection(gpsMapper.toGeoJsonPoints(updatedWaiPoints))
     }
 
-    private fun getWayPointsFromDto(geoJsonObjectDTO: GeoJsonObjectDTO) =
+    private fun getPointsOfInterestFromDto(geoJsonObjectDTO: GeoJsonObjectDTO) =
         when (geoJsonObjectDTO) {
-            is FeatureDTO -> getWayPoint(geoJsonObjectDTO)
-            is FeatureCollectionDTO -> geoJsonObjectDTO.features.flatMap { getWayPoint(it) }
+            is FeatureDTO -> getPointOfInterest(geoJsonObjectDTO)
+            is FeatureCollectionDTO -> geoJsonObjectDTO.features.flatMap { getPointOfInterest(it) }
             else -> throw IllegalArgumentException("Unknown GeoJsonObjectDTO")
         }
 
-    private fun getWayPoint(featureDTO: FeatureDTO): List<WayPoint> {
+    private fun getPointOfInterest(featureDTO: FeatureDTO): List<PointOfInterest> {
         val geometry = featureDTO.geometry
         return if (geometry is PointDTO) {
             try {
@@ -183,12 +192,12 @@ class FileService(
                     }
 
                 listOf(
-                    WayPoint(
-                        latitude = geometry.coordinates[0].toDouble(),
-                        longitude = geometry.coordinates[1].toDouble(),
+                    PointOfInterest(
+                        uuid = uuid,
+                        latitude = geometry.coordinates[1].toDouble(),
+                        longitude = geometry.coordinates[0].toDouble(),
                         type = type,
                         name = name,
-                        uuid = uuid,
                     ),
                 )
             } catch (exception: ClassCastException) {
@@ -197,5 +206,26 @@ class FileService(
         } else {
             emptyList()
         }
+    }
+
+    fun deleteWayPoint(
+        trackId: UUID,
+        pointId: UUID,
+    ) {
+        val originalFile = store.get(trackId)
+        val originalProto = protoService.readProtoContainer(originalFile.storageLocation)
+        val originalGpsContainer = gpsMapper.fromProto(originalProto)
+
+        val newPointsOfInterest = originalGpsContainer.pointsOfInterest.filter { it.uuid != pointId }
+        if (newPointsOfInterest.size == originalGpsContainer.pointsOfInterest.size) {
+            throw NotFoundException("Waypoints not found")
+        }
+        val newGpsContainer = originalGpsContainer.copy(pointsOfInterest = newPointsOfInterest)
+
+        val newProto = gpsMapper.toProto(newGpsContainer)
+        val protoFile = ioService.createTempFile(newProto.toByteArray().inputStream(), originalFile.filename)
+
+        store.put(trackId, protoFile)
+        ioService.delete(originalFile.storageLocation)
     }
 }

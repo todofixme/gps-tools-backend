@@ -4,20 +4,25 @@ import io.jenetics.jpx.GPX
 import mil.nga.sf.geojson.FeatureCollection
 import mil.nga.sf.geojson.Point
 import mil.nga.sf.geojson.Position
-import org.apache.commons.lang3.RandomStringUtils
+import org.apache.commons.lang3.RandomStringUtils.randomAlphabetic
 import org.apache.commons.math3.random.RandomDataGenerator
 import org.assertj.core.api.Assertions.assertThat
 import org.devshred.gpstools.formats.gps.ExtensionValues
 import org.devshred.gpstools.formats.gps.GpsContainer
 import org.devshred.gpstools.formats.gps.GpsContainerMapper
 import org.devshred.gpstools.formats.gps.PoiType
+import org.devshred.gpstools.formats.gps.PointOfInterest
 import org.devshred.gpstools.formats.gps.Track
-import org.devshred.gpstools.formats.gps.WayPoint
+import org.devshred.gpstools.formats.gps.TrackPoint
 import org.devshred.gpstools.formats.gps.toGps
+import org.devshred.gpstools.formats.gps.toGpsPointOfInterest
+import org.devshred.gpstools.formats.gps.toGpsTrackPoint
+import org.devshred.gpstools.formats.gps.toGpx
 import org.devshred.gpstools.formats.gps.toProto
 import org.devshred.gpstools.formats.proto.protoContainer
+import org.devshred.gpstools.formats.proto.protoPointOfInterest
 import org.devshred.gpstools.formats.proto.protoTrack
-import org.devshred.gpstools.formats.proto.protoWayPoint
+import org.devshred.gpstools.formats.proto.protoTrackPoint
 import org.devshred.gpstools.formats.tcx.TcxTools
 import org.hamcrest.MatcherAssert
 import org.junit.jupiter.api.Test
@@ -28,6 +33,7 @@ import org.xmlunit.diff.DefaultNodeMatcher
 import org.xmlunit.diff.ElementSelectors
 import org.xmlunit.matchers.CompareMatcher
 import java.time.Instant
+import java.util.UUID
 import java.util.stream.Stream
 import io.jenetics.jpx.WayPoint as GpxWayPoint
 import org.xmlunit.assertj.XmlAssert.assertThat as xmlAssertThat
@@ -39,9 +45,10 @@ class GpsContainerMapperTest {
     private val gpsContainer =
         GpsContainer(
             name = "Happy Path Example",
-            wayPoints =
+            pointsOfInterest =
                 listOf(
-                    WayPoint(
+                    PointOfInterest(
+                        uuid = UUID.randomUUID(),
                         latitude = 36.74881700,
                         longitude = -4.07262399,
                         time = Instant.ofEpochSecond(1262315764),
@@ -51,21 +58,21 @@ class GpsContainerMapperTest {
                 ),
             track =
                 Track(
-                    wayPoints =
+                    trackPoints =
                         listOf(
-                            WayPoint(
+                            TrackPoint(
                                 latitude = 36.72100500,
                                 longitude = -4.41088200,
                                 elevation = 14.000000,
                                 time = Instant.ofEpochSecond(1262304000),
                             ),
-                            WayPoint(
+                            TrackPoint(
                                 latitude = 36.74881700,
                                 longitude = -4.07262399,
                                 elevation = 3.0000000,
                                 time = Instant.ofEpochSecond(1262315764),
                             ),
-                            WayPoint(
+                            TrackPoint(
                                 latitude = 36.73361890,
                                 longitude = -3.68807099,
                                 elevation = 11.000000,
@@ -80,9 +87,10 @@ class GpsContainerMapperTest {
         val protoGpsContainer: org.devshred.gpstools.formats.proto.ProtoContainer =
             protoContainer {
                 name = "My Track"
-                wayPoints +=
+                pointsOfInterest +=
                     listOf(
-                        protoWayPoint {
+                        protoPointOfInterest {
+                            uuid = UUID.randomUUID().toString()
                             latitude = 1.0
                             longitude = 2.0
                             type = org.devshred.gpstools.formats.proto.ProtoPoiType.SUMMIT
@@ -90,8 +98,8 @@ class GpsContainerMapperTest {
                     )
                 track =
                     protoTrack {
-                        wayPoints +=
-                            protoWayPoint {
+                        trackPoints +=
+                            protoTrackPoint {
                                 latitude = 1.0
                                 longitude = 2.0
                             }
@@ -101,14 +109,14 @@ class GpsContainerMapperTest {
         val domainGpsContainer = mapper.fromProto(protoGpsContainer)
 
         assertThat(domainGpsContainer.name).isEqualTo("My Track")
-        assertThat(domainGpsContainer.wayPoints).hasSize(1)
-        assertThat(domainGpsContainer.wayPoints[0].type).isEqualTo(PoiType.SUMMIT)
-        assertThat(domainGpsContainer.track!!.wayPoints).hasSize(1)
+        assertThat(domainGpsContainer.pointsOfInterest).hasSize(1)
+        assertThat(domainGpsContainer.pointsOfInterest[0].type).isEqualTo(PoiType.SUMMIT)
+        assertThat(domainGpsContainer.track!!.trackPoints).hasSize(1)
     }
 
     @Test
     fun `set trackname from first track`() {
-        val trackname = RandomStringUtils.randomAlphabetic(8)
+        val trackname = randomAlphabetic(8)
         val gpx =
             GPX.builder()
                 .metadata { m -> m.name("yet another name") }
@@ -127,7 +135,7 @@ class GpsContainerMapperTest {
 
     @Test
     fun `set trackname from GPX metadata if no track was found`() {
-        val trackname = RandomStringUtils.randomAlphabetic(8)
+        val trackname = randomAlphabetic(8)
         val gpx =
             GPX.builder()
                 .metadata { m -> m.name(trackname) }
@@ -148,23 +156,28 @@ class GpsContainerMapperTest {
     }
 
     @Test
-    fun `map GPX WayPoint`() {
-        val lat = randomGenerator.nextDouble()
-        val lon = randomGenerator.nextDouble()
-        val gpx = GpxWayPoint.of(lat, lon)
-
-        val protoBuf = gpx.toGps()
-
-        assertThat(protoBuf.latitude).isEqualTo(lat)
-        assertThat(protoBuf.longitude).isEqualTo(lon)
-    }
-
-    @Test
-    fun `map protoBuf WayPoint`() {
+    fun `map protoBuf TrackPoint`() {
         val lat = randomGenerator.nextDouble()
         val lon = randomGenerator.nextDouble()
         val protoBuf =
-            protoWayPoint {
+            protoTrackPoint {
+                latitude = lat
+                longitude = lon
+            }
+
+        val gpx = protoBuf.toGps()
+
+        assertThat(gpx.latitude).isEqualTo(lat)
+        assertThat(gpx.longitude).isEqualTo(lon)
+    }
+
+    @Test
+    fun `map protoBuf PointOfInterest`() {
+        val lat = randomGenerator.nextDouble()
+        val lon = randomGenerator.nextDouble()
+        val protoBuf =
+            protoPointOfInterest {
+                uuid = UUID.randomUUID().toString()
                 latitude = lat
                 longitude = lon
             }
@@ -241,9 +254,10 @@ class GpsContainerMapperTest {
         val tcx =
             mapper.toTcx(
                 gpsContainer.copy(
-                    wayPoints =
+                    pointsOfInterest =
                         listOf(
-                            WayPoint(
+                            PointOfInterest(
+                                uuid = UUID.randomUUID(),
                                 latitude = 36.74881700,
                                 longitude = -4.07262399,
                                 type = PoiType.FOOD,
@@ -252,14 +266,14 @@ class GpsContainerMapperTest {
                         ),
                     track =
                         Track(
-                            wayPoints =
+                            trackPoints =
                                 listOf(
-                                    WayPoint(
+                                    TrackPoint(
                                         latitude = 36.72100500,
                                         longitude = -4.41088200,
                                         elevation = 14.000000,
                                     ),
-                                    WayPoint(
+                                    TrackPoint(
                                         latitude = 36.74881700,
                                         longitude = -4.07262399,
                                         elevation = 3.0000000,
@@ -283,20 +297,20 @@ class GpsContainerMapperTest {
     fun `maps to GeoJSON`() {
         val trackPoints =
             listOf(
-                WayPoint(11.0, 12.0),
-                WayPoint(21.0, 22.0),
-                WayPoint(31.0, 32.0),
-                WayPoint(41.0, 42.0),
-                WayPoint(51.0, 52.0),
+                TrackPoint(11.0, 12.0),
+                TrackPoint(21.0, 22.0),
+                TrackPoint(31.0, 32.0),
+                TrackPoint(41.0, 42.0),
+                TrackPoint(51.0, 52.0),
             )
-        val wayPoints =
+        val pointsOfInterest =
             listOf(
-                WayPoint(11.0, 12.0, type = PoiType.RESIDENCE),
-                WayPoint(31.0, 32.0, type = PoiType.FOOD),
-                WayPoint(51.0, 52.0, type = PoiType.SPRINT),
+                PointOfInterest(UUID.randomUUID(), 11.0, 12.0, type = PoiType.RESIDENCE),
+                PointOfInterest(UUID.randomUUID(), 31.0, 32.0, type = PoiType.FOOD),
+                PointOfInterest(UUID.randomUUID(), 51.0, 52.0, type = PoiType.SPRINT),
             )
         val track = Track(trackPoints)
-        val gpsContainer = GpsContainer("TestTrack", wayPoints, track)
+        val gpsContainer = GpsContainer("TestTrack", pointsOfInterest, track)
 
         val actual: FeatureCollection = mapper.toGeoJson(gpsContainer)
 
@@ -327,6 +341,191 @@ class GpsContainerMapperTest {
                 .map { (it.geometry as Point).point },
         )
             .isEqualTo(listOf(mil.nga.sf.Point(31.0, 32.0)))
+    }
+
+    @Test
+    fun `convert TrackPoint to GpxWayPoint and back to TrackPoint`() {
+        val trackPoint =
+            TrackPoint(
+                latitude = 36.72100500,
+                longitude = -4.41088200,
+            )
+
+        val gpx = trackPoint.toGpx()
+
+        assertThat(gpx.latitude.toDouble()).isEqualTo(36.72100500)
+        assertThat(gpx.longitude.toDouble()).isEqualTo(-4.41088200)
+
+        val gps = gpx.toGpsTrackPoint()
+
+        assertThat(gps.latitude).isEqualTo(36.72100500)
+        assertThat(gps.longitude).isEqualTo(-4.41088200)
+    }
+
+    @Test
+    fun `convert TrackPoint to GpxWayPoint and back to TrackPoint with elevation`() {
+        val trackPoint =
+            TrackPoint(
+                latitude = 36.72100500,
+                longitude = -4.41088200,
+                elevation = 14.000000,
+            )
+
+        val gpx = trackPoint.toGpx()
+
+        assertThat(gpx.latitude.toDouble()).isEqualTo(36.72100500)
+        assertThat(gpx.longitude.toDouble()).isEqualTo(-4.41088200)
+        assertThat(gpx.elevation.get().toDouble()).isEqualTo(14.000000)
+
+        val gps = gpx.toGpsTrackPoint()
+
+        assertThat(gps.latitude).isEqualTo(36.72100500)
+        assertThat(gps.longitude).isEqualTo(-4.41088200)
+        assertThat(gps.elevation).isEqualTo(14.000000)
+    }
+
+    @Test
+    fun `convert TrackPoint to GpxWayPoint and back to TrackPoint with time`() {
+        val trackPoint =
+            TrackPoint(
+                latitude = 36.72100500,
+                longitude = -4.41088200,
+                time = Instant.ofEpochSecond(1262304000),
+            )
+
+        val gpx = trackPoint.toGpx()
+
+        assertThat(gpx.latitude.toDouble()).isEqualTo(36.72100500)
+        assertThat(gpx.longitude.toDouble()).isEqualTo(-4.41088200)
+        assertThat(gpx.time.get().epochSecond).isEqualTo(1262304000)
+
+        val gps = gpx.toGpsTrackPoint()
+
+        assertThat(gps.latitude).isEqualTo(36.72100500)
+        assertThat(gps.longitude).isEqualTo(-4.41088200)
+        assertThat(gps.time?.epochSecond).isEqualTo(1262304000)
+    }
+
+    @Test
+    fun `convert TrackPoint to GpxWayPoint and back to TrackPoint with heartrate`() {
+        val trackPoint =
+            TrackPoint(
+                latitude = 36.72100500,
+                longitude = -4.41088200,
+                heartRate = 180,
+            )
+
+        val gpx = trackPoint.toGpx()
+        val gps = gpx.toGpsTrackPoint()
+
+        assertThat(gps.latitude).isEqualTo(36.72100500)
+        assertThat(gps.longitude).isEqualTo(-4.41088200)
+        assertThat(gps.heartRate).isEqualTo(180)
+    }
+
+    @Test
+    fun `convert TrackPoint to GpxWayPoint and back to TrackPoint with cadence`() {
+        val trackPoint =
+            TrackPoint(
+                latitude = 36.72100500,
+                longitude = -4.41088200,
+                cadence = 90,
+            )
+
+        val gpx = trackPoint.toGpx()
+        val gps = gpx.toGpsTrackPoint()
+
+        assertThat(gps.latitude).isEqualTo(36.72100500)
+        assertThat(gps.longitude).isEqualTo(-4.41088200)
+        assertThat(gps.cadence).isEqualTo(90)
+    }
+
+    @Test
+    fun `convert TrackPoint to GpxWayPoint and back to TrackPoint with power`() {
+        val trackPoint =
+            TrackPoint(
+                latitude = 36.72100500,
+                longitude = -4.41088200,
+                power = 420,
+            )
+
+        val gpx = trackPoint.toGpx()
+        val gps = gpx.toGpsTrackPoint()
+
+        assertThat(gps.latitude).isEqualTo(36.72100500)
+        assertThat(gps.longitude).isEqualTo(-4.41088200)
+        assertThat(gps.power).isEqualTo(420)
+    }
+
+    @Test
+    fun `convert PointOfInterest to GpxWayPoint and back to PointOfInterest`() {
+        val uuid = UUID.randomUUID()
+        val poi =
+            PointOfInterest(
+                uuid = uuid,
+                latitude = 36.72100500,
+                longitude = -4.41088200,
+            )
+
+        val gpx = poi.toGpx()
+
+        assertThat(gpx.latitude.toDouble()).isEqualTo(36.72100500)
+        assertThat(gpx.longitude.toDouble()).isEqualTo(-4.41088200)
+
+        val gps = gpx.toGpsPointOfInterest()
+
+        assertThat(gps.latitude).isEqualTo(36.72100500)
+        assertThat(gps.longitude).isEqualTo(-4.41088200)
+    }
+
+    @Test
+    fun `convert PointOfInterest to GpxWayPoint and back to PointOfInterest with name`() {
+        val uuid = UUID.randomUUID()
+        val name = randomAlphabetic(8)
+        val poi =
+            PointOfInterest(
+                uuid = uuid,
+                latitude = 36.72100500,
+                longitude = -4.41088200,
+                name = name,
+            )
+
+        val gpx = poi.toGpx()
+
+        assertThat(gpx.latitude.toDouble()).isEqualTo(36.72100500)
+        assertThat(gpx.longitude.toDouble()).isEqualTo(-4.41088200)
+        assertThat(gpx.name.get()).isEqualTo(name)
+
+        val gps = gpx.toGpsPointOfInterest()
+
+        assertThat(gps.latitude).isEqualTo(36.72100500)
+        assertThat(gps.longitude).isEqualTo(-4.41088200)
+        assertThat(gps.name).isEqualTo(name)
+    }
+
+    @Test
+    fun `convert PointOfInterest to GpxWayPoint and back to PointOfInterest with type`() {
+        val uuid = UUID.randomUUID()
+        val type = PoiType.RESIDENCE
+        val poi =
+            PointOfInterest(
+                uuid = uuid,
+                latitude = 36.72100500,
+                longitude = -4.41088200,
+                type = type,
+            )
+
+        val gpx = poi.toGpx()
+
+        assertThat(gpx.latitude.toDouble()).isEqualTo(36.72100500)
+        assertThat(gpx.longitude.toDouble()).isEqualTo(-4.41088200)
+        assertThat(gpx.type.get()).isEqualTo("RESIDENCE")
+
+        val gps = gpx.toGpsPointOfInterest()
+
+        assertThat(gps.latitude).isEqualTo(36.72100500)
+        assertThat(gps.longitude).isEqualTo(-4.41088200)
+        assertThat(gps.type).isEqualTo(PoiType.RESIDENCE)
     }
 
     private fun randomWayPoint(): GpxWayPoint =

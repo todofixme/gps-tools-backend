@@ -50,6 +50,21 @@ POST {{baseUrl}}/api/v1/merge?trackIds={{trackId}}&trackIds=727206e4-dc8a-4294-9
 
 > {% client.global.set("trackId", response.body.id) %}
 
+### change trackname
+PATCH {{baseUrl}}/api/v1/tracks/{{trackId}}
+Content-Type: application/geo+json
+
+{
+  "type": "Feature",
+  "properties": {
+    "name": "Better Name 2"
+  }
+}
+
+### get wayPoints
+GET {{baseUrl}}/api/v1/tracks/936fc2d7-cf9a-4a5f-9d45-30884b013c84/points
+Accept: application/geo+json
+
 ### change wayPoints
 PUT {{baseUrl}}/api/v1/tracks/{{trackId}}/points
 Content-Type: application/geo+json
@@ -88,7 +103,7 @@ Content-Type: application/geo+json
   ]
 }
 
-### add wayPoint
+### add or change wayPoint
 PATCH {{baseUrl}}/api/v1/tracks/{{trackId}}/points?mode=opt
 Content-Type: application/geo+json
 
@@ -106,3 +121,8 @@ Content-Type: application/geo+json
     "type": "DANGER"
   }
 }
+
+> {% client.global.set("pointId", response.body.features[1].properties.uuid) %}
+
+### delete wayPoint
+DELETE {{baseUrl}}/api/v1/tracks/{{trackId}}/points/{{pointId}}

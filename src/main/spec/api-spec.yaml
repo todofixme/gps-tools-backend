@@ -14,17 +14,19 @@ servers:
 tags:
   - name: tracks
     description: API to work on GPS-tracks.
+  - name: points
+    description: API to work on waypoints of a GPS-tracks.
   - name: server
     description: Server-related info.
 paths:
-  /tracks/{id}:
+  /tracks/{trackId}:
     get:
       tags:
         - tracks
       summary: Get a track by UUID.
       operationId: download
       parameters:
-        - name: id
+        - name: trackId
           in: path
           description: The UUID of the track you are looking for.
           required: true
@@ -115,10 +117,10 @@ paths:
     delete:
       tags:
         - tracks
-      summary: Delete a GPS track by UUID.
+      summary: Delete a track by UUID.
       operationId: delete
       parameters:
-        - name: id
+        - name: trackId
           in: path
           description: The UUID of the track to be deleted.
           required: true
@@ -140,81 +142,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  /tracks/{id}/points:
-    put:
-      tags:
-        - tracks
-      summary: Replaces the waypoints of the given track.
-      operationId: changePoints
-      parameters:
-        - name: id
-          in: path
-          description: The UUID of the track to be changed.
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: mode
-          in: query
-          description: >
-            Available Mode:
-             * `opt` - Optimize waypoints
-          schema:
-            type: array
-            items:
-              type: string
-              enum:
-                - opt
-      requestBody:
-        required: true
-        content:
-          'application/geo+json':
-            schema:
-              $ref: '#/components/schemas/GeoJsonObject'
-      responses:
-        200:
-          description: Points have been replaced. Returns all waypoints of the track.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GeoJsonObject'
-    patch:
-      tags:
-        - tracks
-      summary: Merges the waypoints with the existing ones based on UUIDs of the waypoints.
-      operationId: addPoints
-      parameters:
-        - name: id
-          in: path
-          description: The UUID of the track to be changed.
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: mode
-          in: query
-          description: >
-            Available Mode:
-             * `opt` - Optimize waypoints
-          schema:
-            type: array
-            items:
-              type: string
-              enum:
-                - opt
-      requestBody:
-        required: true
-        content:
-          'application/geo+json':
-            schema:
-              $ref: '#/components/schemas/GeoJsonObject'
-      responses:
-        200:
-          description: Points have been replaced. Returns all waypoints of the track.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GeoJsonObject'
   /track:
     post:
       tags:
@@ -334,6 +261,178 @@ paths:
                 $ref: '#/components/schemas/Problem'
         404:
           description: Track not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        500:
+          description: Server error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /tracks/{trackId}/points:
+    get:
+      tags:
+        - points
+      summary: Get waypoints of a track.
+      operationId: getPoints
+      parameters:
+        - name: trackId
+          in: path
+          description: The UUID of the track to be changed.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: All waypoints of the track.
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/GeoJsonObject'
+        404:
+          description: Track not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        500:
+          description: Server error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    put:
+      tags:
+        - points
+      summary: Replaces the waypoints of a track.
+      operationId: changePoints
+      parameters:
+        - name: trackId
+          in: path
+          description: The UUID of the track to be changed.
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: mode
+          in: query
+          description: >
+            Available Mode:
+             * `opt` - Optimize waypoints
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - opt
+      requestBody:
+        required: true
+        content:
+          'application/geo+json':
+            schema:
+              $ref: '#/components/schemas/GeoJsonObject'
+      responses:
+        200:
+          description: Points have been replaced. Returns all waypoints of the track.
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/GeoJsonObject'
+        404:
+          description: Track not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        500:
+          description: Server error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    patch:
+      tags:
+        - points
+      summary: Changes waypoints of a track.
+      description: >
+        Merges the waypoints with the existing ones based on UUIDs of the waypoints.
+        If there is a waypoint with that UUID already, the waypoint will be replaced.
+        If the UUID does not exist the waypoint is added.
+        If the new waypoint has no UUID at all, it is given an UUID and added to the list of waypoints.
+      operationId: addPoints
+      parameters:
+        - name: trackId
+          in: path
+          description: The UUID of the track to be changed.
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: mode
+          in: query
+          description: >
+            Available Mode:
+             * `opt` - Optimize waypoints
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - opt
+      requestBody:
+        required: true
+        content:
+          'application/geo+json':
+            schema:
+              $ref: '#/components/schemas/GeoJsonObject'
+      responses:
+        200:
+          description: Points have been replaced. Returns all waypoints of the track.
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/GeoJsonObject'
+        404:
+          description: Track not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        500:
+          description: Server error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /tracks/{trackId}/points/{pointId}:
+    delete:
+      tags:
+        - points
+      summary: Deletes a waypoint of a track.
+      operationId: deletePoint
+      parameters:
+        - name: trackId
+          in: path
+          description: The UUID of the track containing the waypoint to be deleted.
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pointId
+          in: path
+          description: The UUID of the waypoint to be deleted.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        204:
+          description: Successful operation.
+        404:
+          description: Track or waypoint not found.
           content:
             application/problem+json:
               schema:

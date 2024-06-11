@@ -5,59 +5,59 @@ import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.util.UUID
 
-class WayPointTest {
+class PointOfInterestTest {
     @Test
-    fun `should add waypoint`() {
-        val wayPoint1 =
-            WayPoint(
+    fun `should add pointOfInterest`() {
+        val pointOfInterest1 =
+            PointOfInterest(
+                uuid = UUID.randomUUID(),
                 latitude = 36.74881700,
                 longitude = -4.07262399,
                 time = Instant.ofEpochSecond(1262315764),
                 type = PoiType.FOOD,
                 name = "Highlight1",
-                uuid = UUID.randomUUID(),
             )
 
         val wayPoint2 =
-            WayPoint(
+            PointOfInterest(
+                uuid = UUID.randomUUID(),
                 latitude = 36.74881700,
                 longitude = -4.07262399,
                 time = Instant.ofEpochSecond(1262315764),
                 type = PoiType.RESIDENCE,
                 name = "Highlight2",
-                uuid = UUID.randomUUID(),
             )
 
-        val mergedWaypoints = mergeWaypoints(listOf(wayPoint1), listOf(wayPoint2))
+        val mergedPoints = mergePoints(listOf(pointOfInterest1), listOf(wayPoint2))
 
-        assertThat(mergedWaypoints).hasSize(2)
-        assertThat(mergedWaypoints.map { it.name }).contains("Highlight1", "Highlight2")
+        assertThat(mergedPoints).hasSize(2)
+        assertThat(mergedPoints.map { it.name }).contains("Highlight1", "Highlight2")
     }
 
     @Test
-    fun `should change waypoint`() {
+    fun `should change pointOfInterest`() {
         val uuid = UUID.randomUUID()
-        val wayPoint1 =
-            WayPoint(
+        val pointOfInterest1 =
+            PointOfInterest(
+                uuid = uuid,
                 latitude = 36.74881700,
                 longitude = -4.07262399,
                 time = Instant.ofEpochSecond(1262315764),
                 type = PoiType.FOOD,
                 name = "Highlight1",
-                uuid = uuid,
             )
 
-        val wayPoint2 =
-            WayPoint(
+        val pointOfInterest2 =
+            PointOfInterest(
+                uuid = uuid,
                 latitude = 36.74881700,
                 longitude = -4.07262399,
                 time = Instant.ofEpochSecond(1262315764),
                 type = PoiType.RESIDENCE,
                 name = "Highlight2",
-                uuid = uuid,
             )
 
-        val mergedWaypoints = mergeWaypoints(listOf(wayPoint1), listOf(wayPoint2))
+        val mergedWaypoints = mergePoints(listOf(pointOfInterest1), listOf(pointOfInterest2))
 
         assertThat(mergedWaypoints).hasSize(1)
         assertThat(mergedWaypoints.map { it.name }).contains("Highlight2")

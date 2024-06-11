@@ -16,10 +16,12 @@ import org.devshred.gpstools.formats.gps.GpsContainerMapper.Constants.SEMICIRCLE
 import org.devshred.gpstools.formats.gpx.GPX_CREATOR
 import org.devshred.gpstools.formats.proto.ProtoContainer
 import org.devshred.gpstools.formats.proto.ProtoPoiType
-import org.devshred.gpstools.formats.proto.ProtoWayPoint
+import org.devshred.gpstools.formats.proto.ProtoPointOfInterest
+import org.devshred.gpstools.formats.proto.ProtoTrackPoint
 import org.devshred.gpstools.formats.proto.protoContainer
+import org.devshred.gpstools.formats.proto.protoPointOfInterest
 import org.devshred.gpstools.formats.proto.protoTrack
-import org.devshred.gpstools.formats.proto.protoWayPoint
+import org.devshred.gpstools.formats.proto.protoTrackPoint
 import org.devshred.gpstools.formats.tcx.Course
 import org.devshred.gpstools.formats.tcx.CoursePoint
 import org.devshred.gpstools.formats.tcx.Lap
@@ -29,11 +31,13 @@ import org.springframework.stereotype.Component
 import org.w3c.dom.Node
 import java.time.Instant
 import java.time.ZonedDateTime
+import java.util.UUID
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.jvm.optionals.getOrNull
 import kotlin.math.pow
 import io.jenetics.jpx.WayPoint as GpxWayPoint
-import org.devshred.gpstools.formats.gps.WayPoint as GpsWayPoint
+import org.devshred.gpstools.formats.gps.PointOfInterest as GpsPointOfInterest
+import org.devshred.gpstools.formats.gps.TrackPoint as GpsTrackPoint
 import org.devshred.gpstools.formats.tcx.Position as TcxPosition
 import org.devshred.gpstools.formats.tcx.Track as TcxTrack
 
@@ -46,11 +50,11 @@ class GpsContainerMapper {
     fun toProto(gpsContainer: GpsContainer): ProtoContainer =
         protoContainer {
             gpsContainer.name?.let { name = it }
-            gpsContainer.wayPoints.map { it.toProto() }.forEach { wayPoints += it }
+            gpsContainer.pointsOfInterest.map { it.toProto() }.forEach { pointsOfInterest += it }
             gpsContainer.track?.let { gpsTrack ->
                 track =
                     protoTrack {
-                        gpsTrack.wayPoints.forEach { wayPoints += it.toProto() }
+                        gpsTrack.trackPoints.forEach { trackPoints += it.toProto() }
                     }
             }
         }
@@ -58,21 +62,21 @@ class GpsContainerMapper {
     fun fromProto(protoContainer: ProtoContainer): GpsContainer =
         GpsContainer(
             name = protoContainer.name,
-            wayPoints = protoContainer.wayPointsList.map { it.toGps() },
+            pointsOfInterest = protoContainer.pointsOfInterestList.map { it.toGps() },
             track =
                 protoContainer.track
-                    ?.let { Track(protoContainer.track.wayPointsList.map { it.toGps() }) }
+                    ?.let { Track(protoContainer.track.trackPointsList.map { it.toGps() }) }
                     .orElse { null },
         )
 
     fun toGpx(gpsCont: GpsContainer): GPX {
         val gpxBuilder = GPX.builder().creator(GPX_CREATOR)
         gpsCont.name?.let { gpsName -> gpxBuilder.metadata { gpx -> gpx.name(gpsName) } }
-        gpxBuilder.wayPoints(gpsCont.wayPoints.map { it.toGpx() })
+        gpxBuilder.wayPoints(gpsCont.pointsOfInterest.map { it.toGpx() })
         gpxBuilder.addTrack { track ->
             track.name(gpsCont.name)
             track.addSegment { segment ->
-                segment.points(gpsCont.track?.wayPoints?.map { it.toGpx() })
+                segment.points(gpsCont.track?.trackPoints?.map { it.toGpx() })
             }
         }
         return gpxBuilder.build()
@@ -87,17 +91,17 @@ class GpsContainerMapper {
             } else {
                 null
             }
-        val wayPoints = gpx.wayPoints.map { it.toGps() }
+        val wayPoints = gpx.wayPoints.map { it.toGpsPointOfInterest() }
         val track: Track? =
             if (gpx.tracks.isNotEmpty() && gpx.tracks[0].segments.isNotEmpty()) {
-                Track(gpx.tracks[0].segments.flatMap { it.points }.map { it.toGps() })
+                Track(gpx.tracks[0].segments.flatMap { it.points }.map { it.toGpsTrackPoint() })
             } else {
                 null
             }
 
         return GpsContainer(
             name = trackName,
-            wayPoints = wayPoints,
+            pointsOfInterest = wayPoints,
             track = track,
         )
     }
@@ -108,14 +112,14 @@ class GpsContainerMapper {
                 Track(
                     fit.recordMesgs
                         .filter { it.positionLat != null && it.positionLong != null }
-                        .map { records -> records.toGps() },
+                        .map { records -> records.toGpsTrackPoint() },
                 )
                     .orElse { null }
             }
 
         return GpsContainer(
             name = "Activity",
-            wayPoints = emptyList(),
+            pointsOfInterest = emptyList(),
             track = track,
         )
     }
@@ -129,7 +133,7 @@ class GpsContainerMapper {
      */
     fun toGeoJson(gpsContainer: GpsContainer): FeatureCollection {
         val geoTrackPoints =
-            gpsContainer.track?.wayPoints?.map {
+            gpsContainer.track?.trackPoints?.map {
                 val position = Position(it.longitude, it.latitude)
                 val point = Point(position)
                 point
@@ -141,25 +145,21 @@ class GpsContainerMapper {
         val featureCollection = FeatureCollection()
         featureCollection.addFeature(lineStringFeature)
 
-        toGeoJsonPoints(gpsContainer.wayPoints)
+        toGeoJsonPoints(gpsContainer.pointsOfInterest)
             .forEach { feature -> featureCollection.addFeature(feature) }
 
         return featureCollection
     }
 
-    fun fromGeoJson(featureCollection: FeatureCollection): GpsContainer {
-        throw UnsupportedOperationException("Not yet implemented")
-    }
-
-    fun toGeoJsonPoints(wayPoints: List<GpsWayPoint>): List<Feature> {
+    fun toGeoJsonPoints(wayPoints: List<GpsPointOfInterest>): List<Feature> {
         return wayPoints.map { wayPoint ->
             val position = Position(wayPoint.latitude, wayPoint.longitude)
             val point = Point(position)
-            val feature = Feature(point)
 
+            val feature = Feature(point)
+            feature.properties["uuid"] = wayPoint.uuid.toString()
             wayPoint.name?.let { feature.properties["name"] = wayPoint.name.toString() }
             wayPoint.type?.let { feature.properties["type"] = wayPoint.type.toString() }
-            wayPoint.uuid?.let { feature.properties["uuid"] = wayPoint.uuid.toString() }
 
             feature
         }
@@ -170,12 +170,12 @@ class GpsContainerMapper {
 
         val course = Course(gpsContainer.name!!)
         gpsContainer.track?.let { track ->
-            val wayPoints = track.wayPoints
-            val firstWayPoint = wayPoints[0]
-            val lastWayPoint = wayPoints[wayPoints.size - 1]
+            val trackPoints = track.trackPoints
+            val firstTrackPoint = trackPoints[0]
+            val lastTrackPoint = trackPoints[trackPoints.size - 1]
             val durationInSeconds =
-                if (firstWayPoint.time != null && lastWayPoint.time != null && firstWayPoint.time < lastWayPoint.time) {
-                    (lastWayPoint.time.epochSecond - firstWayPoint.time.epochSecond).toDouble()
+                if (firstTrackPoint.time != null && lastTrackPoint.time != null && firstTrackPoint.time < lastTrackPoint.time) {
+                    (lastTrackPoint.time.epochSecond - firstTrackPoint.time.epochSecond).toDouble()
                 } else {
                     0.0
                 }
@@ -185,13 +185,13 @@ class GpsContainerMapper {
                     distanceMeters = track.calculateLength().toDouble(),
                     beginPosition =
                         TcxPosition(
-                            firstWayPoint.latitude,
-                            firstWayPoint.longitude,
+                            firstTrackPoint.latitude,
+                            firstTrackPoint.longitude,
                         ),
                     endPosition =
                         TcxPosition(
-                            lastWayPoint.latitude,
-                            lastWayPoint.longitude,
+                            lastTrackPoint.latitude,
+                            lastTrackPoint.longitude,
                         ),
                     intensity = "Active",
                 )
@@ -199,34 +199,34 @@ class GpsContainerMapper {
 
             val tcxTrack = TcxTrack()
             var distance = 0.0
-            var previous: GpsWayPoint? = null
+            var previous: GpsTrackPoint? = null
             val timeFallback = ZonedDateTime.now(DEFAULT_TIMEZONE)
-            for (point in track.wayPoints) {
+            for (trackPoint in track.trackPoints) {
                 if (previous != null) {
-                    distance += Geoid.WGS84.distance(previous.toGpx(), point.toGpx()).toDouble()
+                    distance += Geoid.WGS84.distance(previous.toGpx(), trackPoint.toGpx()).toDouble()
                 }
                 tcxTrack.addTrackpoint(
                     Trackpoint(
-                        point.time
-                            ?.let { ZonedDateTime.ofInstant(point.time, DEFAULT_TIMEZONE) }
+                        trackPoint.time
+                            ?.let { ZonedDateTime.ofInstant(trackPoint.time, DEFAULT_TIMEZONE) }
                             .orElse { timeFallback },
-                        TcxPosition(point.latitude, point.longitude),
-                        point.elevation!!.toDouble(),
+                        TcxPosition(trackPoint.latitude, trackPoint.longitude),
+                        trackPoint.elevation!!.toDouble(),
                         distance,
                     ),
                 )
-                previous = point
+                previous = trackPoint
             }
             course.setTrack(tcxTrack)
         }
 
-        gpsContainer.wayPoints.forEach { wayPoint: GpsWayPoint ->
+        gpsContainer.pointsOfInterest.forEach { poi: GpsPointOfInterest ->
             course.addCoursePoint(
                 CoursePoint(
-                    name = wayPoint.name.orElse { "unnamed" },
-                    time = wayPoint.time?.atZone(DEFAULT_TIMEZONE),
-                    position = TcxPosition(wayPoint.latitude, wayPoint.longitude),
-                    pointType = wayPoint.type?.tcxType,
+                    name = poi.name.orElse { "unnamed" },
+                    time = poi.time?.atZone(DEFAULT_TIMEZONE),
+                    position = TcxPosition(poi.latitude, poi.longitude),
+                    pointType = poi.type?.tcxType,
                 ),
             )
         }
@@ -237,7 +237,7 @@ class GpsContainerMapper {
     }
 }
 
-fun GpsWayPoint.toGpx(): GpxWayPoint {
+fun GpsTrackPoint.toGpx(): GpxWayPoint {
     val builder = GpxWayPoint.builder()
 
     builder.lat(latitude)
@@ -245,8 +245,6 @@ fun GpsWayPoint.toGpx(): GpxWayPoint {
 
     elevation?.let { builder.ele(it) }
     time?.let { builder.time(it) }
-    name?.let { builder.name(it) }
-    type?.let { builder.sym(it.gpxSym) }
     speed?.let { builder.speed(it) }
 
     if (hasExtensionValues()) {
@@ -292,7 +290,22 @@ fun GpsWayPoint.toGpx(): GpxWayPoint {
     return builder.build()
 }
 
-private fun GpsWayPoint.hasExtensionValues(): Boolean {
+fun GpsPointOfInterest.toGpx(): GpxWayPoint {
+    val builder = GpxWayPoint.builder()
+
+    builder.lat(latitude)
+    builder.lon(longitude)
+
+    elevation?.let { builder.ele(it) }
+    time?.let { builder.time(it) }
+
+    name?.let { builder.name(it) }
+    type?.let { builder.type(it.name) }
+
+    return builder.build()
+}
+
+private fun GpsTrackPoint.hasExtensionValues(): Boolean {
     return power != null || temperature != null || heartRate != null || cadence != null
 }
 
@@ -317,15 +330,13 @@ fun PoiType.toProto(): ProtoPoiType =
         PoiType.SPRINT -> ProtoPoiType.SPRINT
     }
 
-fun GpsWayPoint.toProto(): ProtoWayPoint {
-    val gps: GpsWayPoint = this
-    return protoWayPoint {
+fun GpsTrackPoint.toProto(): ProtoTrackPoint {
+    val gps: GpsTrackPoint = this
+    return protoTrackPoint {
         latitude = gps.latitude
         longitude = gps.longitude
         gps.elevation?.let { elevation = gps.elevation }
         gps.time?.let { time = Timestamp.newBuilder().setSeconds(gps.time.epochSecond).build() }
-        gps.name?.let { name = gps.name }
-        gps.type?.let { type = gps.type.toProto() }
         gps.speed?.let { speed = gps.speed }
         gps.power?.let { power = gps.power }
         gps.temperature?.let { temperature = gps.temperature }
@@ -334,14 +345,25 @@ fun GpsWayPoint.toProto(): ProtoWayPoint {
     }
 }
 
-fun ProtoWayPoint.toGps(): GpsWayPoint =
-    GpsWayPoint(
+fun GpsPointOfInterest.toProto(): ProtoPointOfInterest {
+    val gps: GpsPointOfInterest = this
+    return protoPointOfInterest {
+        uuid = gps.uuid.toString()
+        latitude = gps.latitude
+        longitude = gps.longitude
+        gps.elevation?.let { elevation = gps.elevation }
+        gps.time?.let { time = Timestamp.newBuilder().setSeconds(gps.time.epochSecond).build() }
+        gps.name?.let { name = gps.name }
+        gps.type?.let { type = gps.type.toProto() }
+    }
+}
+
+fun ProtoTrackPoint.toGps(): GpsTrackPoint =
+    GpsTrackPoint(
         latitude = this.latitude,
         longitude = this.longitude,
         elevation = if (this.hasElevation()) this.elevation else null,
-        name = if (this.hasName()) this.name else null,
         time = if (this.hasTime()) Instant.ofEpochSecond(this.time.seconds) else null,
-        type = if (this.hasType()) this.type.toGps() else null,
         speed = if (this.hasSpeed()) this.speed else null,
         power = if (this.hasPower()) this.power else null,
         temperature = if (this.hasTemperature()) this.temperature else null,
@@ -349,9 +371,34 @@ fun ProtoWayPoint.toGps(): GpsWayPoint =
         cadence = if (this.hasCadence()) this.cadence else null,
     )
 
+fun ProtoPointOfInterest.toGps(): GpsPointOfInterest =
+    GpsPointOfInterest(
+        uuid = UUID.fromString(this.uuid),
+        latitude = this.latitude,
+        longitude = this.longitude,
+        elevation = if (this.hasElevation()) this.elevation else null,
+        name = if (this.hasName()) this.name else null,
+        time = if (this.hasTime()) Instant.ofEpochSecond(this.time.seconds) else null,
+        type = if (this.hasType()) this.type.toGps() else null,
+    )
+
 fun ProtoPoiType.toGps(): PoiType = PoiType.fromString(this.name)
 
-fun GpxWayPoint.toGps(): GpsWayPoint {
+fun GpxWayPoint.toGpsPointOfInterest(): GpsPointOfInterest {
+    val gpx = this
+
+    return GpsPointOfInterest(
+        uuid = UUID.randomUUID(),
+        latitude = gpx.latitude.toDouble(),
+        longitude = gpx.longitude.toDouble(),
+        elevation = gpx.elevation.map { it.toDouble() }.getOrNull(),
+        time = gpx.time.map { Instant.ofEpochSecond(it.epochSecond) }.getOrNull(),
+        name = gpx.name.map { it }.getOrNull(),
+        type = gpx.type.map { PoiType.fromGpxSym(it) }.orElseGet { null },
+    )
+}
+
+fun GpxWayPoint.toGpsTrackPoint(): GpsTrackPoint {
     val gpx = this
 
     val extensionValues: ExtensionValues? =
@@ -359,13 +406,11 @@ fun GpxWayPoint.toGps(): GpsWayPoint {
             exploreDocument(it.documentElement)
         }.getOrNull()
 
-    return GpsWayPoint(
+    return GpsTrackPoint(
         latitude = gpx.latitude.toDouble(),
         longitude = gpx.longitude.toDouble(),
         elevation = gpx.elevation.map { it.toDouble() }.getOrNull(),
         time = gpx.time.map { Instant.ofEpochSecond(it.epochSecond) }.getOrNull(),
-        name = gpx.name.map { it }.getOrNull(),
-        type = gpx.symbol.map { PoiType.fromGpxSym(it) }.orElseGet { null },
         power = extensionValues?.power,
         cadence = extensionValues?.cadence,
         temperature = extensionValues?.temperature,
@@ -406,8 +451,8 @@ data class ExtensionValues(
     }
 }
 
-fun RecordMesg.toGps(): GpsWayPoint {
-    return GpsWayPoint(
+fun RecordMesg.toGpsTrackPoint(): GpsTrackPoint {
+    return GpsTrackPoint(
         latitude = this.getLatDegrees(),
         longitude = this.getLongDegrees(),
         elevation = this.altitude?.toDouble(),
