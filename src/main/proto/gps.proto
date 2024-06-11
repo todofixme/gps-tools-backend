@@ -26,31 +26,39 @@ enum ProtoPoiType {
   SPRINT = 16;
 }
 
-message ProtoWayPoint {
+message ProtoTrackPoint {
   double latitude = 1;
   double longitude = 2;
 
   optional double elevation = 3;
   optional google.protobuf.Timestamp time = 4;
 
-  optional string name = 5;
-  optional ProtoPoiType type = 6;
+  optional double speed = 5;
+  optional int32 power = 6;
+  optional int32 temperature = 7;
+  optional int32 heartRate = 8;
+  optional int32 cadence = 9;
+}
 
-  optional double speed = 7;
-  optional int32 power = 8;
-  optional int32 temperature = 9;
-  optional int32 heartRate = 10;
-  optional int32 cadence = 11;
+message ProtoPointOfInterest {
+  string uuid = 1;
 
-  optional string uuid = 12;
+  double latitude = 2;
+  double longitude = 3;
+
+  optional double elevation = 4;
+  optional google.protobuf.Timestamp time = 5;
+
+  optional string name = 6;
+  optional ProtoPoiType type = 7;
 }
 
 message ProtoTrack {
-  repeated ProtoWayPoint wayPoints = 1;
+  repeated ProtoTrackPoint trackPoints = 1;
 }
 
 message ProtoContainer {
   optional string name = 1;
-  repeated ProtoWayPoint wayPoints = 2;
+  repeated ProtoPointOfInterest pointsOfInterest = 2;
   ProtoTrack track = 3;
 }

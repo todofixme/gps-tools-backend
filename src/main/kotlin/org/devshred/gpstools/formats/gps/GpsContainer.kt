@@ -2,20 +2,20 @@ package org.devshred.gpstools.formats.gps
 
 import io.jenetics.jpx.geom.Geoid
 
-data class GpsContainer(val name: String?, val wayPoints: List<WayPoint>, val track: Track?) {
-    fun withOptimizedWayPoints(tolerance: Int = MAX_DISTANCE_BETWEEN_TRACK_AND_WAYPOINT): GpsContainer {
+data class GpsContainer(val name: String?, val pointsOfInterest: List<PointOfInterest>, val track: Track?) {
+    fun withOptimizedPointsOfInterest(tolerance: Int = MAX_DISTANCE_BETWEEN_TRACK_AND_WAYPOINT): GpsContainer {
         val optimizedWayPoints =
-            wayPoints
-                .map { findWayPointOnTrackNearestTo(it, tolerance) ?: it }
+            pointsOfInterest
+                .map { findPointOnTrackNearestTo(it, tolerance) ?: it }
                 .sortedBy { it.time }
 
         return GpsContainer(name, optimizedWayPoints, track)
     }
 
-    private fun findWayPointOnTrackNearestTo(wayPoint: WayPoint): WayPoint {
-        val gpxPoint = wayPoint.toGpx()
+    private fun findPointOnTrackNearestTo(point: PointOfInterest): PointOfInterest {
+        val gpxPoint = point.toGpx()
         val nearestGpxPoint =
-            track?.wayPoints?.stream()
+            track?.trackPoints?.stream()
                 ?.map { it.toGpx() }
                 ?.reduce { result: io.jenetics.jpx.WayPoint, current: io.jenetics.jpx.WayPoint ->
                     if (Geoid.WGS84.distance(current, gpxPoint).toInt()
@@ -27,18 +27,22 @@ data class GpsContainer(val name: String?, val wayPoints: List<WayPoint>, val tr
                     }
                 }?.get()
 
-        return nearestGpxPoint!!.toGps()
+        return point.copy(
+            latitude = nearestGpxPoint!!.latitude.toDouble(),
+            longitude = nearestGpxPoint.longitude.toDouble(),
+            time = nearestGpxPoint.time.get(),
+        )
     }
 
-    private fun findWayPointOnTrackNearestTo(
-        wayPoint: WayPoint,
+    private fun findPointOnTrackNearestTo(
+        point: PointOfInterest,
         tolerance: Int,
-    ): WayPoint? {
-        val nearestWayPoint = findWayPointOnTrackNearestTo(wayPoint)
-        return if (Geoid.WGS84.distance(nearestWayPoint.toGpx(), wayPoint.toGpx()).toInt() > tolerance) {
+    ): PointOfInterest? {
+        val nearestWayPoint = findPointOnTrackNearestTo(point)
+        return if (Geoid.WGS84.distance(nearestWayPoint.toGpx(), point.toGpx()).toInt() > tolerance) {
             null
         } else {
-            wayPoint.copy(
+            point.copy(
                 latitude = nearestWayPoint.latitude,
                 longitude = nearestWayPoint.longitude,
                 time = nearestWayPoint.time,

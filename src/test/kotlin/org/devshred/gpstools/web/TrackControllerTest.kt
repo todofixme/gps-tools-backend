@@ -7,8 +7,6 @@ import io.mockk.verify
 import org.apache.commons.io.input.NullInputStream
 import org.apache.tomcat.util.http.fileupload.impl.SizeLimitExceededException
 import org.assertj.core.api.Assertions.assertThat
-import org.devshred.gpstools.formats.gps.GpsContainerMapper
-import org.devshred.gpstools.formats.gpx.GpxService
 import org.devshred.gpstools.formats.proto.ProtoService
 import org.devshred.gpstools.storage.FileService
 import org.devshred.gpstools.storage.FileStore
@@ -57,12 +55,6 @@ class TrackControllerTest(
     @MockkBean
     lateinit var protoService: ProtoService
 
-    @MockkBean
-    lateinit var gpxService: GpxService
-
-    @MockkBean
-    lateinit var gpsMapper: GpsContainerMapper
-
     @Test
     fun `download file as GPX`() {
         val uuid = UUID.randomUUID()
@@ -107,7 +99,12 @@ class TrackControllerTest(
             )
         } returns emptyByteArrayInputStream()
 
-        mockMvc.perform(get("$API_PATH_TRACKS/$uuid?mode=dl&name=$encodedTrackname").header("Accept", GpsType.GPX.mimeType))
+        mockMvc.perform(
+            get("$API_PATH_TRACKS/$uuid?mode=dl&name=$encodedTrackname").header(
+                "Accept",
+                GpsType.GPX.mimeType,
+            ),
+        )
             .andExpectAll(
                 status().isOk,
                 content().contentType(GpsType.GPX.mimeType),

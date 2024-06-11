@@ -3,18 +3,10 @@ package org.devshred.gpstools.web
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotNull
-import mil.nga.sf.geojson.Feature
 import mil.nga.sf.geojson.FeatureCollection
-import mil.nga.sf.geojson.GeometryType
-import mil.nga.sf.geojson.Point
 import org.devshred.gpstools.api.TracksApi
-import org.devshred.gpstools.api.model.FeatureCollectionDTO
-import org.devshred.gpstools.api.model.FeatureDTO
-import org.devshred.gpstools.api.model.GeoJsonObjectDTO
-import org.devshred.gpstools.api.model.PointDTO
 import org.devshred.gpstools.api.model.TrackDTO
 import org.devshred.gpstools.common.orElse
-import org.devshred.gpstools.formats.gps.GpsContainerMapper
 import org.devshred.gpstools.formats.proto.ProtoService
 import org.devshred.gpstools.formats.proto.protoContainer
 import org.devshred.gpstools.formats.proto.protoTrack
@@ -40,7 +32,6 @@ import org.springframework.web.multipart.MultipartFile
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
-import java.math.BigDecimal
 import java.util.Base64
 import java.util.UUID
 
@@ -53,19 +44,18 @@ class TrackController(
     private val ioService: IOService,
     private val fileService: FileService,
     private val protoService: ProtoService,
-    private val gpsContainerMapper: GpsContainerMapper,
 ) : TracksApi {
     private val log = LoggerFactory.getLogger(javaClass)
 
     override fun download(
-        @PathVariable(value = "id") id: UUID,
+        @PathVariable(value = "trackId") trackId: UUID,
         @Valid @RequestParam(required = false, value = "mode") mode: List<String>?,
         @Valid @RequestParam(required = false, value = "name") name: String?,
         @Valid @RequestParam(required = false, value = "type") type: String?,
         @Valid @RequestParam(required = false, value = "wp") wp: String?,
         @RequestHeader(required = false, value = "accept") accept: String?,
     ): ResponseEntity<Resource> {
-        val storedFile = store.get(id)
+        val storedFile = store.get(trackId)
 
         val waypoints: FeatureCollection? =
             wp?.let {
@@ -215,10 +205,10 @@ class TrackController(
         return ResponseEntity.ok(results)
     }
 
-    override fun delete(id: UUID): ResponseEntity<Unit> {
-        store.delete(id)?.let {
+    override fun delete(trackId: UUID): ResponseEntity<Unit> {
+        store.delete(trackId)?.let {
             ioService.delete(it.storageLocation)
-        } ?: throw NotFoundException("File with ID $id not found.")
+        } ?: throw NotFoundException("File with ID $trackId not found.")
 
         return ResponseEntity.noContent().build()
     }
@@ -233,15 +223,15 @@ class TrackController(
             return ResponseEntity.ok(store.get(trackIds[0]).toTrackDTO())
         }
 
-        val allWayPoints: MutableList<org.devshred.gpstools.formats.proto.ProtoWayPoint> = mutableListOf()
-        val allTrackPoints: MutableList<org.devshred.gpstools.formats.proto.ProtoWayPoint> = mutableListOf()
+        val allWayPoints: MutableList<org.devshred.gpstools.formats.proto.ProtoPointOfInterest> = mutableListOf()
+        val allTrackPoints: MutableList<org.devshred.gpstools.formats.proto.ProtoTrackPoint> = mutableListOf()
         var trackName: String? = null
         trackIds.forEachIndexed { index, uuid ->
             log.info("About to merge $uuid.")
             val protoGpsContainer =
                 protoService.readProtoContainer(store.get(uuid).storageLocation)
-            allWayPoints.addAll(protoGpsContainer.wayPointsList)
-            allTrackPoints.addAll(protoGpsContainer.track.wayPointsList)
+            allWayPoints.addAll(protoGpsContainer.pointsOfInterestList)
+            allTrackPoints.addAll(protoGpsContainer.track.trackPointsList)
             if (index == 0 && protoGpsContainer.name.isNotEmpty()) {
                 trackName = protoGpsContainer.name
             }
@@ -249,29 +239,13 @@ class TrackController(
         val mergedProto =
             protoContainer {
                 trackName?.run { name = this }
-                wayPoints.addAll(allWayPoints)
-                track = protoTrack { wayPoints.addAll(allTrackPoints) }
+                pointsOfInterest.addAll(allWayPoints)
+                track = protoTrack { trackPoints.addAll(allTrackPoints) }
             }
         val protoFile = ioService.createTempFile(mergedProto.toByteArray().inputStream(), Filename("merged.gpx"))
         store.put(protoFile.id, protoFile)
 
         return ResponseEntity.ok(protoFile.toTrackDTO())
-    }
-
-    override fun changePoints(
-        id: UUID,
-        geoJsonObjectDTO: GeoJsonObjectDTO,
-        mode: List<String>?,
-    ): ResponseEntity<GeoJsonObjectDTO> {
-        return ResponseEntity.ok(fileService.handleWayPointUpdate(id, geoJsonObjectDTO, mode, false).toDto())
-    }
-
-    override fun addPoints(
-        id: UUID,
-        geoJsonObjectDTO: GeoJsonObjectDTO,
-        mode: List<String>?,
-    ): ResponseEntity<GeoJsonObjectDTO> {
-        return ResponseEntity.ok(fileService.handleWayPointUpdate(id, geoJsonObjectDTO, mode, true).toDto())
     }
 }
 
@@ -308,29 +282,4 @@ fun <V> Map<String, V>.getIgnoringCase(other: String): V? {
         .asSequence().firstOrNull()
         ?.value
         .orElse { null }
-}
-
-fun FeatureCollection.toDto(): FeatureCollectionDTO {
-    return FeatureCollectionDTO(
-        features = this.features.map { it.toDto() },
-        type = "FeatureCollection",
-    )
-}
-
-fun Feature.toDto(): FeatureDTO {
-    if (geometryType == GeometryType.POINT) {
-        val point = geometry as Point
-        val pointDTO =
-            PointDTO(
-                coordinates = listOf(BigDecimal.valueOf(point.coordinates.x), BigDecimal.valueOf(point.coordinates.y)),
-                type = "Point",
-            )
-        return FeatureDTO(
-            geometry = pointDTO,
-            properties = properties,
-            type = "Feature",
-        )
-    }
-
-    throw UnsupportedOperationException("Geometry $geometryType not implemented yet.")
 }
