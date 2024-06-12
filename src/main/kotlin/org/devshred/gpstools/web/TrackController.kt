@@ -213,7 +213,7 @@ class TrackController(
     override fun delete(trackId: UUID): ResponseEntity<Unit> {
         store.delete(trackId)?.let {
             ioService.delete(it.storageLocation)
-        } ?: throw NotFoundException("File with ID $trackId not found.")
+        } ?: throw NotFoundException("Track with ID $trackId not found.")
 
         return ResponseEntity.noContent().build()
     }

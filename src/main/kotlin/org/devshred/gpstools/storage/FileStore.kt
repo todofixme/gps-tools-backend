@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap
 class FileStore {
     private val store: MutableMap<UUID, StoredFile> = ConcurrentHashMap()
 
-    fun get(id: UUID) = store.getOrElse(id) { throw NotFoundException("File with ID $id not found.") }
+    fun get(id: UUID) = store.getOrElse(id) { throw NotFoundException("Track with ID $id not found.") }
 
     fun put(
         uuid: UUID,
