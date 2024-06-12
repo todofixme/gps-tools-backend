@@ -1,5 +1,6 @@
 import com.google.protobuf.gradle.id
 import net.researchgate.release.ReleaseExtension
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -14,7 +15,7 @@ plugins {
     id("com.google.protobuf") version "0.9.4"
 
     id("net.researchgate.release") version "3.0.2"
-    id("com.palantir.git-version") version "3.0.0"
+    id("com.palantir.git-version") version "3.1.0"
 
     id("com.github.ben-manes.versions") version "0.51.0"
     id("org.jlleitschuh.gradle.ktlint") version "12.1.1"
@@ -30,7 +31,7 @@ repositories {
     mavenCentral()
 }
 
-val protoBufVersion = "4.26.1"
+val protoBufVersion = "4.27.1"
 val jacksonVersion = "2.15.4"
 val xmlunitVersion = "2.10.0"
 
@@ -98,12 +99,14 @@ openApiGenerate {
 java.sourceSets["main"].java.srcDir(generatedOpenApiSourcesDir)
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        freeCompilerArgs += "-Xjsr305=strict"
-        freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
-        jvmTarget = "17"
-        dependsOn(tasks.openApiGenerate)
+    kotlin {
+        compilerOptions {
+            freeCompilerArgs.add("-Xjsr305=strict")
+            freeCompilerArgs.add("-opt-in=kotlin.RequiresOptIn")
+            jvmTarget.set(JVM_17)
+        }
     }
+    dependsOn(tasks.openApiGenerate)
 }
 
 tasks.withType<Test> {
