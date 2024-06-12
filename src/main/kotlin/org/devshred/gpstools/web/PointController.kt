@@ -10,7 +10,6 @@ import org.devshred.gpstools.api.model.FeatureDTO
 import org.devshred.gpstools.api.model.GeoJsonObjectDTO
 import org.devshred.gpstools.api.model.PointDTO
 import org.devshred.gpstools.storage.FileService
-import org.devshred.gpstools.web.TrackLocker.Companion.trackLocker
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.RestController
@@ -26,43 +25,31 @@ class PointController(
         return ResponseEntity.ok(fileService.getWaypoints(trackId).toDto())
     }
 
+    @LockTrack
     override fun changePoints(
         trackId: UUID,
         geoJsonObjectDTO: GeoJsonObjectDTO,
         mode: List<String>?,
     ): ResponseEntity<GeoJsonObjectDTO> {
-        trackLocker().lock(trackId)
-        try {
-            return ResponseEntity.ok(fileService.handleWayPointUpdate(trackId, geoJsonObjectDTO, mode, false).toDto())
-        } finally {
-            trackLocker().unlock(trackId)
-        }
+        return ResponseEntity.ok(fileService.handleWayPointUpdate(trackId, geoJsonObjectDTO, mode, false).toDto())
     }
 
+    @LockTrack
     override fun addPoints(
         trackId: UUID,
         geoJsonObjectDTO: GeoJsonObjectDTO,
         mode: List<String>?,
     ): ResponseEntity<GeoJsonObjectDTO> {
-        trackLocker().lock(trackId)
-        try {
-            return ResponseEntity.ok(fileService.handleWayPointUpdate(trackId, geoJsonObjectDTO, mode, true).toDto())
-        } finally {
-            trackLocker().unlock(trackId)
-        }
+        return ResponseEntity.ok(fileService.handleWayPointUpdate(trackId, geoJsonObjectDTO, mode, true).toDto())
     }
 
+    @LockTrack
     override fun deletePoint(
         trackId: UUID,
         pointId: UUID,
     ): ResponseEntity<Unit> {
-        trackLocker().lock(trackId)
-        try {
-            fileService.deleteWayPoint(trackId, pointId)
-            return ResponseEntity.noContent().build()
-        } finally {
-            trackLocker().unlock(trackId)
-        }
+        fileService.deleteWayPoint(trackId, pointId)
+        return ResponseEntity.noContent().build()
     }
 }
 

@@ -20,7 +20,6 @@ import org.devshred.gpstools.storage.Filename
 import org.devshred.gpstools.storage.IOService
 import org.devshred.gpstools.storage.NotFoundException
 import org.devshred.gpstools.storage.StoredFile
-import org.devshred.gpstools.web.TrackLocker.Companion.trackLocker
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.InputStreamResource
 import org.springframework.core.io.Resource
@@ -253,18 +252,14 @@ class TrackController(
         return ResponseEntity.ok(protoFile.toTrackDTO())
     }
 
+    @LockTrack
     override fun changeName(
         @PathVariable(value = "trackId") trackId: UUID,
         @Valid @RequestBody geoJsonObjectDTO: GeoJsonObjectDTO,
     ): ResponseEntity<Unit> {
-        trackLocker().lock(trackId)
-        try {
-            val trackName: String = getTrackNameFromDto(geoJsonObjectDTO)
-            fileService.changeTrackName(trackId, trackName)
-            return ResponseEntity.noContent().build()
-        } finally {
-            trackLocker().unlock(trackId)
-        }
+        val trackName: String = getTrackNameFromDto(geoJsonObjectDTO)
+        fileService.changeTrackName(trackId, trackName)
+        return ResponseEntity.noContent().build()
     }
 
     private fun getTrackNameFromDto(geoJsonObjectDTO: GeoJsonObjectDTO): String {

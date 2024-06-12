@@ -56,7 +56,7 @@ Content-Type: application/geo+json
 }
 
 ### get wayPoints
-GET {{baseUrl}}/api/v1/tracks/936fc2d7-cf9a-4a5f-9d45-30884b013c84/points
+GET {{baseUrl}}/api/v1/tracks/{{trackId}}/points
 Accept: application/geo+json
 
 ### change wayPoints
