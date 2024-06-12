@@ -101,19 +101,19 @@ paths:
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem400BadRequest'
         404:
           description: Track not found.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem404NotFound'
         500:
           description: Server error.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem500InternalServerError'
     patch:
       tags:
         - tracks
@@ -155,13 +155,13 @@ paths:
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem404NotFound'
         500:
           description: Server error.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem500InternalServerError'
 
     delete:
       tags:
@@ -184,13 +184,13 @@ paths:
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem404NotFound'
         500:
           description: Server error.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem500InternalServerError'
   /track:
     post:
       tags:
@@ -224,19 +224,19 @@ paths:
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem400BadRequest'
         413:
           description: Uploaded file too large.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem413PayloadTooLarge'
         500:
           description: Server error.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem500InternalServerError'
   /tracks:
     post:
       tags:
@@ -266,19 +266,19 @@ paths:
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem400BadRequest'
         413:
           description: Uploaded file too large.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem413PayloadTooLarge'
         500:
           description: Server error.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem500InternalServerError'
   /merge:
     post:
       tags:
@@ -307,19 +307,19 @@ paths:
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem400BadRequest'
         404:
           description: Track not found.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem404NotFound'
         500:
           description: Server error.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem500InternalServerError'
   /tracks/{trackId}/points:
     get:
       tags:
@@ -346,13 +346,13 @@ paths:
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem404NotFound'
         500:
           description: Server error.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem500InternalServerError'
     put:
       tags:
         - points
@@ -395,13 +395,13 @@ paths:
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem404NotFound'
         500:
           description: Server error.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem500InternalServerError'
     patch:
       tags:
         - points
@@ -449,13 +449,13 @@ paths:
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem404NotFound'
         500:
           description: Server error.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem500InternalServerError'
   /tracks/{trackId}/points/{pointId}:
     delete:
       tags:
@@ -485,13 +485,13 @@ paths:
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem404NotFound'
         500:
           description: Server error.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem500InternalServerError'
   /version:
     get:
       tags:
@@ -693,7 +693,35 @@ components:
         detail:
           type: string
           example: 'Failure message.'
-
+    Problem400BadRequest:
       description: >
-        Used when an error was thrown, typically with a HTTP error response-code.
-        Based on RFC 7807 (Problem Details for HTTP APIs).
+        The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax).
+        Problem object is based on RFC 7807 (Problem Details for HTTP APIs).
+      externalDocs:
+        url: https://www.rfc-editor.org/rfc/rfc9110.html#name-400-bad-request
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+    Problem404NotFound:
+      description: >
+        The origin server did not find a current representation for the target resource.
+        Problem object is based on RFC 7807 (Problem Details for HTTP APIs).
+      externalDocs:
+        url: https://www.rfc-editor.org/rfc/rfc9110.html#name-404-not-found
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+    Problem413PayloadTooLarge:
+      description: >
+        The server is refusing to process a request because the request content is larger than the server is willing or able to process.
+        Problem object is based on RFC 7807 (Problem Details for HTTP APIs).
+      externalDocs:
+        url: https://www.rfc-editor.org/rfc/rfc9110.html#name-413-content-too-large
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+    Problem500InternalServerError:
+      description: >
+        The server encountered an unexpected condition that prevented it from fulfilling the request.
+        Problem object is based on RFC 7807 (Problem Details for HTTP APIs).
+      externalDocs:
+        url: https://www.rfc-editor.org/rfc/rfc9110.html#name-500-internal-server-error
+      allOf:
+        - $ref: '#/components/schemas/Problem'

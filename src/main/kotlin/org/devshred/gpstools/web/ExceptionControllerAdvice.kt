@@ -11,44 +11,59 @@ import org.springframework.http.HttpStatus.PAYLOAD_TOO_LARGE
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import java.io.IOException
 
 @ControllerAdvice
 class ExceptionControllerAdvice {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    @ExceptionHandler
+    @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgumentException(ex: IllegalArgumentException): ResponseEntity<ProblemDTO> {
         val problem: Problem = createProblem(BAD_REQUEST, ex)
         log.warn(problem.detail)
         return ResponseEntity.status(problem.status).body(problem.toDTO())
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(MethodArgumentTypeMismatchException::class)
+    fun handleMethodArgumentTypeMismatchException(ex: MethodArgumentTypeMismatchException): ResponseEntity<ProblemDTO> {
+        val problem: Problem = createProblem(BAD_REQUEST, ex)
+        log.warn(problem.detail)
+        return ResponseEntity.status(problem.status).body(problem.toDTO())
+    }
+
+    @ExceptionHandler(SizeLimitExceededException::class)
     fun handleSizeLimitExceededException(ex: SizeLimitExceededException): ResponseEntity<ProblemDTO> {
         val problem: Problem = createProblem(PAYLOAD_TOO_LARGE, "Uploaded file too large.")
         log.warn(ex.message)
         return ResponseEntity.status(problem.status).body(problem.toDTO())
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(IOException::class)
     fun handleIOException(ex: IOException): ResponseEntity<ProblemDTO> {
         val problem: Problem = createProblem(INTERNAL_SERVER_ERROR, "IO error")
         log.warn(ex.message)
         return ResponseEntity.status(problem.status).body(problem.toDTO())
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(NullPointerException::class)
     fun handleNullPointerException(ex: java.lang.NullPointerException): ResponseEntity<ProblemDTO> {
         val problem: Problem = createProblem(NOT_FOUND)
         log.warn(ex.message)
         return ResponseEntity.status(problem.status).body(problem.toDTO())
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(NotFoundException::class)
     fun handleNotFoundException(ex: NotFoundException): ResponseEntity<ProblemDTO> {
         val problem: Problem = createProblem(NOT_FOUND, ex)
         log.warn(problem.detail)
+        return ResponseEntity.status(problem.status).body(problem.toDTO())
+    }
+
+    @ExceptionHandler(Exception::class)
+    fun handleGenericException(ex: Exception): ResponseEntity<ProblemDTO> {
+        val problem: Problem = createProblem(INTERNAL_SERVER_ERROR, "something went wrong")
+        log.warn(ex.message)
         return ResponseEntity.status(problem.status).body(problem.toDTO())
     }
 }
