@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.PAYLOAD_TOO_LARGE
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.ServletRequestBindingException
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
@@ -62,8 +63,15 @@ class ExceptionControllerAdvice {
 
     @ExceptionHandler(Exception::class)
     fun handleGenericException(ex: Exception): ResponseEntity<ProblemDTO> {
-        val problem: Problem = createProblem(INTERNAL_SERVER_ERROR, "something went wrong")
-        log.warn(ex.message)
-        return ResponseEntity.status(problem.status).body(problem.toDTO())
+        if (ex is ServletRequestBindingException) {
+            val problemDetail = ex.body
+            val problem: Problem = createProblem(problemDetail.status, ex)
+            log.warn(problem.detail)
+            return ResponseEntity.status(problem.status).body(problem.toDTO())
+        } else {
+            val problem: Problem = createProblem(INTERNAL_SERVER_ERROR, "something went wrong")
+            log.warn(ex.message)
+            return ResponseEntity.status(problem.status).body(problem.toDTO())
+        }
     }
 }

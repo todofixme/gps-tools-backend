@@ -21,6 +21,16 @@ fun createProblem(
 ): Problem = Problem(title = status.reasonPhrase, status = status.value(), detail = ex.message)
 
 fun createProblem(
+    status: Int,
+    ex: Exception,
+): Problem = Problem(title = HttpStatus.valueOf(status).reasonPhrase, status = status, detail = ex.message)
+
+fun createProblem(
     status: HttpStatus,
     detail: String,
 ): Problem = Problem(title = status.reasonPhrase, status = status.value(), detail = detail)
+
+fun createProblem(
+    status: Int,
+    detail: String,
+): Problem = Problem(title = HttpStatus.valueOf(status).reasonPhrase, status = status, detail = detail)
