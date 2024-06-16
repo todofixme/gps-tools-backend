@@ -2,6 +2,8 @@ package org.devshred.gpstools.storage
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.devshred.gpstools.api.model.FeatureCollectionDTO
 import org.devshred.gpstools.api.model.FeatureDTO
@@ -210,26 +212,44 @@ class FileServiceTest {
         )
     }
 
-    private fun createProtoContainer(vararg points: Pair<UUID, String>) =
-        protoContainer {
-            name = "My Track"
-            pointsOfInterest +=
-                points.map {
-                    protoPointOfInterest {
-                        uuid = it.first.toString()
-                        name = it.second
+    @Test
+    fun `create track with new name and delete existing one`() {
+        val newTrackName = "New Track Name"
+        val protoContainer = createProtoContainer()
+        val filenameSlot = slot<Filename>()
+
+        every { fileStore.get(trackId) } returns storedFile
+        every { protoService.readProtoContainer(storageLocation) } returns protoContainer
+        every { ioService.createTempFile(any(), capture(filenameSlot)) } returns storedFile
+        every { fileStore.put(trackId, storedFile) } returns Unit
+        every { ioService.delete(storageLocation) } returns Unit
+
+        cut.changeTrackName(trackId, newTrackName)
+
+        assertThat(filenameSlot.captured.value).startsWith(newTrackName)
+        verify { ioService.delete(storageLocation) }
+    }
+}
+
+fun createProtoContainer(vararg points: Pair<UUID, String>) =
+    protoContainer {
+        name = "My Track"
+        pointsOfInterest +=
+            points.map {
+                protoPointOfInterest {
+                    uuid = it.first.toString()
+                    name = it.second
+                    latitude = 1.0
+                    longitude = 2.0
+                    type = ProtoPoiType.SUMMIT
+                }
+            }
+        track =
+            protoTrack {
+                trackPoints +=
+                    protoTrackPoint {
                         latitude = 1.0
                         longitude = 2.0
-                        type = ProtoPoiType.SUMMIT
                     }
-                }
-            track =
-                protoTrack {
-                    trackPoints +=
-                        protoTrackPoint {
-                            latitude = 1.0
-                            longitude = 2.0
-                        }
-                }
-        }
-}
+            }
+    }
