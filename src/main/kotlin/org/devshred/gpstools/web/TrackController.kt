@@ -249,6 +249,12 @@ class TrackController(
         val protoFile = ioService.createTempFile(mergedProto.toByteArray().inputStream(), Filename("merged.gpx"))
         store.put(protoFile.id, protoFile)
 
+        trackIds.forEach { trackId ->
+            store.delete(trackId)?.let {
+                ioService.delete(it.storageLocation)
+            }
+        }
+
         return ResponseEntity.ok(protoFile.toTrackDTO())
     }
 

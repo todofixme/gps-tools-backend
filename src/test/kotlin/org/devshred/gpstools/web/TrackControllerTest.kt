@@ -1,5 +1,6 @@
 package org.devshred.gpstools.web
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.called
 import io.mockk.every
@@ -7,6 +8,7 @@ import io.mockk.verify
 import org.apache.commons.io.input.NullInputStream
 import org.apache.tomcat.util.http.fileupload.impl.SizeLimitExceededException
 import org.assertj.core.api.Assertions.assertThat
+import org.devshred.gpstools.api.model.TrackDTO
 import org.devshred.gpstools.formats.proto.ProtoService
 import org.devshred.gpstools.storage.FileService
 import org.devshred.gpstools.storage.FileStore
@@ -14,6 +16,7 @@ import org.devshred.gpstools.storage.Filename
 import org.devshred.gpstools.storage.IOService
 import org.devshred.gpstools.storage.NotFoundException
 import org.devshred.gpstools.storage.StoredFile
+import org.devshred.gpstools.storage.createProtoContainer
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
@@ -38,6 +41,7 @@ import java.util.UUID
 private const val API_PATH_VERSION = "/api/v1"
 private const val API_PATH_TRACK = "$API_PATH_VERSION/track"
 private const val API_PATH_TRACKS = "$API_PATH_VERSION/tracks"
+private const val API_PATH_MERGE = "$API_PATH_VERSION/merge"
 
 @WebMvcTest
 class TrackControllerTest(
@@ -390,6 +394,58 @@ class TrackControllerTest(
 
         verify { fileStore.delete(uuid) }
         verify { ioService.delete(storageLocation) }
+    }
+
+    @Test
+    fun `merge without trackIds`() {
+        mockMvc.perform(post(API_PATH_MERGE)).andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `merge with single trackId simply return the track and does not create a new one`() {
+        val uuid = UUID.randomUUID()
+        val storageLocation = "/path/to/file"
+        val storedFile = StoredFile(uuid, Filename("test.txt"), TEXT_PLAIN_VALUE, "href", 123, storageLocation)
+
+        every { fileStore.get(uuid) } returns storedFile
+
+        mockMvc.perform(post("$API_PATH_MERGE?trackIds=$uuid")).andExpect(status().isOk)
+
+        verify(exactly = 0) { fileStore.put(any(), any()) }
+    }
+
+    @Test
+    fun `merge with multiple trackIds creates new track and deletes previous ones`() {
+        val trackId1 = UUID.randomUUID()
+        val trackId2 = UUID.randomUUID()
+        val newTrackId = UUID.randomUUID()
+        val storageLocation = "/path/to/file"
+        val storedFile = StoredFile(trackId1, Filename("test.txt"), TEXT_PLAIN_VALUE, "href", 123, storageLocation)
+        val newFile = StoredFile(newTrackId, Filename("test.txt"), TEXT_PLAIN_VALUE, "href", 123, storageLocation)
+        val protoContainer = createProtoContainer()
+
+        every { fileStore.get(any()) } returns storedFile
+        every { protoService.readProtoContainer(storageLocation) } returns protoContainer
+        every { ioService.createTempFile(any(), any()) } returns newFile
+        every { fileStore.put(any(), newFile) } returns Unit
+        every { fileStore.delete(any()) } returns storedFile
+        every { ioService.delete(any()) } returns Unit
+
+        val result =
+            mockMvc
+                .perform(post("$API_PATH_MERGE?trackIds=$trackId1&trackIds=$trackId2"))
+                .andExpect(status().isOk)
+                .andReturn()
+
+        val responseContent = result.response.contentAsString
+        val responseDto = ObjectMapper().readValue(responseContent, TrackDTO::class.java)
+        assertThat(responseDto.id).isEqualTo(newTrackId)
+
+        verify(exactly = 2) { fileStore.get(any()) }
+        verify { fileStore.delete(trackId1) }
+        verify { fileStore.delete(trackId2) }
+        verify(exactly = 2) { ioService.delete(storageLocation) }
+        verify { fileStore.put(any(), any()) }
     }
 
     @Test
