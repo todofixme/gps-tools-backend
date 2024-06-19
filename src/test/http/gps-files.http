@@ -46,10 +46,9 @@ POST {{baseUrl}}/api/v1/merge?trackIds={{trackId}}&trackIds=727206e4-dc8a-4294-9
 
 ### change trackname
 PATCH {{baseUrl}}/api/v1/tracks/{{trackId}}
-Content-Type: application/geo+json
+Content-Type: application/json
 
 {
-  "type": "Feature",
   "properties": {
     "name": "Better Name"
   }

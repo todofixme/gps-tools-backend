@@ -118,9 +118,6 @@ paths:
       tags:
         - tracks
       summary: Changes the name of a track.
-      description: >
-        To change the name of a track, you must send a valid GeoJSON object,
-        even if only the name is processed.
       operationId: changeName
       parameters:
         - name: trackId
@@ -133,16 +130,17 @@ paths:
       requestBody:
         required: true
         content:
-          'application/geo+json':
+          'application/json':
             schema:
-              $ref: '#/components/schemas/GeoJsonObject'
+              type: object
+              properties:
+                properties:
+                  type: object
+                  properties:
+                    name:
+                      type: string
             example: >
               {
-                "type": "Feature",
-                "geometry": {
-                  "type": "LineString",
-                  "coordinates": []
-                },
                 "properties": {
                   "name": "new name of the track"
                 }

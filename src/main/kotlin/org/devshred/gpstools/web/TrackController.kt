@@ -5,10 +5,7 @@ import jakarta.validation.Valid
 import jakarta.validation.constraints.NotNull
 import mil.nga.sf.geojson.FeatureCollection
 import org.devshred.gpstools.api.TracksApi
-import org.devshred.gpstools.api.model.FeatureCollectionDTO
-import org.devshred.gpstools.api.model.FeatureDTO
-import org.devshred.gpstools.api.model.GeoJsonObjectDTO
-import org.devshred.gpstools.api.model.LineStringDTO
+import org.devshred.gpstools.api.model.ChangeNameRequestDTO
 import org.devshred.gpstools.api.model.TrackDTO
 import org.devshred.gpstools.common.orElse
 import org.devshred.gpstools.formats.proto.ProtoService
@@ -262,36 +259,13 @@ class TrackController(
     @LockTrack
     override fun changeName(
         @PathVariable(value = "trackId") trackId: UUID,
-        @Valid @RequestBody geoJsonObjectDTO: GeoJsonObjectDTO,
+        @Valid @RequestBody changeNameRequestDTO: ChangeNameRequestDTO,
     ): ResponseEntity<Unit> {
-        val trackName: String = getTrackNameFromDto(geoJsonObjectDTO)
-        fileService.changeTrackName(trackId, trackName)
-        return ResponseEntity.noContent().build()
-    }
-
-    private fun getTrackNameFromDto(geoJsonObjectDTO: GeoJsonObjectDTO): String {
-        val trackNames =
-            when (geoJsonObjectDTO) {
-                is FeatureDTO -> getTrackName(geoJsonObjectDTO)
-                is FeatureCollectionDTO -> geoJsonObjectDTO.features.flatMap { getTrackName(it) }
-                else -> throw IllegalArgumentException("Unknown GeoJsonObjectDTO")
-            }
-        if (trackNames.isEmpty()) {
-            throw IllegalArgumentException("Request contains no trackname.")
-        } else if (trackNames.size > 1) {
-            throw IllegalArgumentException("Too many tracknames found.")
-        }
-        return trackNames.first()
-    }
-
-    private fun getTrackName(featureDTO: FeatureDTO): List<String> {
-        if (featureDTO.geometry is LineStringDTO) {
-            val propertiesMap = featureDTO.properties as Map<*, *>
-            if (propertiesMap.containsKey("name")) {
-                return listOf(propertiesMap["name"] as String)
-            }
-        }
-        return emptyList()
+        val trackName: String? = changeNameRequestDTO.properties?.name
+        trackName?.let {
+            fileService.changeTrackName(trackId, it)
+            return ResponseEntity.noContent().build()
+        } ?: throw IllegalArgumentException("No track name provided.")
     }
 }
 

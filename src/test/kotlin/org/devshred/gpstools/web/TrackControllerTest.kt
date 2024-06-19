@@ -6,6 +6,7 @@ import io.mockk.called
 import io.mockk.every
 import io.mockk.verify
 import org.apache.commons.io.input.NullInputStream
+import org.apache.commons.lang3.RandomStringUtils.randomAlphabetic
 import org.apache.tomcat.util.http.fileupload.impl.SizeLimitExceededException
 import org.assertj.core.api.Assertions.assertThat
 import org.devshred.gpstools.api.model.TrackDTO
@@ -29,6 +30,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
@@ -446,6 +448,33 @@ class TrackControllerTest(
         verify { fileStore.delete(trackId2) }
         verify(exactly = 2) { ioService.delete(storageLocation) }
         verify { fileStore.put(any(), any()) }
+    }
+
+    @Test
+    fun `change the name of a track`() {
+        val uuid = UUID.randomUUID()
+        val newTrackName = randomAlphabetic(8)
+
+        every { fileService.changeTrackName(uuid, newTrackName) } returns Unit
+
+        mockMvc.perform(
+            patch("/api/v1/tracks/$uuid")
+                .header("Content-Type", "application/json")
+                .content("{\"properties\": { \"name\": \"$newTrackName\" } }"),
+        ).andExpect(status().isNoContent)
+
+        verify { fileService.changeTrackName(uuid, newTrackName) }
+    }
+
+    @Test
+    fun `change the name of a track fails if track name is missing`() {
+        val uuid = UUID.randomUUID()
+
+        mockMvc.perform(
+            patch("/api/v1/tracks/$uuid")
+                .header("Content-Type", "application/json")
+                .content("{\"properties\": {} }"),
+        ).andExpect(status().isBadRequest)
     }
 
     @Test

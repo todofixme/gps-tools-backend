@@ -233,6 +233,10 @@ class FileService(
         trackId: UUID,
         trackName: String,
     ) {
+        if (trackName.isEmpty()) {
+            throw IllegalArgumentException("Track name must not be empty.")
+        }
+
         val originalFile = store.get(trackId)
         val originalProto = protoService.readProtoContainer(originalFile.storageLocation)
         val originalGpsContainer = gpsMapper.fromProto(originalProto)
