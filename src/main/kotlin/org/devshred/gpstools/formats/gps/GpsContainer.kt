@@ -30,7 +30,7 @@ data class GpsContainer(val name: String?, val pointsOfInterest: List<PointOfInt
         return point.copy(
             latitude = nearestGpxPoint!!.latitude.toDouble(),
             longitude = nearestGpxPoint.longitude.toDouble(),
-            time = nearestGpxPoint.time.get(),
+            time = nearestGpxPoint.time.orElse(null),
         )
     }
 

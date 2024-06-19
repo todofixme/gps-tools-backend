@@ -528,6 +528,68 @@ class GpsContainerMapperTest {
         assertThat(gps.type).isEqualTo(PoiType.RESIDENCE)
     }
 
+    @Test
+    fun `optimize point of interest fails, since distance higher than tolerance`() {
+        val basePoi =
+            PointOfInterest(
+                uuid = UUID.randomUUID(),
+                latitude = 36.73,
+                longitude = -3.68,
+                type = PoiType.FOOD,
+                name = "Point 1",
+            )
+        val cut = gpsContainer.copy(pointsOfInterest = listOf(basePoi))
+
+        val result = cut.withOptimizedPointsOfInterest()
+
+        assertThat(result.pointsOfInterest).hasSize(1)
+        assertThat(result.pointsOfInterest[0].latitude).isEqualTo(basePoi.latitude)
+        assertThat(result.pointsOfInterest[0].longitude).isEqualTo(basePoi.longitude)
+    }
+
+    @Test
+    fun `optimize point of interest succeeds`() {
+        val basePoi =
+            PointOfInterest(
+                uuid = UUID.randomUUID(),
+                latitude = 36.733,
+                longitude = -3.688,
+                type = PoiType.FOOD,
+                name = "Point 1",
+            )
+        val cut = gpsContainer.copy(pointsOfInterest = listOf(basePoi))
+
+        val result = cut.withOptimizedPointsOfInterest()
+
+        assertThat(result.pointsOfInterest).hasSize(1)
+        assertThat(result.pointsOfInterest[0].latitude).isEqualTo(gpsContainer.track!!.trackPoints[2].latitude)
+        assertThat(result.pointsOfInterest[0].longitude).isEqualTo(gpsContainer.track!!.trackPoints[2].longitude)
+    }
+
+    @Test
+    fun `optimize point of interest without time succeeds`() {
+        val basePoi =
+            PointOfInterest(
+                uuid = UUID.randomUUID(),
+                latitude = 36.733,
+                longitude = -3.688,
+                type = PoiType.FOOD,
+                name = "Point 1",
+            )
+        val cut =
+            gpsContainer.copy(
+                pointsOfInterest = listOf(basePoi),
+                // remove timestamps from trackPoints
+                track = gpsContainer.track!!.copy(trackPoints = gpsContainer.track!!.trackPoints.map { it.copy(time = null) }),
+            )
+
+        val result = cut.withOptimizedPointsOfInterest()
+
+        assertThat(result.pointsOfInterest).hasSize(1)
+        assertThat(result.pointsOfInterest[0].latitude).isEqualTo(gpsContainer.track!!.trackPoints[2].latitude)
+        assertThat(result.pointsOfInterest[0].longitude).isEqualTo(gpsContainer.track!!.trackPoints[2].longitude)
+    }
+
     private fun randomWayPoint(): GpxWayPoint =
         GpxWayPoint.builder().lat(randomGenerator.nextDouble()).lon(randomGenerator.nextDouble()).build()
 }
