@@ -120,9 +120,10 @@ class TrackController(
     }
 
     override fun uploadFile(
-        @NotNull @Valid @RequestParam(required = true, value = "filename") filename: Filename,
+        @NotNull @Valid @RequestParam(required = true, value = "filename") requestFilename: String,
         @Valid @RequestBody body: Resource,
     ): ResponseEntity<TrackDTO> {
+        val filename = Filename(requestFilename)
         if (isGpsFile(filename.value)) {
             val uploadedFile: StoredFile = ioService.createTempFile(body.inputStream, filename)
 

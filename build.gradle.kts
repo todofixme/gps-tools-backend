@@ -83,14 +83,12 @@ openApiGenerate {
     // https://github.com/OpenAPITools/openapi-generator/issues/8333
     typeMappings.set(
         mapOf(
-            "string+filename" to "Filename",
             "file+multipart" to "MultipartFile",
         ),
     )
 
     importMappings.set(
         mapOf(
-            "Filename" to "org.devshred.gpstools.storage.Filename",
             "MultipartFile" to "org.springframework.web.multipart.MultipartFile",
         ),
     )

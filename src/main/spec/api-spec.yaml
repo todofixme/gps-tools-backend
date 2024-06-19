@@ -203,7 +203,7 @@ paths:
           description: Name of the uploaded file.
           required: true
           schema:
-            type: string+filename
+            type: string
       requestBody:
         description: The file to be uploaded.
         required: true
