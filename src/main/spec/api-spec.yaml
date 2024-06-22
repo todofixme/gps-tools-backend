@@ -213,6 +213,12 @@ paths:
       responses:
         201:
           description: Stored the uploaded track successfully.
+          headers:
+            Location:
+              description: URL to the uploaded track.
+              schema:
+                type: string
+                format: url
           content:
             application/json:
               schema:
@@ -296,6 +302,12 @@ paths:
       responses:
         201:
           description: Merged the given tracks successfully.
+          headers:
+            Location:
+              description: URL to the merged track.
+              schema:
+                type: string
+                format: url
           content:
             application/json:
               schema:
@@ -522,15 +534,8 @@ components:
         id:
           type: string
           format: uuid
-        filename:
+        name:
           type: string
-        mimeType:
-          type: string
-        href:
-          type: string
-        size:
-          type: integer
-          format: int64
 
     GeoJsonObject:
       description: GeoJSON base object
