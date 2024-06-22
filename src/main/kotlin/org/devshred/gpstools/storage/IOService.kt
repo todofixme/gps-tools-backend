@@ -1,8 +1,8 @@
 package org.devshred.gpstools.storage
 
-import org.apache.tika.Tika
+import org.devshred.gpstools.formats.gps.GpsContainer
+import org.devshred.gpstools.formats.gps.GpsContainerMapper
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.InputStreamResource
 import org.springframework.stereotype.Service
 import java.io.File
@@ -15,11 +15,8 @@ import java.nio.file.StandardCopyOption
 import java.util.UUID
 
 @Service
-class IOService {
+class IOService(val gpsMapper: GpsContainerMapper) {
     private val log = LoggerFactory.getLogger(javaClass)
-
-    @Value("\${app.base-url}")
-    lateinit var baseUrl: String
 
     fun getAsStream(storageLocation: String): InputStreamResource {
         try {
@@ -32,9 +29,18 @@ class IOService {
     }
 
     fun createTempFile(
+        gpsContainer: GpsContainer,
+        name: String?,
+    ): StoredTrack {
+        val protoContainer = gpsMapper.toProto(gpsContainer)
+        val inputStream = protoContainer.toByteArray().inputStream()
+        return createTempFile(inputStream, gpsContainer.name ?: name ?: "unnamed")
+    }
+
+    fun createTempFile(
         inputStream: InputStream,
-        filename: Filename,
-    ): StoredFile {
+        name: String,
+    ): StoredTrack {
         val uuid = UUID.randomUUID()
         val tempFile = File.createTempFile(uuid.toString(), ".tmp")
         tempFile.deleteOnExit()
@@ -42,14 +48,12 @@ class IOService {
             inputStream.use {
                 Files.copy(it, tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
             }
-            log.info("Copied ${filename.value} to ${tempFile.absoluteFile}")
+            log.info("Copied $name to ${tempFile.absoluteFile}")
         } catch (ioe: IOException) {
             throw IOException("Could not save file: " + tempFile.getName(), ioe)
         }
-        val mimeType: String = Tika().detect(tempFile)
-        val href = "$baseUrl/files/$uuid"
 
-        return StoredFile(uuid, filename, mimeType, href, tempFile.length(), tempFile.absolutePath)
+        return StoredTrack(uuid, name, tempFile.absolutePath)
     }
 
     fun delete(storageLocation: String) {

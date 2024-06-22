@@ -17,33 +17,33 @@ import org.devshred.gpstools.formats.proto.protoPointOfInterest
 import org.devshred.gpstools.formats.proto.protoTrack
 import org.devshred.gpstools.formats.proto.protoTrackPoint
 import org.junit.jupiter.api.Test
-import org.springframework.http.MediaType.TEXT_PLAIN_VALUE
+import java.io.InputStream
 import java.math.BigDecimal
 import java.util.UUID
 
 class FileServiceTest {
-    private val fileStore = mockk<FileStore>()
+    private val trackStore = mockk<TrackStore>()
     private val ioService = mockk<IOService>()
     private val protoService = mockk<ProtoService>()
     private val gpxService = mockk<GpxService>()
 
     private val mapper = GpsContainerMapper()
 
-    private var cut = FileService(fileStore, ioService, protoService, gpxService, mapper)
+    private var cut = FileService(trackStore, ioService, protoService, gpxService, mapper)
 
     private val trackId = UUID.randomUUID()
     private val storageLocation = "/path/to/file"
-    private val fileName = Filename("test.txt")
-    private val storedFile = StoredFile(trackId, fileName, TEXT_PLAIN_VALUE, "href", 123, storageLocation)
+    private val trackName = "test"
+    private val storedFile = StoredTrack(trackId, trackName, storageLocation)
 
     @Test
     fun `replace single point`() {
         val protoContainer = createProtoContainer(Pair(UUID.randomUUID(), "some point"))
 
-        every { fileStore.get(trackId) } returns storedFile
+        every { trackStore.get(trackId) } returns storedFile
         every { protoService.readProtoContainer(storageLocation) } returns protoContainer
-        every { ioService.createTempFile(any(), fileName) } returns storedFile
-        every { fileStore.put(trackId, storedFile) } returns Unit
+        every { ioService.createTempFile(any<InputStream>(), trackName) } returns storedFile
+        every { trackStore.put(trackId, any()) } returns Unit
         every { ioService.delete(storageLocation) } returns Unit
 
         val pointDTO =
@@ -75,10 +75,10 @@ class FileServiceTest {
         val protoContainer =
             createProtoContainer(Pair(UUID.randomUUID(), "first point"), Pair(UUID.randomUUID(), "second point"))
 
-        every { fileStore.get(trackId) } returns storedFile
+        every { trackStore.get(trackId) } returns storedFile
         every { protoService.readProtoContainer(storageLocation) } returns protoContainer
-        every { ioService.createTempFile(any(), fileName) } returns storedFile
-        every { fileStore.put(trackId, storedFile) } returns Unit
+        every { ioService.createTempFile(any<InputStream>(), trackName) } returns storedFile
+        every { trackStore.put(trackId, any()) } returns Unit
         every { ioService.delete(storageLocation) } returns Unit
 
         val pointDTO1 =
@@ -134,10 +134,10 @@ class FileServiceTest {
         val protoContainer =
             createProtoContainer(Pair(pointId, "first point"), Pair(UUID.randomUUID(), "second point"))
 
-        every { fileStore.get(trackId) } returns storedFile
+        every { trackStore.get(trackId) } returns storedFile
         every { protoService.readProtoContainer(storageLocation) } returns protoContainer
-        every { ioService.createTempFile(any(), fileName) } returns storedFile
-        every { fileStore.put(trackId, storedFile) } returns Unit
+        every { ioService.createTempFile(any<InputStream>(), trackName) } returns storedFile
+        every { trackStore.put(trackId, any()) } returns Unit
         every { ioService.delete(storageLocation) } returns Unit
 
         val pointDTO1 =
@@ -175,10 +175,10 @@ class FileServiceTest {
     fun `add point`() {
         val protoContainer = createProtoContainer(Pair(UUID.randomUUID(), "first point"))
 
-        every { fileStore.get(trackId) } returns storedFile
+        every { trackStore.get(trackId) } returns storedFile
         every { protoService.readProtoContainer(storageLocation) } returns protoContainer
-        every { ioService.createTempFile(any(), fileName) } returns storedFile
-        every { fileStore.put(trackId, storedFile) } returns Unit
+        every { ioService.createTempFile(any<InputStream>(), trackName) } returns storedFile
+        every { trackStore.put(trackId, any()) } returns Unit
         every { ioService.delete(storageLocation) } returns Unit
 
         val pointDTO1 =
@@ -216,17 +216,17 @@ class FileServiceTest {
     fun `create track with new name and delete existing one`() {
         val newTrackName = "New Track Name"
         val protoContainer = createProtoContainer()
-        val filenameSlot = slot<Filename>()
+        val trackNameSlot = slot<String>()
 
-        every { fileStore.get(trackId) } returns storedFile
+        every { trackStore.get(trackId) } returns storedFile
         every { protoService.readProtoContainer(storageLocation) } returns protoContainer
-        every { ioService.createTempFile(any(), capture(filenameSlot)) } returns storedFile
-        every { fileStore.put(trackId, storedFile) } returns Unit
+        every { ioService.createTempFile(any<InputStream>(), capture(trackNameSlot)) } returns storedFile
+        every { trackStore.put(trackId, storedFile) } returns Unit
         every { ioService.delete(storageLocation) } returns Unit
 
         cut.changeTrackName(trackId, newTrackName)
 
-        assertThat(filenameSlot.captured.value).startsWith(newTrackName)
+        assertThat(trackNameSlot.captured).startsWith(newTrackName)
         verify { ioService.delete(storageLocation) }
     }
 }

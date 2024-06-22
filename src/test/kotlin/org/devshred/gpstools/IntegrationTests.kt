@@ -28,19 +28,20 @@ class IntegrationTests(
 ) {
     @Test
     fun `trackFile lifecycle`() {
-        val filename = randomAlphabetic(8) + ".gpx"
+        val trackName = "Billerhuder Insel"
+        val fileName = randomAlphabetic(8) + ".gpx"
         val fileContent = this::class.java.classLoader.getResource("data/test.gpx")!!.readText(Charsets.UTF_8)
 
         // upload a file
         val createRequest =
-            post("/api/v1/track?filename=$filename")
+            post("/api/v1/track?filename=$fileName")
                 .contentType(APPLICATION_XML)
                 .body(fileContent)
         val createResponse = restTemplate.exchange<TrackDTO>(createRequest)
 
-        assertThat(createResponse.statusCode).isEqualTo(HttpStatus.OK)
+        assertThat(createResponse.statusCode).isEqualTo(HttpStatus.CREATED)
         assertThat(createResponse.body).isNotNull
-        assertThat(createResponse.body!!.filename).isEqualTo(filename)
+        assertThat(createResponse.body!!.name).isEqualTo(trackName)
 
         val uuid = createResponse.body!!.id
 
@@ -69,11 +70,11 @@ class IntegrationTests(
         // upload a file
         val createRequest =
             post("/api/v1/track?filename=$filename")
-                .contentType(APPLICATION_XML)
+                .header("Content-Type", "application/gpx+xml")
                 .body(fileContent)
         val createResponse = restTemplate.exchange<TrackDTO>(createRequest)
 
-        assertThat(createResponse.statusCode).isEqualTo(HttpStatus.OK)
+        assertThat(createResponse.statusCode).isEqualTo(HttpStatus.CREATED)
         assertThat(createResponse.body).isNotNull
         val uuid = createResponse.body!!.id
 
