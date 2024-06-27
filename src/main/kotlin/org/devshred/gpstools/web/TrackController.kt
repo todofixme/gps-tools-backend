@@ -141,13 +141,13 @@ class TrackController(
                     ioService.delete(storageLocation = uploadedFile.storageLocation)
                     throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
                 }
-            } else if (isFitFile(filename.value)) {
-                val inputStream: InputStream = fileService.getProtoStreamFromFitFile(uploadedFile.storageLocation)
-                val protoFile = ioService.createTempFile(inputStream, filename)
-                store.put(protoFile.id, protoFile)
+            } else if (isFitFile(filename)) {
+                val gpsContainer: GpsContainer = fileService.getGpsContainerFromFitFile(uploadedFile.storageLocation)
+                val storedTrack = ioService.createTempFile(gpsContainer, filename.removeSuffix(".fit"))
+                trackStore.put(storedTrack)
 
                 ioService.delete(uploadedFile.storageLocation)
-                return ResponseEntity.ok(protoFile.toTrackDTO())
+                return ResponseEntity.created(trackUrl(storedTrack.id)).body(storedTrack.toTrackDTO())
             }
         } else {
             throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
@@ -253,7 +253,7 @@ class TrackController(
             }
         }
 
-        return ResponseEntity.ok(protoFile.toTrackDTO())
+        return ResponseEntity.created(trackUrl(mergedTrack.id)).body(mergedTrack.toTrackDTO())
     }
 
     @LockTrack
@@ -266,6 +266,10 @@ class TrackController(
             fileService.changeTrackName(trackId, it)
             return ResponseEntity.noContent().build()
         } ?: throw IllegalArgumentException("No track name provided.")
+    }
+
+    private fun trackUrl(id: UUID): URI {
+        return URI.create("$baseUrl/api/v1/tracks/$id")
     }
 }
 
