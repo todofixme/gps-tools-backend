@@ -8,16 +8,17 @@ import org.devshred.gpstools.api.TracksApi
 import org.devshred.gpstools.api.model.ChangeNameRequestDTO
 import org.devshred.gpstools.api.model.TrackDTO
 import org.devshred.gpstools.common.orElse
-import org.devshred.gpstools.formats.proto.ProtoService
-import org.devshred.gpstools.formats.proto.protoContainer
-import org.devshred.gpstools.formats.proto.protoTrack
+import org.devshred.gpstools.formats.gps.GpsContainer
+import org.devshred.gpstools.formats.gps.PointOfInterest
+import org.devshred.gpstools.formats.gps.Track
+import org.devshred.gpstools.formats.gps.TrackPoint
 import org.devshred.gpstools.storage.FileService
-import org.devshred.gpstools.storage.FileStore
-import org.devshred.gpstools.storage.Filename
 import org.devshred.gpstools.storage.IOService
 import org.devshred.gpstools.storage.NotFoundException
-import org.devshred.gpstools.storage.StoredFile
+import org.devshred.gpstools.storage.StoredTrack
+import org.devshred.gpstools.storage.TrackStore
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.InputStreamResource
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpHeaders
@@ -32,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
 import java.io.File
 import java.io.IOException
-import java.io.InputStream
+import java.net.URI
 import java.util.Base64
 import java.util.UUID
 
@@ -41,12 +42,14 @@ private const val ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED = "Not a supported file fo
 @CrossOrigin(origins = ["*"], maxAge = 3600)
 @RestController
 class TrackController(
-    private val store: FileStore,
+    private val trackStore: TrackStore,
     private val ioService: IOService,
     private val fileService: FileService,
-    private val protoService: ProtoService,
 ) : TracksApi {
     private val log = LoggerFactory.getLogger(javaClass)
+
+    @Value("\${app.base-url}")
+    lateinit var baseUrl: String
 
     override fun download(
         @PathVariable(value = "trackId") trackId: UUID,
@@ -56,7 +59,7 @@ class TrackController(
         @Valid @RequestParam(required = false, value = "wp") wp: String?,
         @RequestHeader(required = false, value = "accept") accept: String?,
     ): ResponseEntity<Resource> {
-        val storedFile = store.get(trackId)
+        val storedFile = trackStore.get(trackId)
 
         val waypoints: FeatureCollection? =
             wp?.let {
@@ -97,7 +100,7 @@ class TrackController(
 
         val responseHeaders = HttpHeaders()
         if (mode != null && mode.contains("dl")) {
-            val basename = trackName.orElse { storedFile.filename.value }
+            val basename = trackName.orElse { storedFile.name }
             val file = File(basename)
             val filename =
                 file.nameWithoutExtension
@@ -117,26 +120,22 @@ class TrackController(
     }
 
     override fun uploadFile(
-        @NotNull @Valid @RequestParam(required = true, value = "filename") requestFilename: String,
+        @NotNull @Valid @RequestParam(required = true, value = "filename") filename: String,
         @Valid @RequestBody body: Resource,
     ): ResponseEntity<TrackDTO> {
-        val filename = Filename(requestFilename)
-        if (isGpsFile(filename.value)) {
-            val uploadedFile: StoredFile = ioService.createTempFile(body.inputStream, filename)
+        if (isGpsFile(filename)) {
+            val uploadedFile: StoredTrack = ioService.createTempFile(body.inputStream, filename)
 
-            if (isGpxFile(filename.value)) {
-                if (uploadedFile.mimeType != org.apache.tika.mime.MediaType.APPLICATION_XML.toString()) {
-                    ioService.delete(storageLocation = uploadedFile.storageLocation)
-                    throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
-                }
-
+            if (isGpxFile(filename)) {
                 try {
-                    val inputStream: InputStream = fileService.getProtoStreamFromGpxFile(uploadedFile.storageLocation)
-                    val protoFile = ioService.createTempFile(inputStream, filename)
-                    store.put(protoFile.id, protoFile)
+                    val gpsContainer: GpsContainer =
+                        fileService.getGpsContainerFromGpxFile(uploadedFile.storageLocation)
+                    val storedTrack = ioService.createTempFile(gpsContainer, filename.removeSuffix(".gpx"))
+
+                    trackStore.put(storedTrack)
 
                     ioService.delete(uploadedFile.storageLocation)
-                    return ResponseEntity.ok(protoFile.toTrackDTO())
+                    return ResponseEntity.created(trackUrl(storedTrack.id)).body(storedTrack.toTrackDTO())
                 } catch (ex: IOException) {
                     ioService.delete(storageLocation = uploadedFile.storageLocation)
                     throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
@@ -167,33 +166,32 @@ class TrackController(
         file
             ?.filter { isGpsFile(it.originalFilename) }
             ?.forEach {
-                val uploadedFile: StoredFile =
-                    ioService.createTempFile(it.inputStream, Filename(it.originalFilename!!))
+                val uploadedFile: StoredTrack =
+                    ioService.createTempFile(it.inputStream, it.originalFilename!!)
 
                 if (isGpxFile(it.originalFilename)) {
                     try {
-                        if (uploadedFile.mimeType != org.apache.tika.mime.MediaType.APPLICATION_XML.toString()) {
-                            ioService.delete(storageLocation = uploadedFile.storageLocation)
-                            throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
-                        }
+                        val gpsContainer = fileService.getGpsContainerFromGpxFile(uploadedFile.storageLocation)
+                        val storedTrack =
+                            ioService.createTempFile(gpsContainer, it.originalFilename!!.removeSuffix(".gpx"))
+                        trackStore.put(storedTrack)
 
-                        val inputStream = fileService.getProtoStreamFromGpxFile(uploadedFile.storageLocation)
-                        val protoFile = ioService.createTempFile(inputStream, Filename(it.originalFilename!!))
-                        store.put(protoFile.id, protoFile)
                         ioService.delete(uploadedFile.storageLocation)
-                        results.add(protoFile.toTrackDTO())
+
+                        results.add(storedTrack.toTrackDTO())
                     } catch (ex: IOException) {
                         ioService.delete(storageLocation = uploadedFile.storageLocation)
                         throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
                     }
                 } else if (isFitFile(it.originalFilename)) {
                     try {
-                        val inputStream: InputStream =
-                            fileService.getProtoStreamFromFitFile(uploadedFile.storageLocation)
-                        val protoFile = ioService.createTempFile(inputStream, Filename(it.originalFilename!!))
-                        store.put(protoFile.id, protoFile)
+                        val gpsContainer = fileService.getGpsContainerFromFitFile(uploadedFile.storageLocation)
+                        val storedTrack =
+                            ioService.createTempFile(gpsContainer, it.originalFilename!!.removeSuffix(".fit"))
+                        trackStore.put(storedTrack)
+
                         ioService.delete(uploadedFile.storageLocation)
-                        results.add(protoFile.toTrackDTO())
+                        results.add(storedTrack.toTrackDTO())
                     } catch (e: Exception) {
                         log.warn("Failed to process FIT file.", e)
                         ioService.delete(storageLocation = uploadedFile.storageLocation)
@@ -208,7 +206,7 @@ class TrackController(
     }
 
     override fun delete(trackId: UUID): ResponseEntity<Unit> {
-        store.delete(trackId)?.let {
+        trackStore.delete(trackId)?.let {
             ioService.delete(it.storageLocation)
         } ?: throw NotFoundException("Track with ID $trackId not found.")
 
@@ -222,33 +220,30 @@ class TrackController(
 
         if (trackIds.size == 1) {
             log.info("No need to merge.")
-            return ResponseEntity.ok(store.get(trackIds[0]).toTrackDTO())
+            val storedTrack = trackStore.get(trackIds[0])
+            return ResponseEntity.ok(storedTrack.toTrackDTO())
         }
 
-        val allWayPoints: MutableList<org.devshred.gpstools.formats.proto.ProtoPointOfInterest> = mutableListOf()
-        val allTrackPoints: MutableList<org.devshred.gpstools.formats.proto.ProtoTrackPoint> = mutableListOf()
+        val allWayPoints: MutableList<PointOfInterest> = mutableListOf()
+        val allTrackPoints: MutableList<TrackPoint> = mutableListOf()
         var trackName: String? = null
         trackIds.forEachIndexed { index, uuid ->
             log.info("About to merge $uuid.")
-            val protoGpsContainer =
-                protoService.readProtoContainer(store.get(uuid).storageLocation)
-            allWayPoints.addAll(protoGpsContainer.pointsOfInterestList)
-            allTrackPoints.addAll(protoGpsContainer.track.trackPointsList)
-            if (index == 0 && protoGpsContainer.name.isNotEmpty()) {
-                trackName = protoGpsContainer.name
+            val storedTrack = trackStore.get(uuid)
+            val gpsContainer = fileService.getGpsContainer(storedTrack.storageLocation)
+            allWayPoints.addAll(gpsContainer.pointsOfInterest)
+            allTrackPoints.addAll(gpsContainer.track?.trackPoints ?: emptyList())
+            if (index == 0 && gpsContainer.name?.isNotBlank() == true) {
+                trackName = gpsContainer.name
             }
         }
-        val mergedProto =
-            protoContainer {
-                trackName?.run { name = this }
-                pointsOfInterest.addAll(allWayPoints)
-                track = protoTrack { trackPoints.addAll(allTrackPoints) }
-            }
-        val protoFile = ioService.createTempFile(mergedProto.toByteArray().inputStream(), Filename("merged.gpx"))
-        store.put(protoFile.id, protoFile)
+        val mergedTrackName = trackName?.orElse { "merged" }
+        val mergedGpsContainer = GpsContainer(mergedTrackName, allWayPoints, Track(allTrackPoints))
+        val mergedTrack = ioService.createTempFile(mergedGpsContainer, mergedTrackName)
+        trackStore.put(mergedTrack)
 
         trackIds.forEach { trackId ->
-            store.delete(trackId)?.let {
+            trackStore.delete(trackId)?.let {
                 ioService.delete(it.storageLocation)
             }
         }

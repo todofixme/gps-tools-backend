@@ -27,7 +27,7 @@ import java.util.UUID
 
 @Service
 class FileService(
-    private val store: FileStore,
+    private val store: TrackStore,
     private val ioService: IOService,
     private val protoService: ProtoService,
     private val gpxService: GpxService,
@@ -64,28 +64,9 @@ class FileService(
         return ByteArrayInputStream(outputStream.toByteArray())
     }
 
-    fun getProtoStreamFromGpxFile(storageLocation: String): InputStream {
-        val gpx = gpxService.gpxFromFileLocation(storageLocation)
-        val gpsContainer = gpsMapper.fromGpx(gpx)
-        val protoContainer = gpsMapper.toProto(gpsContainer)
-        return protoContainer.toByteArray().inputStream()
-    }
-
-    fun getProtoStreamFromFitFile(storageLocation: String): InputStream {
-        val fitDecoder = FitDecoder()
-        try {
-            val fitMessages = fitDecoder.decode(FileInputStream(storageLocation))
-            val gpsContainer = gpsMapper.fromFit(fitMessages)
-            val protoContainer = gpsMapper.toProto(gpsContainer)
-            return protoContainer.toByteArray().inputStream()
-        } catch (e: FitRuntimeException) {
-            throw RuntimeException(e)
-        }
-    }
-
     fun getGpsContainer(
         storageLocation: String,
-        name: String?,
+        name: String? = null,
         featureCollection: FeatureCollection? = null,
     ): GpsContainer {
         val protoGpsContainer = protoService.readProtoContainer(storageLocation, name)
@@ -152,7 +133,7 @@ class FileService(
             originalGpsContainer.copy(pointsOfInterest = updatedWaiPoints)
                 .let { it.takeIf { optimize }?.withOptimizedPointsOfInterest() ?: it }
         val newProto = gpsMapper.toProto(newGpsContainer)
-        val protoFile = ioService.createTempFile(newProto.toByteArray().inputStream(), originalFile.filename)
+        val protoFile = ioService.createTempFile(newProto.toByteArray().inputStream(), originalFile.name)
 
         store.put(trackId, protoFile)
         ioService.delete(originalFile.storageLocation)
@@ -223,7 +204,7 @@ class FileService(
         val newGpsContainer = originalGpsContainer.copy(pointsOfInterest = newPointsOfInterest)
 
         val newProto = gpsMapper.toProto(newGpsContainer)
-        val protoFile = ioService.createTempFile(newProto.toByteArray().inputStream(), originalFile.filename)
+        val protoFile = ioService.createTempFile(newProto.toByteArray().inputStream(), originalFile.name)
 
         store.put(trackId, protoFile)
         ioService.delete(originalFile.storageLocation)
@@ -244,9 +225,24 @@ class FileService(
         val newGpsContainer = originalGpsContainer.copy(name = trackName)
 
         val newProto = gpsMapper.toProto(newGpsContainer)
-        val protoFile = ioService.createTempFile(newProto.toByteArray().inputStream(), Filename("$trackName.gps"))
+        val protoFile = ioService.createTempFile(newProto.toByteArray().inputStream(), trackName)
 
         store.put(trackId, protoFile)
         ioService.delete(originalFile.storageLocation)
+    }
+
+    fun getGpsContainerFromGpxFile(storageLocation: String): GpsContainer {
+        val gpx = gpxService.gpxFromFileLocation(storageLocation)
+        return gpsMapper.fromGpx(gpx)
+    }
+
+    fun getGpsContainerFromFitFile(storageLocation: String): GpsContainer {
+        val fitDecoder = FitDecoder()
+        try {
+            val fitMessages = fitDecoder.decode(FileInputStream(storageLocation))
+            return gpsMapper.fromFit(fitMessages)
+        } catch (e: FitRuntimeException) {
+            throw RuntimeException(e)
+        }
     }
 }

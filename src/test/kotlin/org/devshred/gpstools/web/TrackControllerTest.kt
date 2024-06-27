@@ -4,27 +4,24 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.called
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.verify
-import org.apache.commons.io.input.NullInputStream
 import org.apache.commons.lang3.RandomStringUtils.randomAlphabetic
 import org.apache.tomcat.util.http.fileupload.impl.SizeLimitExceededException
 import org.assertj.core.api.Assertions.assertThat
 import org.devshred.gpstools.api.model.TrackDTO
-import org.devshred.gpstools.formats.proto.ProtoService
+import org.devshred.gpstools.formats.gps.GpsContainer
 import org.devshred.gpstools.storage.FileService
-import org.devshred.gpstools.storage.FileStore
-import org.devshred.gpstools.storage.Filename
 import org.devshred.gpstools.storage.IOService
 import org.devshred.gpstools.storage.NotFoundException
-import org.devshred.gpstools.storage.StoredFile
-import org.devshred.gpstools.storage.createProtoContainer
+import org.devshred.gpstools.storage.StoredTrack
+import org.devshred.gpstools.storage.TrackStore
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.core.io.InputStreamResource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType.APPLICATION_XML_VALUE
-import org.springframework.http.MediaType.TEXT_PLAIN_VALUE
 import org.springframework.mock.web.MockMultipartFile
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
@@ -50,7 +47,7 @@ class TrackControllerTest(
     @Autowired val mockMvc: MockMvc,
 ) {
     @MockkBean
-    lateinit var fileStore: FileStore
+    lateinit var trackStore: TrackStore
 
     @MockkBean
     lateinit var ioService: IOService
@@ -58,16 +55,15 @@ class TrackControllerTest(
     @MockkBean
     lateinit var fileService: FileService
 
-    @MockkBean
-    lateinit var protoService: ProtoService
+    private val emptyGpsContainer = GpsContainer("empty track", emptyList(), null)
 
     @Test
     fun `download file as GPX`() {
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
-        val storedFile = StoredFile(uuid, Filename("test.gpx"), APPLICATION_XML_VALUE, "href", 123, storageLocation)
+        val storedTrack = StoredTrack(uuid, "test", storageLocation)
 
-        every { fileStore.get(uuid) } returns storedFile
+        every { trackStore.get(uuid) } returns storedTrack
         every { ioService.getAsStream(storageLocation) } returns InputStreamResource(InputStream.nullInputStream())
         every {
             fileService.getGpxInputStream(
@@ -84,29 +80,29 @@ class TrackControllerTest(
                 header().string(HttpHeaders.CONTENT_DISPOSITION, ("attachment; filename=\"test.gpx\"")),
             )
 
-        verify { fileStore.get(uuid) }
+        verify { trackStore.get(uuid) }
     }
 
     @Test
-    fun `download file with trackname as GPX`() {
+    fun `download file with name of track as GPX`() {
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
-        val storedFile = StoredFile(uuid, Filename("test.gpx"), APPLICATION_XML_VALUE, "href", 123, storageLocation)
-        val trackname = "My Track"
-        val encodedTrackname = "TXkgVHJhY2s="
+        val storedTrack = StoredTrack(uuid, "test", storageLocation)
+        val trackName = "My Track"
+        val encodedTrackName = "TXkgVHJhY2s="
 
-        every { fileStore.get(uuid) } returns storedFile
+        every { trackStore.get(uuid) } returns storedTrack
         every { ioService.getAsStream(storageLocation) } returns InputStreamResource(InputStream.nullInputStream())
         every {
             fileService.getGpxInputStream(
                 storageLocation,
-                trackname,
+                trackName,
                 null,
             )
         } returns emptyByteArrayInputStream()
 
         mockMvc.perform(
-            get("$API_PATH_TRACKS/$uuid?mode=dl&name=$encodedTrackname").header(
+            get("$API_PATH_TRACKS/$uuid?mode=dl&name=$encodedTrackName").header(
                 "Accept",
                 GpsType.GPX.mimeType,
             ),
@@ -117,19 +113,19 @@ class TrackControllerTest(
                 header().string(HttpHeaders.CONTENT_DISPOSITION, ("attachment; filename=\"My_Track.gpx\"")),
             )
 
-        verify { fileStore.get(uuid) }
+        verify { trackStore.get(uuid) }
     }
 
     @Test
     fun `trying to download file that does not exist in store`() {
         val uuid = UUID.randomUUID()
 
-        every { fileStore.get(uuid) } throws NotFoundException("not found")
+        every { trackStore.get(uuid) } throws NotFoundException("not found")
 
         mockMvc.perform(get("$API_PATH_TRACKS/$uuid").header("Accept", GpsType.GPX.mimeType))
             .andExpect(status().isNotFound)
 
-        verify { fileStore.get(uuid) }
+        verify { trackStore.get(uuid) }
         verify { ioService.getAsStream(any()) wasNot called }
     }
 
@@ -137,9 +133,9 @@ class TrackControllerTest(
     fun `trying to download file that does not exist in filesystem`() {
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
-        val storedFile = StoredFile(uuid, Filename("test.gpx"), TEXT_PLAIN_VALUE, "href", 123, storageLocation)
+        val storedTrack = StoredTrack(uuid, "test", storageLocation)
 
-        every { fileStore.get(uuid) } returns storedFile
+        every { trackStore.get(uuid) } returns storedTrack
         every {
             fileService.getGpxInputStream(
                 storageLocation,
@@ -151,7 +147,7 @@ class TrackControllerTest(
         mockMvc.perform(get("$API_PATH_TRACKS/$uuid").header("Accept", GpsType.GPX.mimeType))
             .andExpect(status().isNotFound)
 
-        verify { fileStore.get(uuid) }
+        verify { trackStore.get(uuid) }
     }
 
     @Test
@@ -166,9 +162,9 @@ class TrackControllerTest(
     fun `get file as GPX`() {
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
-        val storedFile = StoredFile(uuid, Filename("test.txt"), TEXT_PLAIN_VALUE, "href", 123, storageLocation)
+        val storedTrack = StoredTrack(uuid, "test", storageLocation)
 
-        every { fileStore.get(uuid) } returns storedFile
+        every { trackStore.get(uuid) } returns storedTrack
         every {
             fileService.getGpxInputStream(
                 storageLocation,
@@ -184,30 +180,37 @@ class TrackControllerTest(
                 header().doesNotExist(HttpHeaders.CONTENT_DISPOSITION),
             )
 
-        verify { fileStore.get(uuid) }
+        verify { trackStore.get(uuid) }
     }
 
     @Test
     fun `upload single file`() {
-        val filename = "test.gpx"
+        val trackName = "test"
+        val fileName = "$trackName.gpx"
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
-        val storedFile = StoredFile(uuid, Filename(filename), APPLICATION_XML_VALUE, "href", 123, storageLocation)
+        val storedTrack = StoredTrack(uuid, trackName, storageLocation)
 
-        every { ioService.createTempFile(any(), Filename(filename)) } returns storedFile
-        every { fileStore.put(uuid, storedFile) } returns Unit
+        every { ioService.createTempFile(any<InputStream>(), fileName) } returns storedTrack
+        every { ioService.createTempFile(any<GpsContainer>(), trackName) } returns storedTrack
+        every { trackStore.put(any()) } returns Unit
         every { ioService.delete(storageLocation) } returns Unit
-        every { fileService.getProtoStreamFromGpxFile(storageLocation) } returns NullInputStream()
+        every { fileService.getGpsContainerFromGpxFile(storageLocation) } returns emptyGpsContainer
 
         mockMvc.perform(
             post(API_PATH_TRACK)
-                .param("filename", filename)
+                .param("filename", fileName)
                 .content("123"),
         )
-            .andExpect(status().isOk)
+            .andExpect(status().isCreated)
 
-        verify(exactly = 2) { ioService.createTempFile(any(), Filename(filename)) }
-        verify { fileStore.put(uuid, storedFile) }
+        // temporarily store the uploaded file
+        verify { ioService.createTempFile(any<InputStream>(), fileName) }
+        // store the resulting proto file
+        verify { ioService.createTempFile(any<GpsContainer>(), trackName) }
+        // store the proto file in the file store
+        verify { trackStore.put(any()) }
+        // delete the temporary file
         verify { ioService.delete(storageLocation) }
     }
 
@@ -215,7 +218,7 @@ class TrackControllerTest(
     fun `uploading single file fails due wrong file-suffix`() {
         val filename = "test.txt"
 
-        every { ioService.createTempFile(any(), Filename(filename)) } throws IOException()
+        every { ioService.createTempFile(any<GpsContainer>(), filename) } throws IOException()
 
         mockMvc.perform(
             post(API_PATH_TRACK)
@@ -224,15 +227,15 @@ class TrackControllerTest(
         )
             .andExpect(status().isBadRequest)
 
-        verify(exactly = 0) { ioService.createTempFile(any(), Filename(filename)) }
-        verify(exactly = 0) { fileStore.put(any(), any()) }
+        verify(exactly = 0) { ioService.createTempFile(any<GpsContainer>(), filename) }
+        verify(exactly = 0) { trackStore.put(any(), any()) }
     }
 
     @Test
     fun `uploading single file fails due to IO issues`() {
         val filename = "test.gpx"
 
-        every { ioService.createTempFile(any(), Filename(filename)) } throws IOException()
+        every { ioService.createTempFile(any<InputStream>(), filename) } throws IOException()
 
         mockMvc.perform(
             post(API_PATH_TRACK)
@@ -241,8 +244,8 @@ class TrackControllerTest(
         )
             .andExpect(status().isInternalServerError)
 
-        verify { ioService.createTempFile(any(), Filename(filename)) }
-        verify(exactly = 0) { fileStore.put(any(), any()) }
+        verify { ioService.createTempFile(any<InputStream>(), filename) }
+        verify(exactly = 0) { trackStore.put(any(), any()) }
     }
 
     @Test
@@ -250,10 +253,7 @@ class TrackControllerTest(
         val filename = "test.gpx"
 
         every {
-            ioService.createTempFile(
-                any(),
-                Filename(filename),
-            )
+            ioService.createTempFile(any<InputStream>(), filename)
         } throws SizeLimitExceededException("file too large", 2, 1)
 
         mockMvc.perform(
@@ -263,37 +263,31 @@ class TrackControllerTest(
         )
             .andExpect(status().isPayloadTooLarge)
 
-        verify { ioService.createTempFile(any(), Filename(filename)) }
-        verify(exactly = 0) { fileStore.put(any(), any()) }
+        verify { ioService.createTempFile(any<InputStream>(), filename) }
+        verify(exactly = 0) { trackStore.put(any(), any()) }
     }
 
     @Test
     fun `upload multipartFile`() {
-        val filename = "test.gpx"
+        val trackName = "test"
+        val fileName = "$trackName.gpx"
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
-        val storedFile =
-            StoredFile(
-                uuid,
-                Filename(filename),
-                APPLICATION_XML_VALUE,
-                "href",
-                123,
-                storageLocation,
-            )
+        val storedTrack = StoredTrack(uuid, fileName, storageLocation)
 
         val multipartFile =
             MockMultipartFile(
                 "file",
-                filename,
+                fileName,
                 APPLICATION_XML_VALUE,
                 "some data".byteInputStream(),
             )
 
-        every { ioService.createTempFile(any(), Filename(filename)) } returns storedFile
+        every { ioService.createTempFile(any<InputStream>(), fileName) } returns storedTrack
+        every { ioService.createTempFile(any<GpsContainer>(), trackName) } returns storedTrack
         every { ioService.delete(any()) } returns Unit
-        every { fileStore.put(uuid, storedFile) } returns Unit
-        every { fileService.getProtoStreamFromGpxFile(storageLocation) } returns emptyByteArrayInputStream()
+        every { trackStore.put(storedTrack) } returns Unit
+        every { fileService.getGpsContainerFromGpxFile(storageLocation) } returns mockk<GpsContainer>()
 
         mockMvc.perform(
             multipart(API_PATH_TRACKS)
@@ -301,42 +295,47 @@ class TrackControllerTest(
         )
             .andExpect(status().isOk)
 
-        verify { ioService.createTempFile(any(), Filename(filename)) }
-        verify { fileStore.put(uuid, storedFile) }
+        verify { ioService.createTempFile(any<InputStream>(), fileName) }
+        verify { ioService.createTempFile(any<GpsContainer>(), trackName) }
+        verify { trackStore.put(storedTrack) }
     }
 
     @Test
     fun `upload multiple multipartFiles`() {
         val storageLocation = "/path/to/file"
 
-        val filename1 = "test1.gpx"
+        val trackName1 = "test1"
+        val fileName1 = "$trackName1.gpx"
         val uuid1 = UUID.randomUUID()
-        val storedFile1 = StoredFile(uuid1, Filename(filename1), APPLICATION_XML_VALUE, "href", 123, storageLocation)
+        val storedTrack1 = StoredTrack(uuid1, fileName1, storageLocation)
 
-        val filename2 = "test2.gpx"
+        val trackName2 = "test2"
+        val fileName2 = "$trackName2.gpx"
         val uuid2 = UUID.randomUUID()
-        val storedFile2 = StoredFile(uuid2, Filename(filename2), APPLICATION_XML_VALUE, "href", 123, storageLocation)
+        val storedTrack2 = StoredTrack(uuid2, fileName2, storageLocation)
 
         val multipartFile1 =
             MockMultipartFile(
                 "file",
-                filename1,
+                fileName1,
                 APPLICATION_XML_VALUE,
                 "some data".byteInputStream(),
             )
         val multipartFile2 =
             MockMultipartFile(
                 "file",
-                filename2,
+                fileName2,
                 APPLICATION_XML_VALUE,
                 "some data".byteInputStream(),
             )
 
-        every { ioService.createTempFile(any(), Filename(filename1)) } returns storedFile1
-        every { ioService.createTempFile(any(), Filename(filename2)) } returns storedFile2
+        every { ioService.createTempFile(any<InputStream>(), fileName1) } returns storedTrack1
+        every { ioService.createTempFile(any<InputStream>(), fileName2) } returns storedTrack2
+        every { ioService.createTempFile(any<GpsContainer>(), trackName1) } returns storedTrack1
+        every { ioService.createTempFile(any<GpsContainer>(), trackName2) } returns storedTrack2
         every { ioService.delete(any()) } returns Unit
-        every { fileStore.put(any(), any()) } returns Unit
-        every { fileService.getProtoStreamFromGpxFile(any()) } returns emptyByteArrayInputStream()
+        every { trackStore.put(any()) } returns Unit
+        every { fileService.getGpsContainerFromGpxFile(any()) } returns mockk<GpsContainer>()
 
         mockMvc.perform(
             multipart(API_PATH_TRACKS)
@@ -345,10 +344,10 @@ class TrackControllerTest(
         )
             .andExpect(status().isOk)
 
-        verify { ioService.createTempFile(any(), Filename(filename1)) }
-        verify { ioService.createTempFile(any(), Filename(filename2)) }
-        verify { fileStore.put(uuid1, storedFile1) }
-        verify { fileStore.put(uuid2, storedFile2) }
+        verify { ioService.createTempFile(any<GpsContainer>(), trackName1) }
+        verify { ioService.createTempFile(any<GpsContainer>(), trackName2) }
+        verify { trackStore.put(storedTrack1) }
+        verify { trackStore.put(storedTrack2) }
         verify(exactly = 2) { ioService.delete(any()) }
     }
 
@@ -356,15 +355,15 @@ class TrackControllerTest(
     fun `delete file`() {
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
-        val storedFile = StoredFile(uuid, Filename("test.txt"), TEXT_PLAIN_VALUE, "href", 123, storageLocation)
+        val storedTrack = StoredTrack(uuid, "test", storageLocation)
 
-        every { fileStore.delete(uuid) } returns storedFile
+        every { trackStore.delete(uuid) } returns storedTrack
         every { ioService.delete(storageLocation) } returns Unit
 
         mockMvc.perform(delete("$API_PATH_TRACKS/$uuid")) //
             .andExpect(status().isNoContent)
 
-        verify { fileStore.delete(uuid) }
+        verify { trackStore.delete(uuid) }
         verify { ioService.delete(storageLocation) }
     }
 
@@ -373,12 +372,12 @@ class TrackControllerTest(
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
 
-        every { fileStore.delete(uuid) } returns null
+        every { trackStore.delete(uuid) } returns null
 
         mockMvc.perform(delete("$API_PATH_TRACKS/$uuid")) //
             .andExpect(status().isNotFound)
 
-        verify { fileStore.delete(uuid) }
+        verify { trackStore.delete(uuid) }
         verify(exactly = 0) { ioService.delete(storageLocation) }
     }
 
@@ -386,15 +385,15 @@ class TrackControllerTest(
     fun `delete file fails since file is in store but not in filesystem`() {
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
-        val storedFile = StoredFile(uuid, Filename("test.txt"), TEXT_PLAIN_VALUE, "href", 123, storageLocation)
+        val storedTrack = StoredTrack(uuid, "test", storageLocation)
 
-        every { fileStore.delete(uuid) } returns storedFile
+        every { trackStore.delete(uuid) } returns storedTrack
         every { ioService.delete(storageLocation) } throws NotFoundException("not found in filesystem")
 
         mockMvc.perform(delete("$API_PATH_TRACKS/$uuid")) //
             .andExpect(status().isNotFound)
 
-        verify { fileStore.delete(uuid) }
+        verify { trackStore.delete(uuid) }
         verify { ioService.delete(storageLocation) }
     }
 
@@ -407,13 +406,13 @@ class TrackControllerTest(
     fun `merge with single trackId simply return the track and does not create a new one`() {
         val uuid = UUID.randomUUID()
         val storageLocation = "/path/to/file"
-        val storedFile = StoredFile(uuid, Filename("test.txt"), TEXT_PLAIN_VALUE, "href", 123, storageLocation)
+        val storedTrack = StoredTrack(uuid, "test", storageLocation)
 
-        every { fileStore.get(uuid) } returns storedFile
+        every { trackStore.get(uuid) } returns storedTrack
 
         mockMvc.perform(post("$API_PATH_MERGE?trackIds=$uuid")).andExpect(status().isOk)
 
-        verify(exactly = 0) { fileStore.put(any(), any()) }
+        verify(exactly = 0) { trackStore.put(any(), any()) }
     }
 
     @Test
@@ -422,32 +421,31 @@ class TrackControllerTest(
         val trackId2 = UUID.randomUUID()
         val newTrackId = UUID.randomUUID()
         val storageLocation = "/path/to/file"
-        val storedFile = StoredFile(trackId1, Filename("test.txt"), TEXT_PLAIN_VALUE, "href", 123, storageLocation)
-        val newFile = StoredFile(newTrackId, Filename("test.txt"), TEXT_PLAIN_VALUE, "href", 123, storageLocation)
-        val protoContainer = createProtoContainer()
+        val storedTrack = StoredTrack(trackId1, "test", storageLocation)
+        val newFile = StoredTrack(newTrackId, "test", storageLocation)
 
-        every { fileStore.get(any()) } returns storedFile
-        every { protoService.readProtoContainer(storageLocation) } returns protoContainer
-        every { ioService.createTempFile(any(), any()) } returns newFile
-        every { fileStore.put(any(), newFile) } returns Unit
-        every { fileStore.delete(any()) } returns storedFile
+        every { trackStore.get(any()) } returns storedTrack
+        every { fileService.getGpsContainer(storageLocation) } returns emptyGpsContainer
+        every { ioService.createTempFile(any<GpsContainer>(), any()) } returns newFile
+        every { trackStore.put(newFile) } returns Unit
+        every { trackStore.delete(any()) } returns storedTrack
         every { ioService.delete(any()) } returns Unit
 
         val result =
             mockMvc
                 .perform(post("$API_PATH_MERGE?trackIds=$trackId1&trackIds=$trackId2"))
-                .andExpect(status().isOk)
+                .andExpect(status().isCreated)
                 .andReturn()
 
         val responseContent = result.response.contentAsString
         val responseDto = ObjectMapper().readValue(responseContent, TrackDTO::class.java)
         assertThat(responseDto.id).isEqualTo(newTrackId)
 
-        verify(exactly = 2) { fileStore.get(any()) }
-        verify { fileStore.delete(trackId1) }
-        verify { fileStore.delete(trackId2) }
+        verify(exactly = 2) { trackStore.get(any()) }
+        verify { trackStore.delete(trackId1) }
+        verify { trackStore.delete(trackId2) }
         verify(exactly = 2) { ioService.delete(storageLocation) }
-        verify { fileStore.put(any(), any()) }
+        verify { trackStore.put(any()) }
     }
 
     @Test

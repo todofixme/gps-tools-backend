@@ -96,6 +96,8 @@ Content-Type: application/geo+json
   ]
 }
 
+> {% client.global.set("pointId", response.body.features[0].properties.uuid) %}
+
 ### add or change wayPoint
 PATCH {{baseUrl}}/api/v1/tracks/{{trackId}}/points?mode=opt
 Content-Type: application/geo+json
@@ -115,7 +117,7 @@ Content-Type: application/geo+json
   }
 }
 
-> {% client.global.set("pointId", response.body.features[1].properties.uuid) %}
+> {% client.global.set("pointId", response.body.features[0].properties.uuid) %}
 
 ### delete wayPoint
 DELETE {{baseUrl}}/api/v1/tracks/{{trackId}}/points/{{pointId}}

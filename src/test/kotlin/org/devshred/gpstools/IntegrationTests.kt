@@ -38,9 +38,9 @@ class IntegrationTests(
                 .body(fileContent)
         val createResponse = restTemplate.exchange<TrackDTO>(createRequest)
 
-        assertThat(createResponse.statusCode).isEqualTo(HttpStatus.OK)
+        assertThat(createResponse.statusCode).isEqualTo(HttpStatus.CREATED)
         assertThat(createResponse.body).isNotNull
-        assertThat(createResponse.body!!.filename).isEqualTo(filename)
+        assertThat(createResponse.body!!.name).isEqualTo("Billerhuder Insel")
 
         val uuid = createResponse.body!!.id
 
@@ -73,7 +73,7 @@ class IntegrationTests(
                 .body(fileContent)
         val createResponse = restTemplate.exchange<TrackDTO>(createRequest)
 
-        assertThat(createResponse.statusCode).isEqualTo(HttpStatus.OK)
+        assertThat(createResponse.statusCode).isEqualTo(HttpStatus.CREATED)
         assertThat(createResponse.body).isNotNull
         val uuid = createResponse.body!!.id
 
