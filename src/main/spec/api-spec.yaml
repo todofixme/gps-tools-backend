@@ -1,13 +1,13 @@
-openapi: 3.1.1
+openapi: 3.0.3
 info:
   description: |-
-    This defines the API of the GPS-Tools backend based on the OpenAPI 3.1 specification.
+    This defines the API of the GPS-Tools backend based on the OpenAPI 3.0 specification.
 
     Used by these applications:
     - [GPS-Tools backend](https://github.com/devshred/gps-tools-backend)
     - [GPS-Tools frontend](https://github.com/devshred/gps-tools-frontend)
   version: 1.1.0
-  title: GPS-Tools API - OpenAPI 3.1
+  title: GPS-Tools API - OpenAPI 3.0
 servers:
   - url: 'http://localhost:7001/api/v1'
     description: local
