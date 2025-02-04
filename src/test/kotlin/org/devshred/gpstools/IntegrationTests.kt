@@ -4,66 +4,62 @@ import mil.nga.sf.geojson.Feature
 import mil.nga.sf.geojson.FeatureConverter
 import mil.nga.sf.geojson.Point
 import mil.nga.sf.geojson.Position
-import org.apache.commons.lang3.RandomStringUtils.randomAlphabetic
+import org.apache.commons.lang3.RandomStringUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.devshred.gpstools.api.model.TrackDTO
 import org.devshred.gpstools.web.GpsType
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.web.client.TestRestTemplate
-import org.springframework.boot.test.web.client.exchange
 import org.springframework.http.HttpStatus
-import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.MediaType.APPLICATION_XML
-import org.springframework.http.RequestEntity.delete
-import org.springframework.http.RequestEntity.get
-import org.springframework.http.RequestEntity.patch
 import org.springframework.http.RequestEntity.post
-import org.springframework.http.RequestEntity.put
+import org.springframework.test.web.reactive.server.WebTestClient
+import kotlin.collections.set
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class IntegrationTests(
-    @Autowired val restTemplate: TestRestTemplate,
+    @Autowired val testClient: WebTestClient,
 ) {
     @Test
     fun `trackFile lifecycle`() {
-        val filename = randomAlphabetic(8) + ".gpx"
+        val filename = RandomStringUtils.insecure().nextAlphabetic(8) + ".gpx"
         val fileContent = this::class.java.classLoader.getResource("data/test.gpx")!!.readText(Charsets.UTF_8)
 
         // upload a file
-        val createRequest =
-            post("/api/v1/track?filename=$filename")
-                .contentType(APPLICATION_XML)
-                .body(fileContent)
-        val createResponse = restTemplate.exchange<TrackDTO>(createRequest)
+        val createResponse = testClient.post().uri("/api/v1/track?filename=$filename")
+            .contentType(APPLICATION_XML)
+            .bodyValue(fileContent)
+            .exchange()
+            .expectStatus().isCreated
+            .expectBody(TrackDTO::class.java)
+            .value { assertThat(it.name).isEqualTo("Billerhuder Insel") }
+            .returnResult()
 
-        assertThat(createResponse.statusCode).isEqualTo(HttpStatus.CREATED)
-        assertThat(createResponse.body).isNotNull
-        assertThat(createResponse.body!!.name).isEqualTo("Billerhuder Insel")
-
-        val uuid = createResponse.body!!.id
+        val uuid = createResponse.responseHeaders["Location"]!![0].split("/").last()
 
         // download a file
-        val downloadRequest = get("/api/v1/tracks/$uuid").header("Accept", GpsType.GPX.mimeType).build()
-        val downloadResponse = restTemplate.exchange<String>(downloadRequest)
+        testClient.get().uri("/api/v1/tracks/$uuid")
+            .header("Accept", GpsType.GPX.mimeType)
+            .exchange()
+            .expectStatus().isOk
+            .expectHeader().contentType(GpsType.GPX.mimeType)
+            .expectBody().consumeWith {
+                assertThat(it.responseBody).isNotNull()
+            }
 
-        assertThat(downloadResponse.statusCode).isEqualTo(HttpStatus.OK)
-        assertThat(downloadResponse.headers.contentType.toString()).isEqualTo(GpsType.GPX.mimeType)
-        assertThat(downloadResponse.body).isNotNull()
         // TODO: compare waypoints
 
         // delete a file
-        restTemplate.delete("/api/v1/tracks/$uuid")
+        testClient.delete().uri("/api/v1/tracks/$uuid").exchange().expectStatus().isNoContent
 
         // requesting a deleted file should return 404/not found
-        val downloadResponse2 = restTemplate.exchange<String>(downloadRequest)
-        assertThat(downloadResponse2.statusCode).isEqualTo(NOT_FOUND)
+        testClient.delete().uri("/api/v1/tracks/$uuid").exchange().expectStatus().isNotFound
     }
 
     @Test
     fun `waypoint lifecycle`() {
-        val filename = randomAlphabetic(8) + ".gpx"
+        val filename = RandomStringUtils.insecure().nextAlphabetic(8) + ".gpx"
         val fileContent = this::class.java.classLoader.getResource("data/test.gpx")!!.readText(Charsets.UTF_8)
 
         // upload a file
@@ -71,11 +67,15 @@ class IntegrationTests(
             post("/api/v1/track?filename=$filename")
                 .contentType(APPLICATION_XML)
                 .body(fileContent)
-        val createResponse = restTemplate.exchange<TrackDTO>(createRequest)
+        val createResponse = testClient.post().uri("/api/v1/track?filename=$filename")
+            .contentType(APPLICATION_XML)
+            .bodyValue(fileContent)
+            .exchange()
+            .expectStatus().isEqualTo(HttpStatus.CREATED)
+            .expectBody(TrackDTO::class.java)
+            .returnResult()
 
-        assertThat(createResponse.statusCode).isEqualTo(HttpStatus.CREATED)
-        assertThat(createResponse.body).isNotNull
-        val uuid = createResponse.body!!.id
+        val uuid = createResponse.responseBody!!.id
 
         // set waypoint
         val position = Position(53.544225, 10.064383)
@@ -84,15 +84,15 @@ class IntegrationTests(
         firstPoiFeature.properties["name"] = "K1"
         firstPoiFeature.properties["type"] = "SUMMIT"
 
-        val initialRequest =
-            put("/api/v1/tracks/$uuid/points")
-                .header("Content-Type", "application/geo+json")
-                .body(FeatureConverter.toStringValue(firstPoiFeature))
-        val initialResponse = restTemplate.exchange<String>(initialRequest)
+        val initialResponse = testClient.put().uri("/api/v1/tracks/$uuid/points")
+            .header("Content-Type", "application/geo+json")
+            .bodyValue(FeatureConverter.toStringValue(firstPoiFeature))
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(String::class.java)
+            .returnResult()
 
-        assertThat(initialResponse.statusCode).isEqualTo(HttpStatus.OK)
-        assertThat(initialResponse.body).isNotNull
-        val initialResponseFeature = FeatureConverter.toFeatureCollection(initialResponse.body)
+        val initialResponseFeature = FeatureConverter.toFeatureCollection(initialResponse.responseBody)
         assertThat(initialResponseFeature.features[0].properties["uuid"]).isNotNull
 
         // overwrite waypoint
@@ -100,15 +100,15 @@ class IntegrationTests(
         secondPoiFeature.properties["name"] = "K2"
         secondPoiFeature.properties["type"] = "DANGER"
 
-        val overwriteRequest =
-            put("/api/v1/tracks/$uuid/points")
-                .header("Content-Type", "application/geo+json")
-                .body(FeatureConverter.toStringValue(secondPoiFeature))
-        val overwriteResponse = restTemplate.exchange<String>(overwriteRequest)
+        val overwriteResponse = testClient.put().uri("/api/v1/tracks/$uuid/points")
+            .header("Content-Type", "application/geo+json")
+            .bodyValue(FeatureConverter.toStringValue(secondPoiFeature))
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(String::class.java)
+            .returnResult()
 
-        assertThat(overwriteResponse.statusCode).isEqualTo(HttpStatus.OK)
-        assertThat(overwriteResponse.body).isNotNull
-        val overwriteResponseFeature = FeatureConverter.toFeatureCollection(overwriteResponse.body)
+        val overwriteResponseFeature = FeatureConverter.toFeatureCollection(overwriteResponse.responseBody)
         assertThat(overwriteResponseFeature.features).hasSize(1)
         assertThat(overwriteResponseFeature.features[0].properties["name"]).isEqualTo("K2")
         assertThat(overwriteResponseFeature.features[0].properties["uuid"]).isNotNull
@@ -120,15 +120,15 @@ class IntegrationTests(
         thirdPoiFeature.properties["type"] = "WATER"
         thirdPoiFeature.properties["uuid"] = secondPointId
 
-        val changeRequest =
-            patch("/api/v1/tracks/$uuid/points")
-                .header("Content-Type", "application/geo+json")
-                .body(FeatureConverter.toStringValue(thirdPoiFeature))
-        val changeResponse = restTemplate.exchange<String>(changeRequest)
+        val changeResponse = testClient.patch().uri("/api/v1/tracks/$uuid/points")
+            .header("Content-Type", "application/geo+json")
+            .bodyValue(FeatureConverter.toStringValue(thirdPoiFeature))
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(String::class.java)
+            .returnResult()
 
-        assertThat(changeResponse.statusCode).isEqualTo(HttpStatus.OK)
-        assertThat(changeResponse.body).isNotNull
-        val changeResponseFeature = FeatureConverter.toFeatureCollection(changeResponse.body)
+        val changeResponseFeature = FeatureConverter.toFeatureCollection(changeResponse.responseBody)
         assertThat(changeResponseFeature.features).hasSize(1)
         assertThat(changeResponseFeature.features[0].properties["name"]).isEqualTo("K3")
         assertThat(changeResponseFeature.features[0].properties["uuid"]).isNotNull
@@ -140,34 +140,30 @@ class IntegrationTests(
         fourthPoiFeature.properties["name"] = "K4"
         fourthPoiFeature.properties["type"] = "VALLEY"
 
-        val addRequest =
-            patch("/api/v1/tracks/$uuid/points")
-                .header("Content-Type", "application/geo+json")
-                .body(FeatureConverter.toStringValue(fourthPoiFeature))
-        val addResponse = restTemplate.exchange<String>(addRequest)
+        val addResponse = testClient.patch().uri("/api/v1/tracks/$uuid/points")
+            .header("Content-Type", "application/geo+json")
+            .bodyValue(FeatureConverter.toStringValue(fourthPoiFeature))
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(String::class.java)
+            .returnResult()
 
-        assertThat(addResponse.statusCode).isEqualTo(HttpStatus.OK)
-        assertThat(addResponse.body).isNotNull
-        val addResponseFeature = FeatureConverter.toFeatureCollection(addResponse.body)
+        val addResponseFeature = FeatureConverter.toFeatureCollection(addResponse.responseBody)
         assertThat(addResponseFeature.features).hasSize(2)
         assertThat(addResponseFeature.features.map { it.properties["name"] }).containsOnly("K3", "K4")
 
         // delete waypoint
-        val deleteRequest = delete("/api/v1/tracks/$uuid/points/$thirdPointId").build()
-        val deleteResponse = restTemplate.exchange<Unit>(deleteRequest)
-
-        assertThat(deleteResponse.statusCode).isEqualTo(HttpStatus.NO_CONTENT)
+        testClient.delete().uri("/api/v1/tracks/$uuid/points/$thirdPointId").exchange().expectStatus().isNoContent
 
         // check remaining points
-        val getRequest =
-            get("/api/v1/tracks/$uuid/points")
-                .header("Accept", "application/geo+json")
-                .build()
-        val getResponse = restTemplate.exchange<String>(getRequest)
+        val getResponse = testClient.get().uri("/api/v1/tracks/$uuid/points")
+            .header("Accept", "application/geo+json")
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(String::class.java)
+            .returnResult()
 
-        assertThat(getResponse.statusCode).isEqualTo(HttpStatus.OK)
-        assertThat(getResponse.body).isNotNull
-        val getResponseFeature = FeatureConverter.toFeatureCollection(getResponse.body)
+        val getResponseFeature = FeatureConverter.toFeatureCollection(getResponse.responseBody)
         assertThat(getResponseFeature.features).hasSize(1)
         assertThat(getResponseFeature.features[0].properties["name"]).isEqualTo("K4")
     }

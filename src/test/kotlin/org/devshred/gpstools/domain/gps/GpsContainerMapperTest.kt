@@ -4,7 +4,7 @@ import io.jenetics.jpx.GPX
 import mil.nga.sf.geojson.FeatureCollection
 import mil.nga.sf.geojson.Point
 import mil.nga.sf.geojson.Position
-import org.apache.commons.lang3.RandomStringUtils.randomAlphabetic
+import org.apache.commons.lang3.RandomStringUtils
 import org.apache.commons.math3.random.RandomDataGenerator
 import org.assertj.core.api.Assertions.assertThat
 import org.devshred.gpstools.formats.gps.ExtensionValues
@@ -116,7 +116,7 @@ class GpsContainerMapperTest {
 
     @Test
     fun `set trackname from first track`() {
-        val trackname = randomAlphabetic(8)
+        val trackname = RandomStringUtils.insecure().nextAlphabetic(8)
         val gpx =
             GPX.builder()
                 .metadata { m -> m.name("yet another name") }
@@ -135,7 +135,7 @@ class GpsContainerMapperTest {
 
     @Test
     fun `set trackname from GPX metadata if no track was found`() {
-        val trackname = randomAlphabetic(8)
+        val trackname = RandomStringUtils.insecure().nextAlphabetic(8)
         val gpx =
             GPX.builder()
                 .metadata { m -> m.name(trackname) }
@@ -481,7 +481,7 @@ class GpsContainerMapperTest {
     @Test
     fun `convert PointOfInterest to GpxWayPoint and back to PointOfInterest with name`() {
         val uuid = UUID.randomUUID()
-        val name = randomAlphabetic(8)
+        val name = RandomStringUtils.insecure().nextAlphabetic(8)
         val poi =
             PointOfInterest(
                 uuid = uuid,
