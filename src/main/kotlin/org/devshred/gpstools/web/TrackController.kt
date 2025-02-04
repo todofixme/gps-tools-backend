@@ -2,7 +2,6 @@ package org.devshred.gpstools.web
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.validation.Valid
-import jakarta.validation.constraints.NotNull
 import mil.nga.sf.geojson.FeatureCollection
 import org.devshred.gpstools.api.TracksApi
 import org.devshred.gpstools.api.model.ChangeNameRequestDTO
@@ -28,6 +27,7 @@ import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
+import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
@@ -39,8 +39,9 @@ import java.util.UUID
 
 private const val ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED = "Not a supported file format (GPX, FIT)."
 
-@CrossOrigin(origins = ["*"], maxAge = 3600)
 @RestController
+@RequestMapping("/api/v1")
+@CrossOrigin(origins = ["*"], maxAge = 3600)
 class TrackController(
     private val trackStore: TrackStore,
     private val ioService: IOService,
@@ -119,53 +120,17 @@ class TrackController(
             .body(inputStreamResource)
     }
 
-    override fun uploadFile(
-        @NotNull @Valid @RequestParam(required = true, value = "filename") filename: String,
-        @Valid @RequestBody body: Resource,
-    ): ResponseEntity<TrackDTO> {
-        if (isGpsFile(filename)) {
-            val uploadedFile: StoredTrack = ioService.createTempFile(body.inputStream, filename)
-
-            if (isGpxFile(filename)) {
-                try {
-                    val gpsContainer: GpsContainer =
-                        fileService.getGpsContainerFromGpxFile(uploadedFile.storageLocation)
-                    val storedTrack = ioService.createTempFile(gpsContainer, filename.removeSuffix(".gpx"))
-
-                    trackStore.put(storedTrack)
-
-                    ioService.delete(uploadedFile.storageLocation)
-                    return ResponseEntity.created(trackUrl(storedTrack.id)).body(storedTrack.toTrackDTO())
-                } catch (ex: IOException) {
-                    ioService.delete(storageLocation = uploadedFile.storageLocation)
-                    throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
-                }
-            } else if (isFitFile(filename)) {
-                val gpsContainer: GpsContainer = fileService.getGpsContainerFromFitFile(uploadedFile.storageLocation)
-                val storedTrack = ioService.createTempFile(gpsContainer, filename.removeSuffix(".fit"))
-                trackStore.put(storedTrack)
-
-                ioService.delete(uploadedFile.storageLocation)
-                return ResponseEntity.created(trackUrl(storedTrack.id)).body(storedTrack.toTrackDTO())
-            }
-        } else {
-            throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
-        }
-
-        throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
-    }
-
     override fun uploadFiles(
         @RequestParam(
             required = false,
-            value = "file",
-        ) file: List<MultipartFile>?,
+            value = "file"
+        ) file: Array<MultipartFile>
     ): ResponseEntity<List<TrackDTO>> {
         val results = ArrayList<TrackDTO>()
 
         file
-            ?.filter { isGpsFile(it.originalFilename) }
-            ?.forEach {
+            .filter { isGpsFile(it.originalFilename) }
+            .forEach {
                 val uploadedFile: StoredTrack =
                     ioService.createTempFile(it.inputStream, it.originalFilename!!)
 

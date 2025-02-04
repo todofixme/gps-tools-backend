@@ -1,13 +1,4 @@
-### upload single file
-POST {{baseUrl}}/api/v1/track?filename=test.gpx
-Accept: application/json
-Content-Type: application/xml
-
-< data/test.gpx
-
-> {% client.global.set("trackId", response.body.id) %}
-
-### upload multipart
+### upload file
 POST {{baseUrl}}/api/v1/tracks
 Content-Type: multipart/form-data; boundary=WebAppBoundary
 

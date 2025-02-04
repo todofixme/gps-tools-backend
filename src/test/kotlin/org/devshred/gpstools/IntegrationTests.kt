@@ -4,17 +4,18 @@ import mil.nga.sf.geojson.Feature
 import mil.nga.sf.geojson.FeatureConverter
 import mil.nga.sf.geojson.Point
 import mil.nga.sf.geojson.Position
-import org.apache.commons.lang3.RandomStringUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.devshred.gpstools.api.model.TrackDTO
 import org.devshred.gpstools.web.GpsType
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.http.HttpStatus
-import org.springframework.http.MediaType.APPLICATION_XML
-import org.springframework.http.RequestEntity.post
+import org.springframework.http.MediaType.MULTIPART_FORM_DATA
+import org.springframework.http.client.MultipartBodyBuilder
+import org.springframework.http.client.reactive.ClientHttpRequest
 import org.springframework.test.web.reactive.server.WebTestClient
+import org.springframework.web.reactive.function.BodyInserter
+import org.springframework.web.reactive.function.BodyInserters
 import kotlin.collections.set
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -23,20 +24,17 @@ class IntegrationTests(
 ) {
     @Test
     fun `trackFile lifecycle`() {
-        val filename = RandomStringUtils.insecure().nextAlphabetic(8) + ".gpx"
-        val fileContent = this::class.java.classLoader.getResource("data/test.gpx")!!.readText(Charsets.UTF_8)
-
-        // upload a file
-        val createResponse = testClient.post().uri("/api/v1/track?filename=$filename")
-            .contentType(APPLICATION_XML)
-            .bodyValue(fileContent)
+        // upload a file as multipart
+        val createResponse = testClient.post().uri("/api/v1/tracks")
+            .contentType(MULTIPART_FORM_DATA)
+            .body(multipartInserterFromFile("data/test.gpx"))
             .exchange()
-            .expectStatus().isCreated
-            .expectBody(TrackDTO::class.java)
-            .value { assertThat(it.name).isEqualTo("Billerhuder Insel") }
+            .expectStatus().isOk
+            .expectBody(Array<TrackDTO>::class.java)
+            .value { assertThat(it[0].name).isEqualTo("Billerhuder Insel") }
             .returnResult()
 
-        val uuid = createResponse.responseHeaders["Location"]!![0].split("/").last()
+        val uuid = createResponse.responseBody!![0].id
 
         // download a file
         testClient.get().uri("/api/v1/tracks/$uuid")
@@ -59,23 +57,17 @@ class IntegrationTests(
 
     @Test
     fun `waypoint lifecycle`() {
-        val filename = RandomStringUtils.insecure().nextAlphabetic(8) + ".gpx"
-        val fileContent = this::class.java.classLoader.getResource("data/test.gpx")!!.readText(Charsets.UTF_8)
-
-        // upload a file
-        val createRequest =
-            post("/api/v1/track?filename=$filename")
-                .contentType(APPLICATION_XML)
-                .body(fileContent)
-        val createResponse = testClient.post().uri("/api/v1/track?filename=$filename")
-            .contentType(APPLICATION_XML)
-            .bodyValue(fileContent)
+        // upload a file as multipart
+        val createResponse = testClient.post().uri("/api/v1/tracks")
+            .contentType(MULTIPART_FORM_DATA)
+            .body(multipartInserterFromFile("data/test.gpx"))
             .exchange()
-            .expectStatus().isEqualTo(HttpStatus.CREATED)
-            .expectBody(TrackDTO::class.java)
+            .expectStatus().isOk
+            .expectBody(Array<TrackDTO>::class.java)
+            .value { assertThat(it[0].name).isEqualTo("Billerhuder Insel") }
             .returnResult()
 
-        val uuid = createResponse.responseBody!!.id
+        val uuid = createResponse.responseBody!![0].id
 
         // set waypoint
         val position = Position(53.544225, 10.064383)
@@ -166,5 +158,14 @@ class IntegrationTests(
         val getResponseFeature = FeatureConverter.toFeatureCollection(getResponse.responseBody)
         assertThat(getResponseFeature.features).hasSize(1)
         assertThat(getResponseFeature.features[0].properties["name"]).isEqualTo("K4")
+    }
+
+    private fun multipartInserterFromFile(filename: String): BodyInserter<*, in ClientHttpRequest> {
+        val fileContent = this::class.java.classLoader.getResource(filename)!!.readText(Charsets.UTF_8)
+        val multipartData = MultipartBodyBuilder().apply {
+            part("file", fileContent)
+                .header("Content-Disposition", "form-data; name=\"file\"; filename=\"test.gpx\"")
+        }.build()
+        return BodyInserters.fromMultipartData(multipartData)
     }
 }
