@@ -6,7 +6,7 @@ import io.mockk.called
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.apache.commons.lang3.RandomStringUtils.randomAlphabetic
+import org.apache.commons.lang3.RandomStringUtils
 import org.apache.tomcat.util.http.fileupload.impl.SizeLimitExceededException
 import org.assertj.core.api.Assertions.assertThat
 import org.devshred.gpstools.api.model.TrackDTO
@@ -451,7 +451,7 @@ class TrackControllerTest(
     @Test
     fun `change the name of a track`() {
         val uuid = UUID.randomUUID()
-        val newTrackName = randomAlphabetic(8)
+        val newTrackName = RandomStringUtils.insecure().nextAlphabetic(8)
 
         every { fileService.changeTrackName(uuid, newTrackName) } returns Unit
 
