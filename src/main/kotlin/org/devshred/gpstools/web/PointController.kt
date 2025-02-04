@@ -12,12 +12,14 @@ import org.devshred.gpstools.api.model.PointDTO
 import org.devshred.gpstools.storage.FileService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.CrossOrigin
+import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.math.BigDecimal
 import java.util.UUID
 
-@CrossOrigin(origins = ["*"], maxAge = 3600)
 @RestController
+@RequestMapping("/api/v1")
+@CrossOrigin(origins = ["*"], maxAge = 3600)
 class PointController(
     private val fileService: FileService,
 ) : PointsApi {

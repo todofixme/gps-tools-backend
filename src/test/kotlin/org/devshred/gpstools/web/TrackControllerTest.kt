@@ -38,7 +38,6 @@ import java.io.InputStream
 import java.util.UUID
 
 private const val API_PATH_VERSION = "/api/v1"
-private const val API_PATH_TRACK = "$API_PATH_VERSION/track"
 private const val API_PATH_TRACKS = "$API_PATH_VERSION/tracks"
 private const val API_PATH_MERGE = "$API_PATH_VERSION/merge"
 
@@ -184,90 +183,6 @@ class TrackControllerTest(
     }
 
     @Test
-    fun `upload single file`() {
-        val trackName = "test"
-        val fileName = "$trackName.gpx"
-        val uuid = UUID.randomUUID()
-        val storageLocation = "/path/to/file"
-        val storedTrack = StoredTrack(uuid, trackName, storageLocation)
-
-        every { ioService.createTempFile(any<InputStream>(), fileName) } returns storedTrack
-        every { ioService.createTempFile(any<GpsContainer>(), trackName) } returns storedTrack
-        every { trackStore.put(any()) } returns Unit
-        every { ioService.delete(storageLocation) } returns Unit
-        every { fileService.getGpsContainerFromGpxFile(storageLocation) } returns emptyGpsContainer
-
-        mockMvc.perform(
-            post(API_PATH_TRACK)
-                .param("filename", fileName)
-                .content("123"),
-        )
-            .andExpect(status().isCreated)
-
-        // temporarily store the uploaded file
-        verify { ioService.createTempFile(any<InputStream>(), fileName) }
-        // store the resulting proto file
-        verify { ioService.createTempFile(any<GpsContainer>(), trackName) }
-        // store the proto file in the file store
-        verify { trackStore.put(any()) }
-        // delete the temporary file
-        verify { ioService.delete(storageLocation) }
-    }
-
-    @Test
-    fun `uploading single file fails due wrong file-suffix`() {
-        val filename = "test.txt"
-
-        every { ioService.createTempFile(any<GpsContainer>(), filename) } throws IOException()
-
-        mockMvc.perform(
-            post(API_PATH_TRACK)
-                .param("filename", filename)
-                .content("123"),
-        )
-            .andExpect(status().isBadRequest)
-
-        verify(exactly = 0) { ioService.createTempFile(any<GpsContainer>(), filename) }
-        verify(exactly = 0) { trackStore.put(any(), any()) }
-    }
-
-    @Test
-    fun `uploading single file fails due to IO issues`() {
-        val filename = "test.gpx"
-
-        every { ioService.createTempFile(any<InputStream>(), filename) } throws IOException()
-
-        mockMvc.perform(
-            post(API_PATH_TRACK)
-                .param("filename", filename)
-                .content("123"),
-        )
-            .andExpect(status().isInternalServerError)
-
-        verify { ioService.createTempFile(any<InputStream>(), filename) }
-        verify(exactly = 0) { trackStore.put(any(), any()) }
-    }
-
-    @Test
-    fun `uploading large file fails`() {
-        val filename = "test.gpx"
-
-        every {
-            ioService.createTempFile(any<InputStream>(), filename)
-        } throws SizeLimitExceededException("file too large", 2, 1)
-
-        mockMvc.perform(
-            post(API_PATH_TRACK)
-                .param("filename", filename)
-                .content("123"),
-        )
-            .andExpect(status().isPayloadTooLarge)
-
-        verify { ioService.createTempFile(any<InputStream>(), filename) }
-        verify(exactly = 0) { trackStore.put(any(), any()) }
-    }
-
-    @Test
     fun `upload multipartFile`() {
         val trackName = "test"
         val fileName = "$trackName.gpx"
@@ -349,6 +264,77 @@ class TrackControllerTest(
         verify { trackStore.put(storedTrack1) }
         verify { trackStore.put(storedTrack2) }
         verify(exactly = 2) { ioService.delete(any()) }
+    }
+
+    @Test
+    fun `uploading single file fails due wrong file-suffix`() {
+        val fileName = "test.txt"
+        val multipartFile =
+            MockMultipartFile(
+                "file",
+                fileName,
+                APPLICATION_XML_VALUE,
+                "some data".byteInputStream(),
+            )
+
+        every { ioService.createTempFile(any<GpsContainer>(), fileName) } throws IOException()
+
+        mockMvc.perform(
+            multipart(API_PATH_TRACKS)
+                .file(multipartFile),
+        )
+            .andExpect(status().isBadRequest)
+
+        verify(exactly = 0) { ioService.createTempFile(any<GpsContainer>(), fileName) }
+        verify(exactly = 0) { trackStore.put(any(), any()) }
+    }
+
+    @Test
+    fun `upload file fails due to IO issues`() {
+        val fileName = "test.gpx"
+        val multipartFile =
+            MockMultipartFile(
+                "file",
+                fileName,
+                APPLICATION_XML_VALUE,
+                "some data".byteInputStream(),
+            )
+
+        every { ioService.createTempFile(any<InputStream>(), fileName) } throws IOException()
+
+        mockMvc.perform(
+            multipart(API_PATH_TRACKS)
+                .file(multipartFile),
+        )
+            .andExpect(status().isInternalServerError)
+
+        verify { ioService.createTempFile(any<InputStream>(), fileName) }
+        verify(exactly = 0) { trackStore.put(any(), any()) }
+    }
+
+    @Test
+    fun `uploading large file fails`() {
+        val fileName = "test.gpx"
+        val multipartFile =
+            MockMultipartFile(
+                "file",
+                fileName,
+                APPLICATION_XML_VALUE,
+                "some data".byteInputStream(),
+            )
+
+        every {
+            ioService.createTempFile(any<InputStream>(), fileName)
+        } throws SizeLimitExceededException("file too large", 2, 1)
+
+        mockMvc.perform(
+            multipart(API_PATH_TRACKS)
+                .file(multipartFile),
+        )
+            .andExpect(status().isPayloadTooLarge)
+
+        verify { ioService.createTempFile(any<InputStream>(), fileName) }
+        verify(exactly = 0) { trackStore.put(any(), any()) }
     }
 
     @Test

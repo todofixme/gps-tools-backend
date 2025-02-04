@@ -1,13 +1,13 @@
-openapi: 3.0.3
+openapi: 3.1.1
 info:
   description: |-
-    This defines the API of the GPS-Tools backend based on the OpenAPI 3.0 specification.
+    This defines the API of the GPS-Tools backend based on the OpenAPI 3.1 specification.
 
     Used by these applications:
     - [GPS-Tools backend](https://github.com/devshred/gps-tools-backend)
     - [GPS-Tools frontend](https://github.com/devshred/gps-tools-frontend)
-  version: 1.0.0
-  title: GPS-Tools API - OpenAPI 3.0
+  version: 1.1.0
+  title: GPS-Tools API - OpenAPI 3.1
 servers:
   - url: 'http://localhost:7001/api/v1'
     description: local
@@ -189,75 +189,25 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem500InternalServerError'
-  /track:
-    post:
-      tags:
-        - tracks
-      summary: Upload a single GPS file.
-      operationId: uploadFile
-      parameters:
-        - name: filename
-          in: query
-          description: Name of the uploaded file.
-          required: true
-          schema:
-            type: string
-      requestBody:
-        description: The file to be uploaded.
-        required: true
-        content:
-          '*/*':
-            schema:
-              type: string
-              format: binary
-      responses:
-        201:
-          description: Stored the uploaded track successfully.
-          headers:
-            Location:
-              description: URL to the uploaded track.
-              schema:
-                type: string
-                format: url
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Track'
-        400:
-          description: Bad request.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem400BadRequest'
-        413:
-          description: Uploaded file too large.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem413PayloadTooLarge'
-        500:
-          description: Server error.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem500InternalServerError'
   /tracks:
     post:
       tags:
         - tracks
-      summary: Upload multiple GPS files.
+      summary: Upload GPS files.
       operationId: uploadFiles
       requestBody:
         content:
           multipart/form-data:
             schema:
+              type: object
               properties:
                 file:
                   type: array
                   items:
-                    $ref: '#/components/schemas/MultipartFile'
+                    type: string
+                    format: binary
       responses:
-        201:
+        200:
           description: Successful operation.
           content:
             application/json:
@@ -679,9 +629,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LineStringCoordinates'
-
-    MultipartFile:
-      type: file+multipart
     Problem:
       required:
         - type

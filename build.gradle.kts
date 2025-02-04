@@ -10,7 +10,7 @@ plugins {
 
     id("org.springframework.boot") version "3.4.2"
     id("io.spring.dependency-management") version "1.1.7"
-    id("org.openapi.generator") version "7.6.0"
+    id("org.openapi.generator") version "7.11.0"
 
     id("com.google.protobuf") version "0.9.4"
 
@@ -38,10 +38,9 @@ val xmlunitVersion = "2.10.0"
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-aop")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.apache.tika:tika-core:3.1.0")
-
-    implementation("jakarta.validation:jakarta.validation-api")
 
     implementation("io.jenetics:jpx:3.2.1")
     implementation("com.garmin:fit:21.158.0")
@@ -79,20 +78,6 @@ openApiGenerate {
     outputDir.set(generatedOpenApiSourcesDir)
 
     configFile.set("src/main/spec/api-config.json")
-
-    // MultipartFile definition due to bug in OAG
-    // https://github.com/OpenAPITools/openapi-generator/issues/8333
-    typeMappings.set(
-        mapOf(
-            "file+multipart" to "MultipartFile",
-        ),
-    )
-
-    importMappings.set(
-        mapOf(
-            "MultipartFile" to "org.springframework.web.multipart.MultipartFile",
-        ),
-    )
 }
 
 java.sourceSets["main"].java.srcDir(generatedOpenApiSourcesDir)
