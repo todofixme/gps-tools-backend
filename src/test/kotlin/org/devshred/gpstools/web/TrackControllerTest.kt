@@ -72,7 +72,8 @@ class TrackControllerTest(
             )
         } returns emptyByteArrayInputStream()
 
-        mockMvc.perform(get("$API_PATH_TRACKS/$uuid?mode=dl").header("Accept", GpsType.GPX.mimeType)) //
+        mockMvc
+            .perform(get("$API_PATH_TRACKS/$uuid?mode=dl").header("Accept", GpsType.GPX.mimeType)) //
             .andExpectAll(
                 status().isOk,
                 content().contentType(GpsType.GPX.mimeType),
@@ -100,13 +101,13 @@ class TrackControllerTest(
             )
         } returns emptyByteArrayInputStream()
 
-        mockMvc.perform(
-            get("$API_PATH_TRACKS/$uuid?mode=dl&name=$encodedTrackName").header(
-                "Accept",
-                GpsType.GPX.mimeType,
-            ),
-        )
-            .andExpectAll(
+        mockMvc
+            .perform(
+                get("$API_PATH_TRACKS/$uuid?mode=dl&name=$encodedTrackName").header(
+                    "Accept",
+                    GpsType.GPX.mimeType,
+                ),
+            ).andExpectAll(
                 status().isOk,
                 content().contentType(GpsType.GPX.mimeType),
                 header().string(HttpHeaders.CONTENT_DISPOSITION, ("attachment; filename=\"My_Track.gpx\"")),
@@ -121,7 +122,8 @@ class TrackControllerTest(
 
         every { trackStore.get(uuid) } throws NotFoundException("not found")
 
-        mockMvc.perform(get("$API_PATH_TRACKS/$uuid").header("Accept", GpsType.GPX.mimeType))
+        mockMvc
+            .perform(get("$API_PATH_TRACKS/$uuid").header("Accept", GpsType.GPX.mimeType))
             .andExpect(status().isNotFound)
 
         verify { trackStore.get(uuid) }
@@ -143,7 +145,8 @@ class TrackControllerTest(
             )
         } throws NotFoundException("not found")
 
-        mockMvc.perform(get("$API_PATH_TRACKS/$uuid").header("Accept", GpsType.GPX.mimeType))
+        mockMvc
+            .perform(get("$API_PATH_TRACKS/$uuid").header("Accept", GpsType.GPX.mimeType))
             .andExpect(status().isNotFound)
 
         verify { trackStore.get(uuid) }
@@ -153,7 +156,8 @@ class TrackControllerTest(
     fun `trying to download file with invalid UUID`() {
         val uuid = "not a UUID"
 
-        mockMvc.perform(get("$API_PATH_TRACKS/$uuid")) //
+        mockMvc
+            .perform(get("$API_PATH_TRACKS/$uuid")) //
             .andExpect(status().isBadRequest)
     }
 
@@ -172,7 +176,8 @@ class TrackControllerTest(
             )
         } returns emptyByteArrayInputStream()
 
-        mockMvc.perform(get("$API_PATH_TRACKS/$uuid").header("Accept", GpsType.GPX.mimeType))
+        mockMvc
+            .perform(get("$API_PATH_TRACKS/$uuid").header("Accept", GpsType.GPX.mimeType))
             .andExpectAll(
                 status().isOk,
                 content().contentType(GpsType.GPX.mimeType),
@@ -204,11 +209,11 @@ class TrackControllerTest(
         every { trackStore.put(storedTrack) } returns Unit
         every { fileService.getGpsContainerFromGpxFile(storageLocation) } returns mockk<GpsContainer>()
 
-        mockMvc.perform(
-            multipart(API_PATH_TRACKS)
-                .file(multipartFile),
-        )
-            .andExpect(status().isOk)
+        mockMvc
+            .perform(
+                multipart(API_PATH_TRACKS)
+                    .file(multipartFile),
+            ).andExpect(status().isOk)
 
         verify { ioService.createTempFile(any<InputStream>(), fileName) }
         verify { ioService.createTempFile(any<GpsContainer>(), trackName) }
@@ -252,12 +257,12 @@ class TrackControllerTest(
         every { trackStore.put(any()) } returns Unit
         every { fileService.getGpsContainerFromGpxFile(any()) } returns mockk<GpsContainer>()
 
-        mockMvc.perform(
-            multipart(API_PATH_TRACKS)
-                .file(multipartFile1)
-                .file(multipartFile2),
-        )
-            .andExpect(status().isOk)
+        mockMvc
+            .perform(
+                multipart(API_PATH_TRACKS)
+                    .file(multipartFile1)
+                    .file(multipartFile2),
+            ).andExpect(status().isOk)
 
         verify { ioService.createTempFile(any<GpsContainer>(), trackName1) }
         verify { ioService.createTempFile(any<GpsContainer>(), trackName2) }
@@ -279,11 +284,11 @@ class TrackControllerTest(
 
         every { ioService.createTempFile(any<GpsContainer>(), fileName) } throws IOException()
 
-        mockMvc.perform(
-            multipart(API_PATH_TRACKS)
-                .file(multipartFile),
-        )
-            .andExpect(status().isBadRequest)
+        mockMvc
+            .perform(
+                multipart(API_PATH_TRACKS)
+                    .file(multipartFile),
+            ).andExpect(status().isBadRequest)
 
         verify(exactly = 0) { ioService.createTempFile(any<GpsContainer>(), fileName) }
         verify(exactly = 0) { trackStore.put(any(), any()) }
@@ -302,11 +307,11 @@ class TrackControllerTest(
 
         every { ioService.createTempFile(any<InputStream>(), fileName) } throws IOException()
 
-        mockMvc.perform(
-            multipart(API_PATH_TRACKS)
-                .file(multipartFile),
-        )
-            .andExpect(status().isInternalServerError)
+        mockMvc
+            .perform(
+                multipart(API_PATH_TRACKS)
+                    .file(multipartFile),
+            ).andExpect(status().isInternalServerError)
 
         verify { ioService.createTempFile(any<InputStream>(), fileName) }
         verify(exactly = 0) { trackStore.put(any(), any()) }
@@ -327,11 +332,11 @@ class TrackControllerTest(
             ioService.createTempFile(any<InputStream>(), fileName)
         } throws SizeLimitExceededException("file too large", 2, 1)
 
-        mockMvc.perform(
-            multipart(API_PATH_TRACKS)
-                .file(multipartFile),
-        )
-            .andExpect(status().isPayloadTooLarge)
+        mockMvc
+            .perform(
+                multipart(API_PATH_TRACKS)
+                    .file(multipartFile),
+            ).andExpect(status().isPayloadTooLarge)
 
         verify { ioService.createTempFile(any<InputStream>(), fileName) }
         verify(exactly = 0) { trackStore.put(any(), any()) }
@@ -346,7 +351,8 @@ class TrackControllerTest(
         every { trackStore.delete(uuid) } returns storedTrack
         every { ioService.delete(storageLocation) } returns Unit
 
-        mockMvc.perform(delete("$API_PATH_TRACKS/$uuid")) //
+        mockMvc
+            .perform(delete("$API_PATH_TRACKS/$uuid")) //
             .andExpect(status().isNoContent)
 
         verify { trackStore.delete(uuid) }
@@ -360,7 +366,8 @@ class TrackControllerTest(
 
         every { trackStore.delete(uuid) } returns null
 
-        mockMvc.perform(delete("$API_PATH_TRACKS/$uuid")) //
+        mockMvc
+            .perform(delete("$API_PATH_TRACKS/$uuid")) //
             .andExpect(status().isNotFound)
 
         verify { trackStore.delete(uuid) }
@@ -376,7 +383,8 @@ class TrackControllerTest(
         every { trackStore.delete(uuid) } returns storedTrack
         every { ioService.delete(storageLocation) } throws NotFoundException("not found in filesystem")
 
-        mockMvc.perform(delete("$API_PATH_TRACKS/$uuid")) //
+        mockMvc
+            .perform(delete("$API_PATH_TRACKS/$uuid")) //
             .andExpect(status().isNotFound)
 
         verify { trackStore.delete(uuid) }
@@ -441,11 +449,12 @@ class TrackControllerTest(
 
         every { fileService.changeTrackName(uuid, newTrackName) } returns Unit
 
-        mockMvc.perform(
-            patch("/api/v1/tracks/$uuid")
-                .header("Content-Type", "application/json")
-                .content("{\"properties\": { \"name\": \"$newTrackName\" } }"),
-        ).andExpect(status().isNoContent)
+        mockMvc
+            .perform(
+                patch("/api/v1/tracks/$uuid")
+                    .header("Content-Type", "application/json")
+                    .content("{\"properties\": { \"name\": \"$newTrackName\" } }"),
+            ).andExpect(status().isNoContent)
 
         verify { fileService.changeTrackName(uuid, newTrackName) }
     }
@@ -454,11 +463,12 @@ class TrackControllerTest(
     fun `change the name of a track fails if track name is missing`() {
         val uuid = UUID.randomUUID()
 
-        mockMvc.perform(
-            patch("/api/v1/tracks/$uuid")
-                .header("Content-Type", "application/json")
-                .content("{\"properties\": {} }"),
-        ).andExpect(status().isBadRequest)
+        mockMvc
+            .perform(
+                patch("/api/v1/tracks/$uuid")
+                    .header("Content-Type", "application/json")
+                    .content("{\"properties\": {} }"),
+            ).andExpect(status().isBadRequest)
     }
 
     @Test

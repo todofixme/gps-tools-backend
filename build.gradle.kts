@@ -118,8 +118,7 @@ tasks {
                             "preview",
                             "b",
                             "ea",
-                        )
-                            .map { qualifier -> Regex("(?i).*[.-]$qualifier[.\\d-+]*") }
+                        ).map { qualifier -> Regex("(?i).*[.-]$qualifier[.\\d-+]*") }
                             .any { it.matches(candidate.version) }
                     if (rejected) {
                         reject("Release candidate")
@@ -150,6 +149,7 @@ protobuf {
 }
 
 ktlint {
+    version.set("1.5.0")
     filter {
         exclude { entry -> entry.file.toString().contains("generated") }
     }

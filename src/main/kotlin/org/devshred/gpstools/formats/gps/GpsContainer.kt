@@ -2,7 +2,11 @@ package org.devshred.gpstools.formats.gps
 
 import io.jenetics.jpx.geom.Geoid
 
-data class GpsContainer(val name: String?, val pointsOfInterest: List<PointOfInterest>, val track: Track?) {
+data class GpsContainer(
+    val name: String?,
+    val pointsOfInterest: List<PointOfInterest>,
+    val track: Track?,
+) {
     fun withOptimizedPointsOfInterest(tolerance: Int = MAX_DISTANCE_BETWEEN_TRACK_AND_WAYPOINT): GpsContainer {
         val optimizedWayPoints =
             pointsOfInterest
@@ -15,7 +19,9 @@ data class GpsContainer(val name: String?, val pointsOfInterest: List<PointOfInt
     private fun findPointOnTrackNearestTo(point: PointOfInterest): PointOfInterest {
         val gpxPoint = point.toGpx()
         val nearestGpxPoint =
-            track?.trackPoints?.stream()
+            track
+                ?.trackPoints
+                ?.stream()
                 ?.map { it.toGpx() }
                 ?.reduce { result: io.jenetics.jpx.WayPoint, current: io.jenetics.jpx.WayPoint ->
                     if (Geoid.WGS84.distance(current, gpxPoint).toInt()

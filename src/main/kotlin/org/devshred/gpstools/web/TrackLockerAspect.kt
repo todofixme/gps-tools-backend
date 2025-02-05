@@ -34,7 +34,8 @@ class TrackLockerAspect {
         val methodName = joinPoint.signature.name
         val indexOfTrackId =
             joinPoint.target.javaClass.methods
-                .first { it.name == methodName }.parameters
+                .first { it.name == methodName }
+                .parameters
                 .indexOfFirst { it.name == "trackId" }
         if (indexOfTrackId == -1) {
             throw RuntimeException("Advice won't work because parameter trackId was not found.")

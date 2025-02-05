@@ -23,27 +23,26 @@ import java.util.UUID
 class PointController(
     private val fileService: FileService,
 ) : PointsApi {
-    override fun getPoints(trackId: UUID): ResponseEntity<GeoJsonObjectDTO> {
-        return ResponseEntity.ok(fileService.getWaypoints(trackId).toDto())
-    }
+    @Suppress("ktlint")
+    override fun getPoints(trackId: UUID): ResponseEntity<GeoJsonObjectDTO> =
+        ResponseEntity.ok(fileService.getWaypoints(trackId).toDto())
 
     @LockTrack
     override fun changePoints(
         trackId: UUID,
         geoJsonObjectDTO: GeoJsonObjectDTO,
         mode: List<String>?,
-    ): ResponseEntity<GeoJsonObjectDTO> {
-        return ResponseEntity.ok(fileService.handleWayPointUpdate(trackId, geoJsonObjectDTO, mode, false).toDto())
-    }
+    ): ResponseEntity<GeoJsonObjectDTO> =
+        ResponseEntity.ok(fileService.handleWayPointUpdate(trackId, geoJsonObjectDTO, mode, false).toDto())
 
     @LockTrack
     override fun addPoints(
         trackId: UUID,
         geoJsonObjectDTO: GeoJsonObjectDTO,
         mode: List<String>?,
-    ): ResponseEntity<GeoJsonObjectDTO> {
-        return ResponseEntity.ok(fileService.handleWayPointUpdate(trackId, geoJsonObjectDTO, mode, true).toDto())
-    }
+    ): ResponseEntity<GeoJsonObjectDTO> =
+        ResponseEntity
+            .ok(fileService.handleWayPointUpdate(trackId, geoJsonObjectDTO, mode, true).toDto())
 
     @LockTrack
     override fun deletePoint(
@@ -55,12 +54,11 @@ class PointController(
     }
 }
 
-fun FeatureCollection.toDto(): FeatureCollectionDTO {
-    return FeatureCollectionDTO(
+fun FeatureCollection.toDto(): FeatureCollectionDTO =
+    FeatureCollectionDTO(
         features = this.features.map { it.toDto() },
         type = "FeatureCollection",
     )
-}
 
 fun Feature.toDto(): FeatureDTO {
     if (geometryType == GeometryType.POINT) {

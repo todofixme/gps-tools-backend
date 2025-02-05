@@ -22,9 +22,7 @@ class CoursePoint(
 
     @JacksonXmlProperty(localName = "Time", namespace = TCX_NAMESPACE)
     @JsonSerialize(using = ZonedDateTimeSerializer::class)
-    fun getTime(): ZonedDateTime? {
-        return time
-    }
+    fun getTime(): ZonedDateTime? = time
 
     @JacksonXmlProperty(localName = "Position", namespace = TCX_NAMESPACE)
     fun getPosition() = position

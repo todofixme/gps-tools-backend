@@ -26,7 +26,5 @@ class TrainingCenterDatabase(
         localName = "Course",
         namespace = TCX_NAMESPACE,
     )
-    fun getCourse(): List<Course> {
-        return course
-    }
+    fun getCourse(): List<Course> = course
 }

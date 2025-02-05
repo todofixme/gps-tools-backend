@@ -94,12 +94,16 @@ class TrainingCenterDatabaseTest {
                     ),
             )
 
-        val expected = this::class.java.classLoader.getResource("data/test.tcx")?.readText()
+        val expected =
+            this::class.java.classLoader
+                .getResource("data/test.tcx")
+                ?.readText()
         val actual = XML_MAPPER.writeValueAsString(tcx)
 
         assertThat(
             actual,
-            CompareMatcher.isSimilarTo(expected)
+            CompareMatcher
+                .isSimilarTo(expected)
                 .withNodeMatcher(DefaultNodeMatcher(ElementSelectors.byName))
                 .ignoreWhitespace(),
         )

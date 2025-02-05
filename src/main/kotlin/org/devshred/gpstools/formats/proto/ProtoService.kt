@@ -6,7 +6,9 @@ import org.springframework.core.io.InputStreamResource
 import org.springframework.stereotype.Service
 
 @Service
-class ProtoService(private val ioService: IOService) {
+class ProtoService(
+    private val ioService: IOService,
+) {
     fun readProtoContainer(storageLocation: String): ProtoContainer {
         val inputStreamResource: InputStreamResource = ioService.getAsStream(storageLocation)
         return ProtoContainer.parseFrom(inputStreamResource.contentAsByteArray)
@@ -16,9 +18,10 @@ class ProtoService(private val ioService: IOService) {
         storageLocation: String,
         trackname: String?,
     ): ProtoContainer =
-        trackname?.let {
-            readProtoContainer(storageLocation).toBuilder().setName(trackname).build()
-        }.orElse {
-            readProtoContainer(storageLocation)
-        }
+        trackname
+            ?.let {
+                readProtoContainer(storageLocation).toBuilder().setName(trackname).build()
+            }.orElse {
+                readProtoContainer(storageLocation)
+            }
 }

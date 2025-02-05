@@ -15,7 +15,9 @@ import java.nio.file.StandardCopyOption
 import java.util.UUID
 
 @Service
-class IOService(val gpsMapper: GpsContainerMapper) {
+class IOService(
+    val gpsMapper: GpsContainerMapper,
+) {
     private val log = LoggerFactory.getLogger(javaClass)
 
     fun getAsStream(storageLocation: String): InputStreamResource {

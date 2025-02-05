@@ -28,7 +28,5 @@ class VersionController : ServerApi {
         log.info("[GIT_VERSION] {}", gitVersion)
     }
 
-    override fun version(): ResponseEntity<VersionDTO> {
-        return ResponseEntity.ok(VersionDTO(appVersion, gitVersion))
-    }
+    override fun version(): ResponseEntity<VersionDTO> = ResponseEntity.ok(VersionDTO(appVersion, gitVersion))
 }

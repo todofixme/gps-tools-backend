@@ -7,7 +7,8 @@ import java.io.ByteArrayOutputStream
 
 object TcxTools {
     val XML_MAPPER: XmlMapper =
-        XmlMapper.Builder(XmlMapper())
+        XmlMapper
+            .Builder(XmlMapper())
             .enable(SerializationFeature.INDENT_OUTPUT)
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
             .build()

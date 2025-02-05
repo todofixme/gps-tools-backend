@@ -24,7 +24,7 @@ import org.devshred.gpstools.formats.proto.protoPointOfInterest
 import org.devshred.gpstools.formats.proto.protoTrack
 import org.devshred.gpstools.formats.proto.protoTrackPoint
 import org.devshred.gpstools.formats.tcx.TcxTools
-import org.hamcrest.MatcherAssert
+import org.hamcrest.MatcherAssert.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -118,15 +118,15 @@ class GpsContainerMapperTest {
     fun `set trackname from first track`() {
         val trackname = RandomStringUtils.insecure().nextAlphabetic(8)
         val gpx =
-            GPX.builder()
+            GPX
+                .builder()
                 .metadata { m -> m.name("yet another name") }
                 .addTrack { track ->
                     run {
                         track.name(trackname)
                         track.addSegment { s -> s.addPoint(randomWayPoint()).build() }
                     }
-                }
-                .build()
+                }.build()
 
         val gpsContainer = mapper.fromGpx(gpx)
 
@@ -137,7 +137,8 @@ class GpsContainerMapperTest {
     fun `set trackname from GPX metadata if no track was found`() {
         val trackname = RandomStringUtils.insecure().nextAlphabetic(8)
         val gpx =
-            GPX.builder()
+            GPX
+                .builder()
                 .metadata { m -> m.name(trackname) }
                 .build()
 
@@ -199,8 +200,8 @@ class GpsContainerMapperTest {
 
     companion object {
         @JvmStatic
-        private fun protoToGps(): Stream<Arguments> {
-            return Stream.of(
+        private fun protoToGps(): Stream<Arguments> =
+            Stream.of(
                 Arguments.of(PoiType.GENERIC, org.devshred.gpstools.formats.proto.ProtoPoiType.GENERIC),
                 Arguments.of(PoiType.SUMMIT, org.devshred.gpstools.formats.proto.ProtoPoiType.SUMMIT),
                 Arguments.of(PoiType.VALLEY, org.devshred.gpstools.formats.proto.ProtoPoiType.VALLEY),
@@ -219,7 +220,6 @@ class GpsContainerMapperTest {
                 Arguments.of(PoiType.RESIDENCE, org.devshred.gpstools.formats.proto.ProtoPoiType.RESIDENCE),
                 Arguments.of(PoiType.SPRINT, org.devshred.gpstools.formats.proto.ProtoPoiType.SPRINT),
             )
-        }
     }
 
     @Test
@@ -235,15 +235,19 @@ class GpsContainerMapperTest {
 
     @Test
     fun `convert to TCX`() {
-        val expectedTcx = this::class.java.classLoader.getResource("data/full.tcx").readText()
+        val expectedTcx =
+            this::class.java.classLoader
+                .getResource("data/full.tcx")
+                .readText()
 
         val tcx = mapper.toTcx(gpsContainer)
 
         val actualTcx = TcxTools.XML_MAPPER.writeValueAsString(tcx)
 
-        MatcherAssert.assertThat(
+        assertThat(
             actualTcx,
-            CompareMatcher.isSimilarTo(expectedTcx)
+            CompareMatcher
+                .isSimilarTo(expectedTcx)
                 .withNodeMatcher(DefaultNodeMatcher(ElementSelectors.byName))
                 .ignoreWhitespace(),
         )
@@ -323,14 +327,13 @@ class GpsContainerMapperTest {
             actual.features
                 .filter { it.geometry.type == "LineString" }
                 .flatMap { f -> (f.geometry as mil.nga.sf.geojson.LineString).coordinates },
+        ).containsExactly(
+            Position(12.0, 11.0),
+            Position(22.0, 21.0),
+            Position(32.0, 31.0),
+            Position(42.0, 41.0),
+            Position(52.0, 51.0),
         )
-            .containsExactly(
-                Position(12.0, 11.0),
-                Position(22.0, 21.0),
-                Position(32.0, 31.0),
-                Position(42.0, 41.0),
-                Position(52.0, 51.0),
-            )
 
         // the wayPoints (of type Point)
         assertThat(actual.features.filter { it.geometry.type == "Point" }).hasSize(3)
@@ -339,8 +342,7 @@ class GpsContainerMapperTest {
                 .filter { it.geometry.type == "Point" }
                 .filter { it.properties["type"] == "FOOD" }
                 .map { (it.geometry as Point).point },
-        )
-            .isEqualTo(listOf(mil.nga.sf.Point(31.0, 32.0)))
+        ).isEqualTo(listOf(mil.nga.sf.Point(31.0, 32.0)))
     }
 
     @Test
@@ -591,5 +593,9 @@ class GpsContainerMapperTest {
     }
 
     private fun randomWayPoint(): GpxWayPoint =
-        GpxWayPoint.builder().lat(randomGenerator.nextDouble()).lon(randomGenerator.nextDouble()).build()
+        GpxWayPoint
+            .builder()
+            .lat(randomGenerator.nextDouble())
+            .lon(randomGenerator.nextDouble())
+            .build()
 }

@@ -86,15 +86,27 @@ class GpsContainerMapper {
         val trackName: String? =
             if (gpx.tracks.isNotEmpty() && gpx.tracks[0].name.isPresent) {
                 gpx.tracks[0].name.get()
-            } else if (gpx.metadata.isPresent && gpx.metadata.get().name.isPresent) {
-                gpx.metadata.get().name.get()
+            } else if (gpx.metadata.isPresent &&
+                gpx.metadata
+                    .get()
+                    .name.isPresent
+            ) {
+                gpx.metadata
+                    .get()
+                    .name
+                    .get()
             } else {
                 null
             }
         val wayPoints = gpx.wayPoints.map { it.toGpsPointOfInterest() }
         val track: Track? =
             if (gpx.tracks.isNotEmpty() && gpx.tracks[0].segments.isNotEmpty()) {
-                Track(gpx.tracks[0].segments.flatMap { it.points }.map { it.toGpsTrackPoint() })
+                Track(
+                    gpx.tracks[0]
+                        .segments
+                        .flatMap { it.points }
+                        .map { it.toGpsTrackPoint() },
+                )
             } else {
                 null
             }
@@ -113,8 +125,7 @@ class GpsContainerMapper {
                     fit.recordMesgs
                         .filter { it.positionLat != null && it.positionLong != null }
                         .map { records -> records.toGpsTrackPoint() },
-                )
-                    .orElse { null }
+                ).orElse { null }
             }
 
         return GpsContainer(
@@ -151,8 +162,8 @@ class GpsContainerMapper {
         return featureCollection
     }
 
-    fun toGeoJsonPoints(wayPoints: List<GpsPointOfInterest>): List<Feature> {
-        return wayPoints.map { wayPoint ->
+    fun toGeoJsonPoints(wayPoints: List<GpsPointOfInterest>): List<Feature> =
+        wayPoints.map { wayPoint ->
             val position = Position(wayPoint.latitude, wayPoint.longitude)
             val point = Point(position)
 
@@ -163,7 +174,6 @@ class GpsContainerMapper {
 
             feature
         }
-    }
 
     fun toTcx(gpsContainer: GpsContainer): TrainingCenterDatabase {
         val trainingCenterDatabase = TrainingCenterDatabase()
@@ -305,9 +315,9 @@ fun GpsPointOfInterest.toGpx(): GpxWayPoint {
     return builder.build()
 }
 
-private fun GpsTrackPoint.hasExtensionValues(): Boolean {
-    return power != null || temperature != null || heartRate != null || cadence != null
-}
+@Suppress("ktlint")
+private fun GpsTrackPoint.hasExtensionValues(): Boolean =
+    power != null || temperature != null || heartRate != null || cadence != null
 
 fun PoiType.toProto(): ProtoPoiType =
     when (this) {
@@ -402,9 +412,10 @@ fun GpxWayPoint.toGpsTrackPoint(): GpsTrackPoint {
     val gpx = this
 
     val extensionValues: ExtensionValues? =
-        gpx.extensions.map {
-            exploreDocument(it.documentElement)
-        }.getOrNull()
+        gpx.extensions
+            .map {
+                exploreDocument(it.documentElement)
+            }.getOrNull()
 
     return GpsTrackPoint(
         latitude = gpx.latitude.toDouble(),
@@ -441,18 +452,17 @@ data class ExtensionValues(
     val temperature: Int? = null,
     val heartRate: Int? = null,
 ) {
-    fun union(newValues: ExtensionValues): ExtensionValues {
-        return this.copy(
+    fun union(newValues: ExtensionValues): ExtensionValues =
+        this.copy(
             power = newValues.power ?: this.power,
             cadence = newValues.cadence ?: this.cadence,
             temperature = newValues.temperature ?: this.temperature,
             heartRate = newValues.heartRate ?: this.heartRate,
         )
-    }
 }
 
-fun RecordMesg.toGpsTrackPoint(): GpsTrackPoint {
-    return GpsTrackPoint(
+fun RecordMesg.toGpsTrackPoint(): GpsTrackPoint =
+    GpsTrackPoint(
         latitude = this.getLatDegrees(),
         longitude = this.getLongDegrees(),
         elevation = this.altitude?.toDouble(),
@@ -463,7 +473,6 @@ fun RecordMesg.toGpsTrackPoint(): GpsTrackPoint {
         temperature = this.temperature?.toInt(),
         heartRate = this.heartRate?.toInt(),
     )
-}
 
 private fun RecordMesg.getLatDegrees() = this.positionLat * SEMICIRCLES_TO_DEGREES
 

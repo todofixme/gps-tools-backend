@@ -1,6 +1,8 @@
 package org.devshred.gpstools.web
 
-enum class GpsType(val mimeType: String) {
+enum class GpsType(
+    val mimeType: String,
+) {
     GPX("application/gpx+xml"),
     TCX("application/vnd.garmin.tcx+xml"),
     FIT("application/fit"),

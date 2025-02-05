@@ -130,7 +130,8 @@ class FileService(
             }
 
         val newGpsContainer =
-            originalGpsContainer.copy(pointsOfInterest = updatedWaiPoints)
+            originalGpsContainer
+                .copy(pointsOfInterest = updatedWaiPoints)
                 .let { it.takeIf { optimize }?.withOptimizedPointsOfInterest() ?: it }
         val newProto = gpsMapper.toProto(newGpsContainer)
         val protoFile = ioService.createTempFile(newProto.toByteArray().inputStream(), originalFile.name)

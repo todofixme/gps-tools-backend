@@ -1,6 +1,9 @@
 package org.devshred.gpstools.formats.gps
 
-enum class PoiType(val tcxType: String, val gpxSym: String) {
+enum class PoiType(
+    val tcxType: String,
+    val gpxSym: String,
+) {
     GENERIC("Generic", "generic"),
     SUMMIT("Summit", "summit"),
     VALLEY("Valley", "valley"),
@@ -21,15 +24,16 @@ enum class PoiType(val tcxType: String, val gpxSym: String) {
     ;
 
     companion object Factory {
-        fun fromString(name: String): PoiType {
-            return try {
+        fun fromString(name: String): PoiType =
+            try {
                 PoiType.valueOf(name.uppercase())
             } catch (e: IllegalArgumentException) {
                 GENERIC
             }
-        }
 
-        fun fromTcxType(tcxType: String): PoiType? = entries.firstOrNull { it.tcxType.equals(tcxType, ignoreCase = true) }
+        @Suppress("ktlint")
+        fun fromTcxType(tcxType: String): PoiType? =
+            entries.firstOrNull { it.tcxType.equals(tcxType, ignoreCase = true) }
 
         fun fromGpxSym(gpxSym: String): PoiType? = entries.firstOrNull { it.gpxSym.equals(gpxSym, ignoreCase = true) }
     }

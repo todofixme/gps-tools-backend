@@ -25,47 +25,70 @@ class IntegrationTests(
     @Test
     fun `trackFile lifecycle`() {
         // upload a file as multipart
-        val createResponse = testClient.post().uri("/api/v1/tracks")
-            .contentType(MULTIPART_FORM_DATA)
-            .body(multipartInserterFromFile("data/test.gpx"))
-            .exchange()
-            .expectStatus().isOk
-            .expectBody(Array<TrackDTO>::class.java)
-            .value { assertThat(it[0].name).isEqualTo("Billerhuder Insel") }
-            .returnResult()
+        val createResponse =
+            testClient
+                .post()
+                .uri("/api/v1/tracks")
+                .contentType(MULTIPART_FORM_DATA)
+                .body(multipartInserterFromFile("data/test.gpx"))
+                .exchange()
+                .expectStatus()
+                .isOk
+                .expectBody(Array<TrackDTO>::class.java)
+                .value { assertThat(it[0].name).isEqualTo("Billerhuder Insel") }
+                .returnResult()
 
         val uuid = createResponse.responseBody!![0].id
 
         // download a file
-        testClient.get().uri("/api/v1/tracks/$uuid")
+        testClient
+            .get()
+            .uri("/api/v1/tracks/$uuid")
             .header("Accept", GpsType.GPX.mimeType)
             .exchange()
-            .expectStatus().isOk
-            .expectHeader().contentType(GpsType.GPX.mimeType)
-            .expectBody().consumeWith {
+            .expectStatus()
+            .isOk
+            .expectHeader()
+            .contentType(GpsType.GPX.mimeType)
+            .expectBody()
+            .consumeWith {
                 assertThat(it.responseBody).isNotNull()
             }
 
         // TODO: compare waypoints
 
         // delete a file
-        testClient.delete().uri("/api/v1/tracks/$uuid").exchange().expectStatus().isNoContent
+        testClient
+            .delete()
+            .uri("/api/v1/tracks/$uuid")
+            .exchange()
+            .expectStatus()
+            .isNoContent
 
         // requesting a deleted file should return 404/not found
-        testClient.delete().uri("/api/v1/tracks/$uuid").exchange().expectStatus().isNotFound
+        testClient
+            .delete()
+            .uri("/api/v1/tracks/$uuid")
+            .exchange()
+            .expectStatus()
+            .isNotFound
     }
 
     @Test
     fun `waypoint lifecycle`() {
         // upload a file as multipart
-        val createResponse = testClient.post().uri("/api/v1/tracks")
-            .contentType(MULTIPART_FORM_DATA)
-            .body(multipartInserterFromFile("data/test.gpx"))
-            .exchange()
-            .expectStatus().isOk
-            .expectBody(Array<TrackDTO>::class.java)
-            .value { assertThat(it[0].name).isEqualTo("Billerhuder Insel") }
-            .returnResult()
+        val createResponse =
+            testClient
+                .post()
+                .uri("/api/v1/tracks")
+                .contentType(MULTIPART_FORM_DATA)
+                .body(multipartInserterFromFile("data/test.gpx"))
+                .exchange()
+                .expectStatus()
+                .isOk
+                .expectBody(Array<TrackDTO>::class.java)
+                .value { assertThat(it[0].name).isEqualTo("Billerhuder Insel") }
+                .returnResult()
 
         val uuid = createResponse.responseBody!![0].id
 
@@ -76,13 +99,17 @@ class IntegrationTests(
         firstPoiFeature.properties["name"] = "K1"
         firstPoiFeature.properties["type"] = "SUMMIT"
 
-        val initialResponse = testClient.put().uri("/api/v1/tracks/$uuid/points")
-            .header("Content-Type", "application/geo+json")
-            .bodyValue(FeatureConverter.toStringValue(firstPoiFeature))
-            .exchange()
-            .expectStatus().isOk
-            .expectBody(String::class.java)
-            .returnResult()
+        val initialResponse =
+            testClient
+                .put()
+                .uri("/api/v1/tracks/$uuid/points")
+                .header("Content-Type", "application/geo+json")
+                .bodyValue(FeatureConverter.toStringValue(firstPoiFeature))
+                .exchange()
+                .expectStatus()
+                .isOk
+                .expectBody(String::class.java)
+                .returnResult()
 
         val initialResponseFeature = FeatureConverter.toFeatureCollection(initialResponse.responseBody)
         assertThat(initialResponseFeature.features[0].properties["uuid"]).isNotNull
@@ -92,13 +119,17 @@ class IntegrationTests(
         secondPoiFeature.properties["name"] = "K2"
         secondPoiFeature.properties["type"] = "DANGER"
 
-        val overwriteResponse = testClient.put().uri("/api/v1/tracks/$uuid/points")
-            .header("Content-Type", "application/geo+json")
-            .bodyValue(FeatureConverter.toStringValue(secondPoiFeature))
-            .exchange()
-            .expectStatus().isOk
-            .expectBody(String::class.java)
-            .returnResult()
+        val overwriteResponse =
+            testClient
+                .put()
+                .uri("/api/v1/tracks/$uuid/points")
+                .header("Content-Type", "application/geo+json")
+                .bodyValue(FeatureConverter.toStringValue(secondPoiFeature))
+                .exchange()
+                .expectStatus()
+                .isOk
+                .expectBody(String::class.java)
+                .returnResult()
 
         val overwriteResponseFeature = FeatureConverter.toFeatureCollection(overwriteResponse.responseBody)
         assertThat(overwriteResponseFeature.features).hasSize(1)
@@ -112,13 +143,17 @@ class IntegrationTests(
         thirdPoiFeature.properties["type"] = "WATER"
         thirdPoiFeature.properties["uuid"] = secondPointId
 
-        val changeResponse = testClient.patch().uri("/api/v1/tracks/$uuid/points")
-            .header("Content-Type", "application/geo+json")
-            .bodyValue(FeatureConverter.toStringValue(thirdPoiFeature))
-            .exchange()
-            .expectStatus().isOk
-            .expectBody(String::class.java)
-            .returnResult()
+        val changeResponse =
+            testClient
+                .patch()
+                .uri("/api/v1/tracks/$uuid/points")
+                .header("Content-Type", "application/geo+json")
+                .bodyValue(FeatureConverter.toStringValue(thirdPoiFeature))
+                .exchange()
+                .expectStatus()
+                .isOk
+                .expectBody(String::class.java)
+                .returnResult()
 
         val changeResponseFeature = FeatureConverter.toFeatureCollection(changeResponse.responseBody)
         assertThat(changeResponseFeature.features).hasSize(1)
@@ -132,28 +167,41 @@ class IntegrationTests(
         fourthPoiFeature.properties["name"] = "K4"
         fourthPoiFeature.properties["type"] = "VALLEY"
 
-        val addResponse = testClient.patch().uri("/api/v1/tracks/$uuid/points")
-            .header("Content-Type", "application/geo+json")
-            .bodyValue(FeatureConverter.toStringValue(fourthPoiFeature))
-            .exchange()
-            .expectStatus().isOk
-            .expectBody(String::class.java)
-            .returnResult()
+        val addResponse =
+            testClient
+                .patch()
+                .uri("/api/v1/tracks/$uuid/points")
+                .header("Content-Type", "application/geo+json")
+                .bodyValue(FeatureConverter.toStringValue(fourthPoiFeature))
+                .exchange()
+                .expectStatus()
+                .isOk
+                .expectBody(String::class.java)
+                .returnResult()
 
         val addResponseFeature = FeatureConverter.toFeatureCollection(addResponse.responseBody)
         assertThat(addResponseFeature.features).hasSize(2)
         assertThat(addResponseFeature.features.map { it.properties["name"] }).containsOnly("K3", "K4")
 
         // delete waypoint
-        testClient.delete().uri("/api/v1/tracks/$uuid/points/$thirdPointId").exchange().expectStatus().isNoContent
+        testClient
+            .delete()
+            .uri("/api/v1/tracks/$uuid/points/$thirdPointId")
+            .exchange()
+            .expectStatus()
+            .isNoContent
 
         // check remaining points
-        val getResponse = testClient.get().uri("/api/v1/tracks/$uuid/points")
-            .header("Accept", "application/geo+json")
-            .exchange()
-            .expectStatus().isOk
-            .expectBody(String::class.java)
-            .returnResult()
+        val getResponse =
+            testClient
+                .get()
+                .uri("/api/v1/tracks/$uuid/points")
+                .header("Accept", "application/geo+json")
+                .exchange()
+                .expectStatus()
+                .isOk
+                .expectBody(String::class.java)
+                .returnResult()
 
         val getResponseFeature = FeatureConverter.toFeatureCollection(getResponse.responseBody)
         assertThat(getResponseFeature.features).hasSize(1)
@@ -161,11 +209,16 @@ class IntegrationTests(
     }
 
     private fun multipartInserterFromFile(filename: String): BodyInserter<*, in ClientHttpRequest> {
-        val fileContent = this::class.java.classLoader.getResource(filename)!!.readText(Charsets.UTF_8)
-        val multipartData = MultipartBodyBuilder().apply {
-            part("file", fileContent)
-                .header("Content-Disposition", "form-data; name=\"file\"; filename=\"test.gpx\"")
-        }.build()
+        val fileContent =
+            this::class.java.classLoader
+                .getResource(filename)!!
+                .readText(Charsets.UTF_8)
+        val multipartData =
+            MultipartBodyBuilder()
+                .apply {
+                    part("file", fileContent)
+                        .header("Content-Disposition", "form-data; name=\"file\"; filename=\"test.gpx\"")
+                }.build()
         return BodyInserters.fromMultipartData(multipartData)
     }
 }

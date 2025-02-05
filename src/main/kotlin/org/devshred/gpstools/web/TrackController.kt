@@ -63,26 +63,29 @@ class TrackController(
         val storedFile = trackStore.get(trackId)
 
         val waypoints: FeatureCollection? =
-            wp?.let {
-                ObjectMapper().readValue(String(Base64.getDecoder().decode(it)), FeatureCollection::class.java)
-            }?.orElse { null }
+            wp
+                ?.let {
+                    ObjectMapper().readValue(String(Base64.getDecoder().decode(it)), FeatureCollection::class.java)
+                }?.orElse { null }
 
         val gpsType =
-            type?.let {
-                GpsType.fromTypeString(it).orElse { throw IllegalArgumentException("unknown type $it") }
-            }.orElse {
-                accept?.let {
-                    GpsType.fromMimeType(it).orElse {
-                        if (it == "*/*") {
-                            DEFAULT_GPS_TYPE
-                        } else {
-                            throw IllegalArgumentException("invalid accept header $it")
-                        }
-                    }
+            type
+                ?.let {
+                    GpsType.fromTypeString(it).orElse { throw IllegalArgumentException("unknown type $it") }
                 }.orElse {
-                    DEFAULT_GPS_TYPE
+                    accept
+                        ?.let {
+                            GpsType.fromMimeType(it).orElse {
+                                if (it == "*/*") {
+                                    DEFAULT_GPS_TYPE
+                                } else {
+                                    throw IllegalArgumentException("invalid accept header $it")
+                                }
+                            }
+                        }.orElse {
+                            DEFAULT_GPS_TYPE
+                        }
                 }
-            }
 
         val optimize: Boolean = mode?.contains("opt") ?: false
 
@@ -114,7 +117,8 @@ class TrackController(
             )
         }
 
-        return ResponseEntity.ok() //
+        return ResponseEntity
+            .ok() //
             .contentType(MediaType.valueOf(gpsType.mimeType)) //
             .headers(responseHeaders)
             .body(inputStreamResource)
@@ -123,8 +127,8 @@ class TrackController(
     override fun uploadFiles(
         @RequestParam(
             required = false,
-            value = "file"
-        ) file: Array<MultipartFile>
+            value = "file",
+        ) file: Array<MultipartFile>,
     ): ResponseEntity<List<TrackDTO>> {
         val results = ArrayList<TrackDTO>()
 
@@ -228,9 +232,7 @@ class TrackController(
         } ?: throw IllegalArgumentException("No track name provided.")
     }
 
-    private fun trackUrl(id: UUID): URI {
-        return URI.create("$baseUrl/api/v1/tracks/$id")
-    }
+    private fun trackUrl(id: UUID): URI = URI.create("$baseUrl/api/v1/tracks/$id")
 }
 
 private fun isGpxFile(filename: String?) = filename?.endsWith(".gpx").orElse { false }
@@ -246,24 +248,21 @@ private val trailingUnderscoresAndHyphens = "[-_]+$".toRegex()
 private const val TWO_UNDERSCORES = "__"
 private val DEFAULT_GPS_TYPE = GpsType.GPX
 
-fun String.sanitize(): String {
-    return this
+fun String.sanitize(): String =
+    this
         .trim()
         .replace(notAllowedCharacters, "_")
         .replace(moreThan2UnderscoresInARow, TWO_UNDERSCORES)
         .replace(leadingUnderscoresAndHyphens, "")
         .replace(trailingUnderscoresAndHyphens, "")
-}
 
-fun Map<String, Any>.containsKeyIgnoringCase(other: String): Boolean {
-    return any { it.key.equals(other, ignoreCase = true) }
-}
+fun Map<String, Any>.containsKeyIgnoringCase(other: String): Boolean = any { it.key.equals(other, ignoreCase = true) }
 
-fun <V> Map<String, V>.getIgnoringCase(other: String): V? {
-    return this.filterKeys {
-        it.equals(other, ignoreCase = true)
-    }
-        .asSequence().firstOrNull()
+fun <V> Map<String, V>.getIgnoringCase(other: String): V? =
+    this
+        .filterKeys {
+            it.equals(other, ignoreCase = true)
+        }.asSequence()
+        .firstOrNull()
         ?.value
         .orElse { null }
-}
