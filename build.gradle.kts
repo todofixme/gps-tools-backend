@@ -67,6 +67,9 @@ dependencies {
     testImplementation("org.xmlunit:xmlunit-matchers:$xmlunitVersion")
     testImplementation("org.xmlunit:xmlunit-assertj:$xmlunitVersion")
     testImplementation("org.apache.httpcomponents.client5:httpclient5:5.4.2")
+    testImplementation("io.github.microcks:microcks-testcontainers:0.2.8")
+    testImplementation("org.testcontainers:junit-jupiter:1.18.3")
+    testImplementation("io.swagger.parser.v3:swagger-parser:2.1.22")
 }
 
 val generatedOpenApiSourcesDir = "${layout.buildDirectory.get()}/generated-openapi"
