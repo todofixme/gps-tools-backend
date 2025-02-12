@@ -1,7 +1,9 @@
+import com.github.gradle.node.npm.task.NpxTask
 import com.google.protobuf.gradle.id
 import net.researchgate.release.ReleaseExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 
 plugins {
     val kotlinVersion = "2.1.10"
@@ -11,6 +13,7 @@ plugins {
     id("org.springframework.boot") version "3.4.2"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.openapi.generator") version "7.11.0"
+    id("com.github.node-gradle.node") version "7.1.0"
 
     id("com.google.protobuf") version "0.9.4"
 
@@ -69,9 +72,16 @@ dependencies {
     testImplementation("org.apache.httpcomponents.client5:httpclient5:5.4.2")
 }
 
+tasks.register<NpxTask>("lintApiSpec") {
+    command = "@redocly/cli"
+    args = listOf("lint", "./src/main/spec/api-spec.yaml")
+}
+
 val generatedOpenApiSourcesDir = "${layout.buildDirectory.get()}/generated-openapi"
 
-openApiGenerate {
+tasks.named<GenerateTask>("openApiGenerate") {
+    dependsOn("lintApiSpec")
+
     generatorName.set("kotlin-spring")
 
     inputSpec.set("src/main/spec/api-spec.yaml")

@@ -8,9 +8,16 @@ info:
     - [GPS-Tools frontend](https://github.com/devshred/gps-tools-frontend)
   version: 1.1.0
   title: GPS-Tools API - OpenAPI 3.0
+  license:
+    name: MIT
+    url: https://www.tldrlegal.com/license/mit-license
 servers:
   - url: 'http://localhost:7001/api/v1'
     description: local
+  - url: 'https://gps-backend.tigerflanke.de/api/v1'
+    description: prod
+# This API has no security
+security: []
 tags:
   - name: tracks
     description: API to work on GPS-tracks.
@@ -122,7 +129,7 @@ paths:
       parameters:
         - name: trackId
           in: path
-          description: The UUID of the track to be deleted.
+          description: The UUID of the track to be changed.
           required: true
           schema:
             type: string
