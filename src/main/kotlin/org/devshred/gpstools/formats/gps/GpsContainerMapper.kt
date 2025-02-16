@@ -1,5 +1,6 @@
 package org.devshred.gpstools.formats.gps
 
+import com.garmin.fit.CoursePointMesg
 import com.garmin.fit.FitMessages
 import com.garmin.fit.RecordMesg
 import com.google.protobuf.Timestamp
@@ -13,6 +14,7 @@ import mil.nga.sf.geojson.Position
 import org.devshred.gpstools.common.Constants.DEFAULT_TIMEZONE
 import org.devshred.gpstools.common.orElse
 import org.devshred.gpstools.formats.gps.GpsContainerMapper.Constants.SEMICIRCLES_TO_DEGREES
+import org.devshred.gpstools.formats.gps.PointOfInterest
 import org.devshred.gpstools.formats.gpx.GPX_CREATOR
 import org.devshred.gpstools.formats.proto.ProtoContainer
 import org.devshred.gpstools.formats.proto.ProtoPoiType
@@ -124,13 +126,27 @@ class GpsContainerMapper {
                 Track(
                     fit.recordMesgs
                         .filter { it.positionLat != null && it.positionLong != null }
-                        .map { records -> records.toGpsTrackPoint() },
+                        .map { it.toGpsTrackPoint() },
                 ).orElse { null }
             }
 
+        val pointsOfInterest: List<PointOfInterest> =
+            fitMessages
+                ?.coursePointMesgs
+                ?.let { coursePoints ->
+                    coursePoints
+                        .filter { it.positionLat != null && it.positionLong != null }
+                        .map { it.toPointOfInterest() }
+                }.orElse { emptyList() }
+
         return GpsContainer(
-            name = "Activity",
-            pointsOfInterest = emptyList(),
+            name =
+                fitMessages
+                    ?.courseMesgs
+                    ?.firstOrNull()
+                    ?.getField("name")
+                    ?.value as? String,
+            pointsOfInterest = pointsOfInterest,
             track = track,
         )
     }
@@ -477,3 +493,17 @@ fun RecordMesg.toGpsTrackPoint(): GpsTrackPoint =
 private fun RecordMesg.getLatDegrees() = this.positionLat * SEMICIRCLES_TO_DEGREES
 
 private fun RecordMesg.getLongDegrees() = this.positionLong * SEMICIRCLES_TO_DEGREES
+
+fun CoursePointMesg.toPointOfInterest(): PointOfInterest =
+    PointOfInterest(
+        uuid = UUID.randomUUID(),
+        name = this.name.orElse { "unnamed" },
+        latitude = this.getLatDegrees(),
+        longitude = this.getLongDegrees(),
+        type = PoiType.fromTcxType(this.type?.name.orElse { "GENERIC" }),
+        time = this.timestamp?.let { Instant.ofEpochSecond(it.timestamp) },
+    )
+
+private fun CoursePointMesg.getLatDegrees() = this.positionLat * SEMICIRCLES_TO_DEGREES
+
+private fun CoursePointMesg.getLongDegrees() = this.positionLong * SEMICIRCLES_TO_DEGREES
