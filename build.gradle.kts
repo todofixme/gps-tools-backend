@@ -8,9 +8,9 @@ plugins {
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.spring") version kotlinVersion
 
-    id("org.springframework.boot") version "3.4.2"
+    id("org.springframework.boot") version "3.4.3"
     id("io.spring.dependency-management") version "1.1.7"
-    id("org.openapi.generator") version "7.11.0"
+    id("org.openapi.generator") version "7.12.0"
 
     id("com.google.protobuf") version "0.9.4"
 
@@ -18,7 +18,7 @@ plugins {
     id("com.palantir.git-version") version "3.1.0"
 
     id("com.github.ben-manes.versions") version "0.52.0"
-    id("org.jlleitschuh.gradle.ktlint") version "12.1.2"
+    id("org.jlleitschuh.gradle.ktlint") version "12.2.0"
 }
 
 group = "org.devshred"
@@ -31,8 +31,8 @@ repositories {
     mavenCentral()
 }
 
-val protoBufVersion = "4.29.3"
-val jacksonVersion = "2.18.2"
+val protoBufVersion = "4.30.0"
+val jacksonVersion = "2.18.3"
 val xmlunitVersion = "2.10.0"
 
 dependencies {
