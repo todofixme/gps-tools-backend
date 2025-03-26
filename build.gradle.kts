@@ -31,7 +31,7 @@ repositories {
     mavenCentral()
 }
 
-val protoBufVersion = "4.30.0"
+val protoBufVersion = "4.30.2"
 val jacksonVersion = "2.18.3"
 val xmlunitVersion = "2.10.0"
 
