@@ -10,7 +10,7 @@ data class GpsContainer(
     fun withOptimizedPointsOfInterest(tolerance: Int = MAX_DISTANCE_BETWEEN_TRACK_AND_WAYPOINT): GpsContainer {
         val optimizedWayPoints =
             pointsOfInterest
-                .map { findPointOnTrackNearestTo(it, tolerance) ?: it }
+                .mapNotNull { findPointOnTrackNearestTo(it, tolerance) }
                 .sortedBy { it.time }
 
         return GpsContainer(name, optimizedWayPoints, track)
