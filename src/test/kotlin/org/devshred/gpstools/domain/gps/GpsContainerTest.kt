@@ -74,7 +74,7 @@ class GpsContainerTest {
     }
 
     @Test
-    fun `optimize wayPoint - not on track since too far away`() {
+    fun `optimize point filters out waypoint, since distance higher than tolerance`() {
         val containerToTest =
             gpsContainer.copy(
                 pointsOfInterest =
@@ -92,7 +92,7 @@ class GpsContainerTest {
 
         val actual = containerToTest.withOptimizedPointsOfInterest()
 
-        assertThat(actual.pointsOfInterest[0].latitude).isEqualTo(36.74181700)
+        assertThat(actual.pointsOfInterest).isEmpty()
     }
 
     @Test

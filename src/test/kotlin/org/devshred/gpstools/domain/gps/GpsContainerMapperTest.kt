@@ -531,7 +531,7 @@ class GpsContainerMapperTest {
     }
 
     @Test
-    fun `optimize point of interest fails, since distance higher than tolerance`() {
+    fun `optimize point filters out waypoint, since distance higher than tolerance`() {
         val basePoi =
             PointOfInterest(
                 uuid = UUID.randomUUID(),
@@ -544,9 +544,7 @@ class GpsContainerMapperTest {
 
         val result = cut.withOptimizedPointsOfInterest()
 
-        assertThat(result.pointsOfInterest).hasSize(1)
-        assertThat(result.pointsOfInterest[0].latitude).isEqualTo(basePoi.latitude)
-        assertThat(result.pointsOfInterest[0].longitude).isEqualTo(basePoi.longitude)
+        assertThat(result.pointsOfInterest).isEmpty()
     }
 
     @Test
