@@ -95,8 +95,12 @@ class FileService(
         storageLocation: String,
         name: String?,
         waypoints: FeatureCollection?,
+        waypointsOnly: Boolean = false,
     ): InputStream {
-        val gpsContainer: GpsContainer = getGpsContainer(storageLocation, name, waypoints)
+        var gpsContainer: GpsContainer = getGpsContainer(storageLocation, name, waypoints)
+        if (waypointsOnly) {
+            gpsContainer = gpsContainer.copy(track = null)
+        }
         val geoJson = gpsMapper.toGeoJson(gpsContainer)
         val jsonString = FeatureConverter.toStringValue(geoJson)
         return ByteArrayInputStream(jsonString.toByteArray())

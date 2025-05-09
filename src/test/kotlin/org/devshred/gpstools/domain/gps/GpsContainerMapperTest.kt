@@ -346,6 +346,25 @@ class GpsContainerMapperTest {
     }
 
     @Test
+    fun `maps waypoints only to GeoJSON`() {
+        val pointsOfInterest =
+            listOf(
+                PointOfInterest(UUID.randomUUID(), 11.0, 12.0, type = PoiType.RESIDENCE),
+                PointOfInterest(UUID.randomUUID(), 31.0, 32.0, type = PoiType.FOOD),
+                PointOfInterest(UUID.randomUUID(), 51.0, 52.0, type = PoiType.SPRINT),
+            )
+        val gpsContainer = GpsContainer("TestTrack", pointsOfInterest, null)
+
+        val actual: FeatureCollection = mapper.toGeoJson(gpsContainer)
+
+        // 0 track and 3 wayPoints
+        assertThat(actual.features).hasSize(3)
+
+        // the wayPoints (of type Point)
+        assertThat(actual.features.filter { it.geometry.type == "Point" }).hasSize(3)
+    }
+
+    @Test
     fun `convert TrackPoint to GpxWayPoint and back to TrackPoint`() {
         val trackPoint =
             TrackPoint(
