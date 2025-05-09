@@ -32,7 +32,7 @@ repositories {
 }
 
 val protoBufVersion = "4.30.2"
-val jacksonVersion = "2.18.3"
+val jacksonVersion = "2.19.0"
 val xmlunitVersion = "2.10.0"
 
 dependencies {
