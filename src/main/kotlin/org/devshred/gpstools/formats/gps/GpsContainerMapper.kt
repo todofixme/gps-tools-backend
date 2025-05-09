@@ -145,17 +145,19 @@ class GpsContainerMapper {
     fun toGeoJson(gpsContainer: GpsContainer): FeatureCollection {
         val featureCollection = FeatureCollection()
 
-        gpsContainer.track?.trackPoints?.map {
-            val position = Position(it.longitude, it.latitude)
-            val point = Point(position)
-            point
-        }?.let {
-            val lineString = LineString(it)
-            val lineStringFeature = Feature(lineString)
-            lineStringFeature.properties["name"] = gpsContainer.name
+        gpsContainer.track
+            ?.trackPoints
+            ?.map {
+                val position = Position(it.longitude, it.latitude)
+                val point = Point(position)
+                point
+            }?.let {
+                val lineString = LineString(it)
+                val lineStringFeature = Feature(lineString)
+                lineStringFeature.properties["name"] = gpsContainer.name
 
-            featureCollection.addFeature(lineStringFeature)
-        }
+                featureCollection.addFeature(lineStringFeature)
+            }
 
         toGeoJsonPoints(gpsContainer.pointsOfInterest)
             .forEach { feature -> featureCollection.addFeature(feature) }

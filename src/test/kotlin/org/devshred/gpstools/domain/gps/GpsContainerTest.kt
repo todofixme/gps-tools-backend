@@ -126,4 +126,50 @@ class GpsContainerTest {
         assertThat(actual.pointsOfInterest[1].name).isEqualTo("Finish")
         assertThat(actual.pointsOfInterest[1].latitude).isEqualTo(36.73361890)
     }
+
+    @Test
+    fun `remove duplicated waypoints`() {
+        val containerToTest =
+            gpsContainer.copy(
+                pointsOfInterest =
+                    listOf(
+                        PointOfInterest(
+                            UUID.randomUUID(),
+                            latitude = 36.732,
+                            longitude = -3.688,
+                            type = PoiType.RESIDENCE,
+                            name = "Finish",
+                        ),
+                        PointOfInterest(
+                            UUID.randomUUID(),
+                            latitude = 36.722,
+                            longitude = -4.410,
+                            type = PoiType.STRAIGHT,
+                            name = "Start",
+                        ),
+                        PointOfInterest(
+                            UUID.randomUUID(),
+                            latitude = 36.722,
+                            longitude = -4.410,
+                            type = PoiType.STRAIGHT,
+                            name = "Start",
+                        ),
+                        PointOfInterest(
+                            UUID.randomUUID(),
+                            latitude = 36.732,
+                            longitude = -3.688,
+                            type = PoiType.RESIDENCE,
+                            name = "Finish",
+                        ),
+                    ),
+            )
+
+        val actual = containerToTest.withOptimizedPointsOfInterest().removeDuplicatePointsOfInterest()
+
+        assertThat(actual.pointsOfInterest[0].name).isEqualTo("Start")
+        assertThat(actual.pointsOfInterest[0].latitude).isEqualTo(36.72100500)
+
+        assertThat(actual.pointsOfInterest[1].name).isEqualTo("Finish")
+        assertThat(actual.pointsOfInterest[1].latitude).isEqualTo(36.73361890)
+    }
 }

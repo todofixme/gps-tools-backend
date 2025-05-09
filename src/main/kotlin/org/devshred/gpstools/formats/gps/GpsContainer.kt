@@ -55,6 +55,14 @@ data class GpsContainer(
             )
         }
     }
+
+    fun removeDuplicatePointsOfInterest(): GpsContainer {
+        val cleanedPoints =
+            pointsOfInterest
+                .distinctBy { Triple(it.latitude, it.longitude, it.name) }
+
+        return GpsContainer(name, cleanedPoints, track)
+    }
 }
 
 private const val MAX_DISTANCE_BETWEEN_TRACK_AND_WAYPOINT = 500

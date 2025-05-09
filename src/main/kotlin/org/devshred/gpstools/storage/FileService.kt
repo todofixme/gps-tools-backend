@@ -43,7 +43,7 @@ class FileService(
             getGpsContainer(storageLocation, name, featureCollection)
                 .let {
                     it.takeIf { optimizeWaypoints }?.withOptimizedPointsOfInterest() ?: it
-                }
+                }.removeDuplicatePointsOfInterest()
         val outputStream = gpxToByteArrayOutputStream(gpsMapper.toGpx(gpsContainer))
         return ByteArrayInputStream(outputStream.toByteArray())
     }
@@ -58,7 +58,7 @@ class FileService(
             getGpsContainer(storageLocation, name, featureCollection)
                 .let {
                     it.takeIf { optimizeWaypoints }?.withOptimizedPointsOfInterest() ?: it
-                }
+                }.removeDuplicatePointsOfInterest()
         val tcx: TrainingCenterDatabase = gpsMapper.toTcx(gpsContainer)
         val outputStream = tcxToByteArrayOutputStream(tcx)
         return ByteArrayInputStream(outputStream.toByteArray())
@@ -97,7 +97,8 @@ class FileService(
         waypoints: FeatureCollection?,
         waypointsOnly: Boolean = false,
     ): InputStream {
-        var gpsContainer: GpsContainer = getGpsContainer(storageLocation, name, waypoints)
+        var gpsContainer: GpsContainer =
+            getGpsContainer(storageLocation, name, waypoints).removeDuplicatePointsOfInterest()
         if (waypointsOnly) {
             gpsContainer = gpsContainer.copy(track = null)
         }
