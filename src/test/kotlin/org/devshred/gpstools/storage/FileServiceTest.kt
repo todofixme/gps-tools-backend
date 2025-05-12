@@ -229,6 +229,33 @@ class FileServiceTest {
         assertThat(trackNameSlot.captured).startsWith(newTrackName)
         verify { ioService.delete(storageLocation) }
     }
+
+    @Test
+    fun `import TCX activity file`() {
+        val actual = cut.getGpsContainerFromTcxFile(getAbsolutePath("garmin/activity.tcx"))
+
+        assertThat(actual).isNotNull
+        assertThat(actual.name).isEqualTo("Activity")
+        assertThat(actual.pointsOfInterest).isEmpty()
+        assertThat(actual.track?.trackPoints).hasSize(1303)
+    }
+
+    @Test
+    fun `import TCX course file`() {
+        val actual = cut.getGpsContainerFromTcxFile(getAbsolutePath("garmin/course.tcx"))
+
+        assertThat(actual).isNotNull
+        assertThat(actual.name).isEqualTo("Champs-Élysées")
+        assertThat(actual.pointsOfInterest).hasSize(1)
+        assertThat(actual.pointsOfInterest[0].name).isEqualTo("Fontaine")
+        assertThat(actual.track?.trackPoints).hasSize(18)
+    }
+
+    private fun getAbsolutePath(fileName: String): String {
+        val resource = this::class.java.classLoader.getResource(fileName)
+        val absolutePath = resource?.toURI()?.path
+        return absolutePath!!
+    }
 }
 
 fun createProtoContainer(vararg points: Pair<UUID, String>) =

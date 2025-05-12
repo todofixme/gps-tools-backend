@@ -2,6 +2,10 @@ package org.devshred.gpstools.formats.gps
 
 import com.garmin.fit.FitMessages
 import com.garmin.fit.RecordMesg
+import com.garmin.xmlschemas.activityextension.v2.ActivityTrackpointExtensionT
+import com.garmin.xmlschemas.trainingcenterdatabase.v2.CoursePointT
+import com.garmin.xmlschemas.trainingcenterdatabase.v2.TrackpointT
+import com.garmin.xmlschemas.trainingcenterdatabase.v2.TrainingCenterDatabaseT
 import com.google.protobuf.Timestamp
 import io.jenetics.jpx.GPX
 import io.jenetics.jpx.geom.Geoid
@@ -248,6 +252,46 @@ class GpsContainerMapper {
 
         return trainingCenterDatabase
     }
+
+    fun fromTcx(tcx: TrainingCenterDatabaseT): GpsContainer {
+        try {
+            tcx.courses?.let { courses ->
+                val course = courses.course.first()
+                return GpsContainer(
+                    name = course.name,
+                    pointsOfInterest = course.coursePoint.map { it.toGpsPointOfInterest() },
+                    track =
+                        Track(
+                            course.track
+                                .first()
+                                .trackpoint
+                                .map { it.toGpsTrackPoint() },
+                        ),
+                )
+            }
+
+            tcx.activities?.let { activities ->
+                val activity = activities.activity.first()
+                return GpsContainer(
+                    name = "Activity",
+                    pointsOfInterest = emptyList(),
+                    track =
+                        Track(
+                            activity.lap
+                                .first()
+                                .track
+                                .first()
+                                .trackpoint
+                                .map { it.toGpsTrackPoint() },
+                        ),
+                )
+            }
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Error parsing TCX file: ${e.message}", e)
+        }
+
+        throw IllegalArgumentException("No activities found in TCX file")
+    }
 }
 
 fun GpsTrackPoint.toGpx(): GpxWayPoint {
@@ -475,6 +519,31 @@ fun RecordMesg.toGpsTrackPoint(): GpsTrackPoint =
         cadence = this.cadence?.toInt(),
         temperature = this.temperature?.toInt(),
         heartRate = this.heartRate?.toInt(),
+    )
+
+fun TrackpointT.toGpsTrackPoint(): GpsTrackPoint {
+    val extension = extensions?.any?.filterIsInstance<ActivityTrackpointExtensionT>()?.firstOrNull()
+    return GpsTrackPoint(
+        latitude = position.latitudeDegrees,
+        longitude = position.longitudeDegrees,
+        elevation = altitudeMeters,
+        time = time?.toGregorianCalendar()?.toInstant(),
+        speed = extension?.speed?.toDouble(),
+        power = extension?.watts,
+        cadence = cadence?.toInt(),
+        heartRate = heartRateBpm?.value?.toInt(),
+    )
+}
+
+fun CoursePointT.toGpsPointOfInterest() =
+    GpsPointOfInterest(
+        uuid = UUID.randomUUID(),
+        latitude = position.latitudeDegrees,
+        longitude = position.longitudeDegrees,
+        elevation = altitudeMeters,
+        time = time.toGregorianCalendar().toInstant(),
+        name = name,
+        type = PoiType.fromTcxType(pointType),
     )
 
 private fun RecordMesg.getLatDegrees() = this.positionLat * SEMICIRCLES_TO_DEGREES

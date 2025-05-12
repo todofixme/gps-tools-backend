@@ -2,6 +2,9 @@ package org.devshred.gpstools.storage
 
 import com.garmin.fit.FitDecoder
 import com.garmin.fit.FitRuntimeException
+import com.garmin.xmlschemas.trainingcenterdatabase.v2.TrainingCenterDatabaseT
+import jakarta.xml.bind.JAXBContext
+import jakarta.xml.bind.JAXBElement
 import mil.nga.sf.geojson.FeatureCollection
 import mil.nga.sf.geojson.FeatureConverter
 import mil.nga.sf.geojson.Point
@@ -24,6 +27,7 @@ import java.io.ByteArrayInputStream
 import java.io.FileInputStream
 import java.io.InputStream
 import java.util.UUID
+import javax.xml.transform.stream.StreamSource
 
 @Service
 class FileService(
@@ -250,5 +254,18 @@ class FileService(
         } catch (e: FitRuntimeException) {
             throw RuntimeException(e)
         }
+    }
+
+    fun getGpsContainerFromTcxFile(storageLocation: String): GpsContainer {
+        val unmarshaller = JAXBContext.newInstance(TrainingCenterDatabaseT::class.java).createUnmarshaller()
+        val source = StreamSource(FileInputStream(storageLocation))
+        val tcx =
+            (
+                unmarshaller.unmarshal(
+                    source,
+                    TrainingCenterDatabaseT::class.java,
+                ) as JAXBElement<TrainingCenterDatabaseT>
+            ).value
+        return gpsMapper.fromTcx(tcx)
     }
 }

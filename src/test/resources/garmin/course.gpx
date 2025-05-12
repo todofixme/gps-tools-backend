@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx creator="Garmin Connect" version="1.1"
+  xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/11.xsd"
+  xmlns:ns3="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"
+  xmlns="http://www.topografix.com/GPX/1/1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ns2="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+  <metadata>
+    <name>Champs-Élysées</name>
+    <link href="connect.garmin.com">
+      <text>Garmin Connect</text>
+    </link>
+    <time>2025-05-12T05:46:50.000Z</time>
+  </metadata>
+  <wpt lat="48.86639276483035" lon="2.31825212015206">
+    <ele>0.0</ele>
+    <name>Wasser</name>
+    <type>WATER</type>
+  </wpt>
+  <trk>
+    <name>Champs-Élysées</name>
+    <trkseg>
+      <trkpt lat="48.86592149734497" lon="2.319767475128174">
+        <ele>32.88</ele>
+        <time>2025-05-12T05:46:50.000Z</time>
+      </trkpt>
+      <trkpt lat="48.865921581164" lon="2.319767475128174">
+        <ele>32.87</ele>
+        <time>2025-05-12T05:46:50.000Z</time>
+      </trkpt>
+      <trkpt lat="48.86594303883612" lon="2.3196816444396973">
+        <ele>32.85</ele>
+        <time>2025-05-12T05:46:50.001Z</time>
+      </trkpt>
+      <trkpt lat="48.86600741185248" lon="2.319488525390625">
+        <ele>32.9</ele>
+        <time>2025-05-12T05:46:50.004Z</time>
+      </trkpt>
+      <trkpt lat="48.866136157885194" lon="2.3190808296203613">
+        <ele>33.0</ele>
+        <time>2025-05-12T05:46:50.012Z</time>
+      </trkpt>
+      <trkpt lat="48.86613607406616" lon="2.3190808296203613">
+        <ele>33.03</ele>
+        <time>2025-05-12T05:46:50.020Z</time>
+      </trkpt>
+      <trkpt lat="48.86615761555731" lon="2.3189949989318848">
+        <ele>33.09</ele>
+        <time>2025-05-12T05:46:50.029Z</time>
+      </trkpt>
+      <trkpt lat="48.86623280122876" lon="2.318758377805352">
+        <ele>33.12</ele>
+        <time>2025-05-12T05:46:50.041Z</time>
+      </trkpt>
+      <trkpt lat="48.86630781926215" lon="2.3185229301452637">
+        <ele>33.17</ele>
+        <time>2025-05-12T05:46:50.056Z</time>
+      </trkpt>
+      <trkpt lat="48.866392727941275" lon="2.3182521108537912">
+        <ele>33.43</ele>
+        <time>2025-05-12T05:46:50.074Z</time>
+      </trkpt>
+      <trkpt lat="48.86640454642475" lon="2.3182143922895193">
+        <ele>33.79</ele>
+        <time>2025-05-12T05:46:50.092Z</time>
+      </trkpt>
+      <trkpt lat="48.86650135740638" lon="2.317905854433775">
+        <ele>34.35</ele>
+        <time>2025-05-12T05:46:50.114Z</time>
+      </trkpt>
+      <trkpt lat="48.866597497835755" lon="2.3175994120538235">
+        <ele>35.21</ele>
+        <time>2025-05-12T05:46:50.139Z</time>
+      </trkpt>
+      <trkpt lat="48.86673009954393" lon="2.3171767126768827">
+        <ele>36.31</ele>
+        <time>2025-05-12T05:46:50.169Z</time>
+      </trkpt>
+      <trkpt lat="48.8668627012521" lon="2.3167540971189737">
+        <ele>37.69</ele>
+        <time>2025-05-12T05:46:50.204Z</time>
+      </trkpt>
+      <trkpt lat="48.86699446476996" lon="2.3163342475891113">
+        <ele>37.99</ele>
+        <time>2025-05-12T05:46:50.244Z</time>
+      </trkpt>
+      <trkpt lat="48.86699438095093" lon="2.3163342475891113">
+        <ele>38.33</ele>
+        <time>2025-05-12T05:46:50.284Z</time>
+      </trkpt>
+      <trkpt lat="48.86705154553056" lon="2.3161628376692533">
+        <ele>38.37</ele>
+        <time>2025-05-12T05:46:50.326Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>
