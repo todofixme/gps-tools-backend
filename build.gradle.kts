@@ -19,6 +19,8 @@ plugins {
 
     id("com.github.ben-manes.versions") version "0.52.0"
     id("org.jlleitschuh.gradle.ktlint") version "12.2.0"
+
+    id("com.intershop.gradle.jaxb") version "7.0.1"
 }
 
 group = "org.devshred"
@@ -55,6 +57,9 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
 
     implementation("org.apache.commons:commons-lang3:3.17.0")
+
+    implementation("jakarta.xml.bind:jakarta.xml.bind-api:4.0.2")
+    implementation("org.glassfish.jaxb:jaxb-runtime:4.0.5")
 
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.springframework.boot:spring-boot-starter-webflux")
@@ -156,3 +161,14 @@ ktlint {
 }
 
 tasks.named("runKtlintCheckOverMainSourceSet").configure { dependsOn("openApiGenerate") }
+
+jaxb {
+    javaGen {
+        register("tcx") {
+            schema = file("src/main/schema/TrainingCenterDatabasev2.xsd")
+        }
+        register("tpx") {
+            schema = file("src/main/schema/ActivityExtensionv2.xsd")
+        }
+    }
+}

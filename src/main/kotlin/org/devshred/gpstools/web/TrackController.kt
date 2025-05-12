@@ -14,7 +14,6 @@ import org.devshred.gpstools.formats.gps.TrackPoint
 import org.devshred.gpstools.storage.FileService
 import org.devshred.gpstools.storage.IOService
 import org.devshred.gpstools.storage.NotFoundException
-import org.devshred.gpstools.storage.StoredTrack
 import org.devshred.gpstools.storage.TrackStore
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -32,7 +31,6 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
 import java.io.File
-import java.io.IOException
 import java.net.URI
 import java.util.Base64
 import java.util.UUID
@@ -133,49 +131,36 @@ class TrackController(
     }
 
     override fun uploadFiles(
-        @RequestParam(
-            required = false,
-            value = "file",
-        ) file: Array<MultipartFile>,
+        @RequestParam(required = false, value = "file") file: Array<MultipartFile>,
     ): ResponseEntity<List<TrackDTO>> {
-        val results = ArrayList<TrackDTO>()
-
-        file
-            .filter { isGpsFile(it.originalFilename) }
-            .forEach {
-                val uploadedFile: StoredTrack =
-                    ioService.createTempFile(it.inputStream, it.originalFilename!!)
-
-                if (isGpxFile(it.originalFilename)) {
+        val results =
+            file
+                .filter { isGpsFile(it.originalFilename) }
+                .mapNotNull {
+                    val uploadedFile = ioService.createTempFile(it.inputStream, it.originalFilename!!)
                     try {
-                        val gpsContainer = fileService.getGpsContainerFromGpxFile(uploadedFile.storageLocation)
+                        val gpsContainer =
+                            when {
+                                isGpxFile(it.originalFilename) -> fileService.getGpsContainerFromGpxFile(uploadedFile.storageLocation)
+                                isFitFile(it.originalFilename) -> fileService.getGpsContainerFromFitFile(uploadedFile.storageLocation)
+                                isTcxFile(it.originalFilename) -> fileService.getGpsContainerFromTcxFile(uploadedFile.storageLocation)
+                                else -> throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
+                            }
                         val storedTrack =
-                            ioService.createTempFile(gpsContainer, it.originalFilename!!.removeSuffix(".gpx"))
+                            ioService.createTempFile(
+                                gpsContainer,
+                                it.originalFilename!!.removeSuffix(".${it.originalFilename!!.substringAfterLast('.')}"),
+                            )
                         trackStore.put(storedTrack)
-
                         ioService.delete(uploadedFile.storageLocation)
-
-                        results.add(storedTrack.toTrackDTO())
-                    } catch (ex: IOException) {
-                        ioService.delete(storageLocation = uploadedFile.storageLocation)
-                        throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
-                    }
-                } else if (isFitFile(it.originalFilename)) {
-                    try {
-                        val gpsContainer = fileService.getGpsContainerFromFitFile(uploadedFile.storageLocation)
-                        val storedTrack =
-                            ioService.createTempFile(gpsContainer, it.originalFilename!!.removeSuffix(".fit"))
-                        trackStore.put(storedTrack)
-
-                        ioService.delete(uploadedFile.storageLocation)
-                        results.add(storedTrack.toTrackDTO())
+                        storedTrack.toTrackDTO()
                     } catch (e: Exception) {
-                        log.warn("Failed to process FIT file.", e)
-                        ioService.delete(storageLocation = uploadedFile.storageLocation)
-                        throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
+                        log.warn("Failed to process file: ${it.originalFilename}", e)
+                        ioService.delete(uploadedFile.storageLocation)
+                        null
                     }
                 }
-            }
+
         if (results.isEmpty()) {
             throw IllegalArgumentException("Failed to upload files.")
         }
@@ -247,7 +232,9 @@ private fun isGpxFile(filename: String?) = filename?.endsWith(".gpx").orElse { f
 
 private fun isFitFile(filename: String?) = filename?.endsWith(".fit").orElse { false }
 
-private fun isGpsFile(filename: String?) = isGpxFile(filename) || isFitFile(filename)
+private fun isTcxFile(filename: String?) = filename?.endsWith(".tcx").orElse { false }
+
+private fun isGpsFile(filename: String?) = isGpxFile(filename) || isFitFile(filename) || isTcxFile(filename)
 
 private val notAllowedCharacters = "[^a-zA-Z0-9\\p{L}\\p{M}*\\p{N}.\\-]".toRegex()
 private val moreThan2UnderscoresInARow = "_{3,}".toRegex()

@@ -8,7 +8,7 @@ The prod "server" is running at home on a [Raspberry Pi](https://www.raspberrypi
 The prod website is hosted by [Cloudflare](https://www.cloudflare.com/) at: https://gps-tools.pages.dev/ 
 
 ## Features
-* imports data as [FIT](https://developer.garmin.com/fit/overview/), [GPX](https://www.topografix.com/gpx.asp) and [GeoJSON](https://geojson.org/)
+* imports data as [TCX](https://www8.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd), [GPX](https://www.topografix.com/gpx.asp), [GeoJSON](https://geojson.org/) and [FIT](https://developer.garmin.com/fit/overview/)
 * exports data as [TCX](https://www8.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd), [GPX](https://www.topografix.com/gpx.asp) and [GeoJSON](https://geojson.org/)
 * converts seamlessly between these formats
 * optimizes waypoints to improve performance on GPS-devices
