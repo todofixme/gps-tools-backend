@@ -1,10 +1,10 @@
 import com.google.protobuf.gradle.id
 import net.researchgate.release.ReleaseExtension
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    val kotlinVersion = "2.1.20"
+    val kotlinVersion = "2.1.21"
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.spring") version kotlinVersion
 
@@ -26,14 +26,14 @@ plugins {
 group = "org.devshred"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
 }
 
 repositories {
     mavenCentral()
 }
 
-val protoBufVersion = "4.30.2"
+val protoBufVersion = "4.31.0"
 val jacksonVersion = "2.18.3"
 val xmlunitVersion = "2.10.0"
 
@@ -45,7 +45,7 @@ dependencies {
     implementation("org.apache.tika:tika-core:3.1.0")
 
     implementation("io.jenetics:jpx:3.2.1")
-    implementation("com.garmin:fit:21.158.0")
+    implementation("com.garmin:fit:21.171.0")
     implementation("mil.nga:sf:2.2.2")
     implementation("mil.nga.sf:sf-geojson:3.3.3")
 
@@ -92,7 +92,7 @@ tasks.withType<KotlinCompile> {
         compilerOptions {
             freeCompilerArgs.add("-Xjsr305=strict")
             freeCompilerArgs.add("-opt-in=kotlin.RequiresOptIn")
-            jvmTarget.set(JVM_17)
+            jvmTarget.set(JvmTarget.JVM_21)
         }
     }
     dependsOn(tasks.openApiGenerate)
