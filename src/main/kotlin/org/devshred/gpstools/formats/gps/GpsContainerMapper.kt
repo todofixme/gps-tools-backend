@@ -1,5 +1,6 @@
 package org.devshred.gpstools.formats.gps
 
+import com.garmin.fit.CoursePointMesg
 import com.garmin.fit.FitMessages
 import com.garmin.fit.RecordMesg
 import com.garmin.xmlschemas.activityextension.v2.ActivityTrackpointExtensionT
@@ -128,13 +129,21 @@ class GpsContainerMapper {
                 Track(
                     fit.recordMesgs
                         .filter { it.positionLat != null && it.positionLong != null }
-                        .map { records -> records.toGpsTrackPoint() },
+                        .map { recordMesg -> recordMesg.toGpsTrackPoint() },
                 ).orElse { null }
             }
 
+        val pointsOfInterest: List<GpsPointOfInterest> =
+            fitMessages
+                ?.coursePointMesgs
+                ?.filter { it.positionLat != null && it.positionLong != null }
+                ?.map { pointMesg -> pointMesg.toGpsPointOfInterest() }
+                ?.toList()
+                .orElse { emptyList() }
+
         return GpsContainer(
             name = "Activity",
-            pointsOfInterest = emptyList(),
+            pointsOfInterest = pointsOfInterest,
             track = track,
         )
     }
@@ -544,6 +553,16 @@ fun CoursePointT.toGpsPointOfInterest() =
         time = time.toGregorianCalendar().toInstant(),
         name = name,
         type = PoiType.fromTcxType(pointType),
+    )
+
+fun CoursePointMesg.toGpsPointOfInterest() =
+    GpsPointOfInterest(
+        uuid = UUID.randomUUID(),
+        latitude = positionLat.toDouble(),
+        longitude = positionLong.toDouble(),
+        time = timestamp.date.toInstant(),
+        name = name,
+        type = PoiType.fromTcxType(type.name),
     )
 
 private fun RecordMesg.getLatDegrees() = this.positionLat * SEMICIRCLES_TO_DEGREES
