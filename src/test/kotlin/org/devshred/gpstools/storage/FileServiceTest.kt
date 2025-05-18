@@ -25,7 +25,7 @@ class FileServiceTest {
     private val trackStore = mockk<TrackStore>()
     private val ioService = mockk<IOService>()
     private val protoService = mockk<ProtoService>()
-    private val gpxService = mockk<GpxService>()
+    private val gpxService = GpxService()
 
     private val mapper = GpsContainerMapper()
 
@@ -231,6 +231,27 @@ class FileServiceTest {
     }
 
     @Test
+    fun `import GPX activity file`() {
+        val actual = cut.getGpsContainerFromGpxFile(getAbsolutePath("garmin/activity.gpx"))
+
+        assertThat(actual).isNotNull
+        assertThat(actual.name).isEqualTo("Gorafe Rennradfahren")
+        assertThat(actual.pointsOfInterest).isEmpty()
+        assertThat(actual.track?.trackPoints).hasSize(1303)
+    }
+
+    @Test
+    fun `import GPX course file`() {
+        val actual = cut.getGpsContainerFromGpxFile(getAbsolutePath("garmin/course.gpx"))
+
+        assertThat(actual).isNotNull
+        assertThat(actual.name).isEqualTo("Champs-Élysées")
+        assertThat(actual.pointsOfInterest).hasSize(1)
+        assertThat(actual.pointsOfInterest[0].name).isEqualTo("Fontaine")
+        assertThat(actual.track?.trackPoints).hasSize(18)
+    }
+
+    @Test
     fun `import TCX activity file`() {
         val actual = cut.getGpsContainerFromTcxFile(getAbsolutePath("garmin/activity.tcx"))
 
@@ -248,6 +269,27 @@ class FileServiceTest {
         assertThat(actual.name).isEqualTo("Champs-Élysées")
         assertThat(actual.pointsOfInterest).hasSize(1)
         assertThat(actual.pointsOfInterest[0].name).isEqualTo("Fontaine")
+        assertThat(actual.track?.trackPoints).hasSize(18)
+    }
+
+    @Test
+    fun `import FIT activity file`() {
+        val actual = cut.getGpsContainerFromFitFile(getAbsolutePath("garmin/activity.fit"))
+
+        assertThat(actual).isNotNull
+        assertThat(actual.name).isEqualTo("Activity")
+        assertThat(actual.pointsOfInterest).isEmpty()
+        assertThat(actual.track?.trackPoints).hasSize(1303)
+    }
+
+    @Test
+    fun `import FIT course file`() {
+        val actual = cut.getGpsContainerFromFitFile(getAbsolutePath("garmin/course.fit"))
+
+        assertThat(actual).isNotNull
+        assertThat(actual.name).isEqualTo("Activity")
+        assertThat(actual.pointsOfInterest).hasSize(1)
+        assertThat(actual.pointsOfInterest[0].name).isEqualTo("Wasser")
         assertThat(actual.track?.trackPoints).hasSize(18)
     }
 
