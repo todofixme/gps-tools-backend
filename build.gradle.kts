@@ -8,14 +8,14 @@ plugins {
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.spring") version kotlinVersion
 
-    id("org.springframework.boot") version "3.4.5"
+    id("org.springframework.boot") version "3.4.6"
     id("io.spring.dependency-management") version "1.1.7"
-    id("org.openapi.generator") version "7.12.0"
+    id("org.openapi.generator") version "7.13.0"
 
     id("com.google.protobuf") version "0.9.5"
 
     id("net.researchgate.release") version "3.1.0"
-    id("com.palantir.git-version") version "3.2.0"
+    id("com.palantir.git-version") version "3.3.0"
 
     id("com.github.ben-manes.versions") version "0.52.0"
     id("org.jlleitschuh.gradle.ktlint") version "12.2.0"
@@ -34,8 +34,7 @@ repositories {
 }
 
 val protoBufVersion = "4.31.0"
-val jacksonVersion = "2.18.3"
-val xmlunitVersion = "2.10.0"
+val xmlunitVersion = "2.10.1"
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -52,9 +51,8 @@ dependencies {
     implementation("com.google.protobuf:protobuf-kotlin:$protoBufVersion")
     implementation("com.google.protobuf:protobuf-java-util:$protoBufVersion")
 
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:$jacksonVersion")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
+    implementation("com.fasterxml.jackson:jackson-bom:2.19.0")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml")
 
     implementation("org.apache.commons:commons-lang3:3.17.0")
 
@@ -154,7 +152,7 @@ protobuf {
 }
 
 ktlint {
-    version.set("1.5.0")
+    version.set("1.6.0")
     filter {
         exclude { entry -> entry.file.toString().contains("generated") }
     }
