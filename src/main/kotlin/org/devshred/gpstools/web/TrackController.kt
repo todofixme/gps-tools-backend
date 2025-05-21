@@ -51,12 +51,12 @@ class TrackController(
     lateinit var baseUrl: String
 
     override fun download(
-        @PathVariable(value = "trackId") trackId: UUID,
-        @Valid @RequestParam(required = false, value = "mode") mode: List<String>?,
-        @Valid @RequestParam(required = false, value = "name") name: String?,
-        @Valid @RequestParam(required = false, value = "type") type: String?,
-        @Valid @RequestParam(required = false, value = "wp") wp: String?,
-        @RequestHeader(required = false, value = "accept") accept: String?,
+        @PathVariable("trackId") trackId: UUID,
+        @RequestParam(value = "mode", required = false) mode: List<String>?,
+        @RequestParam(value = "name", required = false) name: String?,
+        @RequestParam(value = "type", required = false) type: String?,
+        @RequestParam(value = "wp", required = false) wp: String?,
+        @RequestHeader(value = "accept", required = false) accept: String?,
     ): ResponseEntity<Resource> {
         val storedFile = trackStore.get(trackId)
 
