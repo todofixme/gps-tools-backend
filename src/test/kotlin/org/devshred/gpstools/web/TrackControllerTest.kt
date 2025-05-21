@@ -37,8 +37,8 @@ import java.io.IOException
 import java.io.InputStream
 import java.util.UUID
 
-private const val API_PATH_VERSION = "/api/v1"
-private const val API_PATH_TRACKS = "$API_PATH_VERSION/tracks"
+const val API_PATH_VERSION = "/api/v1"
+const val API_PATH_TRACKS = "$API_PATH_VERSION/tracks"
 private const val API_PATH_MERGE = "$API_PATH_VERSION/merge"
 
 @WebMvcTest

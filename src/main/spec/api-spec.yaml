@@ -39,7 +39,6 @@ paths:
             Available Modes:
              * `dl` - Forcing download (via Content-Disposition)
              * `opt` - Optimize waypoints
-             * `wpo` - Waypoints only (only for type `json` / `GeoJSON`)
           schema:
             type: array
             items:
@@ -47,7 +46,6 @@ paths:
               enum:
                 - dl
                 - opt
-                - wpo
         - name: name
           in: query
           description: >
@@ -302,6 +300,17 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: mode
+          in: query
+          description: >
+            Available Modes:
+             * `dl` - Forcing download (via Content-Disposition)
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - dl
       responses:
         200:
           description: All waypoints of the track.

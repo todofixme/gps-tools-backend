@@ -609,6 +609,28 @@ class GpsContainerMapperTest {
         assertThat(result.pointsOfInterest[0].longitude).isEqualTo(gpsContainer.track!!.trackPoints[2].longitude)
     }
 
+    @Test
+    fun `maps point to GeoJSON`() {
+        val poi =
+            PointOfInterest(
+                uuid = UUID.randomUUID(),
+                latitude = 36.733,
+                longitude = -3.688,
+                type = PoiType.FOOD,
+                name = "Point 1",
+            )
+
+        val result = mapper.toGeoJsonPoints(listOf(poi))
+
+        assertThat(result).hasSize(1)
+        val point = result.first()
+        assertThat(point.geometry).isInstanceOf(Point::class.java)
+        assertThat((point.geometry as Point).position.x).isEqualTo(36.733)
+        assertThat((point.geometry as Point).position.y).isEqualTo(-3.688)
+        assertThat(point.properties["type"]).isEqualTo("FOOD")
+        assertThat(point.properties["name"]).isEqualTo("Point 1")
+    }
+
     private fun randomWayPoint(): GpxWayPoint =
         GpxWayPoint
             .builder()

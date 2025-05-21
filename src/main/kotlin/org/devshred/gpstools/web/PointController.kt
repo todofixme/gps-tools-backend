@@ -10,10 +10,13 @@ import org.devshred.gpstools.api.model.FeatureDTO
 import org.devshred.gpstools.api.model.GeoJsonObjectDTO
 import org.devshred.gpstools.api.model.PointDTO
 import org.devshred.gpstools.storage.FileService
+import org.devshred.gpstools.storage.TrackStore
+import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.io.File
 import java.math.BigDecimal
 import java.util.UUID
 
@@ -22,10 +25,32 @@ import java.util.UUID
 @CrossOrigin(origins = ["*"], maxAge = 3600)
 class PointController(
     private val fileService: FileService,
+    private val trackStore: TrackStore,
 ) : PointsApi {
     @Suppress("ktlint")
-    override fun getPoints(trackId: UUID): ResponseEntity<GeoJsonObjectDTO> =
-        ResponseEntity.ok(fileService.getWaypoints(trackId).toDto())
+    override fun getPoints(
+        trackId: UUID,
+        mode: List<String>?
+    ): ResponseEntity<GeoJsonObjectDTO> {
+        val responseHeaders = HttpHeaders()
+        if (mode != null && mode.contains("dl")) {
+            val file = File(trackStore.get(trackId).name)
+            val filename =
+                file.nameWithoutExtension
+                    .sanitize()
+                    .ifBlank { "waypoints" }
+            responseHeaders.set(
+                HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"$filename.json\"",
+            )
+        }
+        responseHeaders.set(HttpHeaders.CONTENT_TYPE, "application/geo+json")
+
+        return ResponseEntity
+            .ok() //
+            .headers(responseHeaders) //
+            .body(fileService.getWaypoints(trackId).toDto())
+    }
 
     @LockTrack
     override fun changePoints(
