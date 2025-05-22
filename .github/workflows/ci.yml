@@ -10,6 +10,7 @@ name: Java CI with Gradle
 on:
   release:
     types: [published] # prereleased and released
+  workflow_dispatch:
 
 permissions:
   contents: read
