@@ -1,5 +1,7 @@
 package org.devshred.gpstools.storage
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -20,18 +22,20 @@ import org.junit.jupiter.api.Test
 import java.io.InputStream
 import java.math.BigDecimal
 import java.util.UUID
+import java.util.UUID.randomUUID
 
 class FileServiceTest {
     private val trackStore = mockk<TrackStore>()
     private val ioService = mockk<IOService>()
     private val protoService = mockk<ProtoService>()
+
     private val gpxService = GpxService()
-
     private val mapper = GpsContainerMapper()
+    private val objectMapper = ObjectMapper().registerKotlinModule()
 
-    private var cut = FileService(trackStore, ioService, protoService, gpxService, mapper)
+    private var cut = FileService(trackStore, ioService, protoService, gpxService, mapper, objectMapper)
 
-    private val trackId = UUID.randomUUID()
+    private val trackId = randomUUID()
     private val storageLocation = "/path/to/file"
     private val trackName = "test"
     private val storedTrack = StoredTrack(trackId, trackName, storageLocation)
@@ -291,6 +295,27 @@ class FileServiceTest {
         assertThat(actual.pointsOfInterest).hasSize(1)
         assertThat(actual.pointsOfInterest[0].name).isEqualTo("Wasser")
         assertThat(actual.track?.trackPoints).hasSize(18)
+    }
+
+    @Test
+    fun `import GeoJSON file`() {
+        val actual =
+            cut.getGpsContainerFromJsonFile(
+                StoredTrack(
+                    id = randomUUID(),
+                    name = "Champs-Élysées",
+                    storageLocation =
+                        getAbsolutePath(
+                            "garmin/course.json",
+                        ),
+                ),
+            )
+
+        assertThat(actual).isNotNull
+        assertThat(actual.name).isEqualTo("Champs-Élysées")
+        assertThat(actual.pointsOfInterest).hasSize(1)
+        assertThat(actual.pointsOfInterest[0].name).isEqualTo("Fontaine")
+        assertThat(actual.track?.trackPoints).isNull()
     }
 
     private fun getAbsolutePath(fileName: String): String {

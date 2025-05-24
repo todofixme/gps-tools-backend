@@ -1,5 +1,6 @@
 package org.devshred.gpstools.storage
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.garmin.fit.FitDecoder
 import com.garmin.fit.FitRuntimeException
 import com.garmin.xmlschemas.trainingcenterdatabase.v2.TrainingCenterDatabaseT
@@ -24,6 +25,7 @@ import org.devshred.gpstools.formats.tcx.TrainingCenterDatabase
 import org.devshred.gpstools.formats.tcx.tcxToByteArrayOutputStream
 import org.springframework.stereotype.Service
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
 import java.util.UUID
@@ -36,6 +38,7 @@ class FileService(
     private val protoService: ProtoService,
     private val gpxService: GpxService,
     private val gpsMapper: GpsContainerMapper,
+    private val objectMapper: ObjectMapper,
 ) {
     fun getGpxInputStream(
         storageLocation: String,
@@ -267,5 +270,13 @@ class FileService(
                 ) as JAXBElement<TrainingCenterDatabaseT>
             ).value
         return gpsMapper.fromTcx(tcx)
+    }
+
+    fun getGpsContainerFromJsonFile(storedTrack: StoredTrack): GpsContainer {
+        val file = File(storedTrack.storageLocation)
+        val basename = storedTrack.name.substringBeforeLast(".", storedTrack.name)
+        val feature = objectMapper.readValue(file, FeatureCollectionDTO::class.java)
+
+        return gpsMapper.fromGeoJson(featureCollectionDTO = feature, name = basename)
     }
 }

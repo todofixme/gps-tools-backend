@@ -1,0 +1,20 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          48.86639273,
+          2.31825211
+        ]
+      },
+      "properties": {
+        "name": "Fontaine",
+        "type": "WATER",
+        "uuid": "17ed4f31-6ee7-4b6f-b521-cddd64c42f9a"
+      }
+    }
+  ]
+}

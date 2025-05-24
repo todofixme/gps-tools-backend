@@ -144,6 +144,7 @@ class TrackController(
                                 isGpxFile(it.originalFilename) -> fileService.getGpsContainerFromGpxFile(uploadedFile.storageLocation)
                                 isFitFile(it.originalFilename) -> fileService.getGpsContainerFromFitFile(uploadedFile.storageLocation)
                                 isTcxFile(it.originalFilename) -> fileService.getGpsContainerFromTcxFile(uploadedFile.storageLocation)
+                                isJsonFile(it.originalFilename) -> fileService.getGpsContainerFromJsonFile(uploadedFile)
                                 else -> throw IllegalArgumentException(ERROR_MSG_FILE_FORMAT_NOT_SUPPORTED)
                             }
                         val storedTrack =
@@ -234,7 +235,9 @@ private fun isFitFile(filename: String?) = filename?.endsWith(".fit").orElse { f
 
 private fun isTcxFile(filename: String?) = filename?.endsWith(".tcx").orElse { false }
 
-private fun isGpsFile(filename: String?) = isGpxFile(filename) || isFitFile(filename) || isTcxFile(filename)
+private fun isJsonFile(filename: String?) = filename?.endsWith(".json").orElse { false }
+
+private fun isGpsFile(filename: String?) = isGpxFile(filename) || isFitFile(filename) || isTcxFile(filename) || isJsonFile(filename)
 
 private val notAllowedCharacters = "[^a-zA-Z0-9\\p{L}\\p{M}*\\p{N}.\\-]".toRegex()
 private val moreThan2UnderscoresInARow = "_{3,}".toRegex()

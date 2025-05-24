@@ -15,6 +15,8 @@ import mil.nga.sf.geojson.FeatureCollection
 import mil.nga.sf.geojson.LineString
 import mil.nga.sf.geojson.Point
 import mil.nga.sf.geojson.Position
+import org.devshred.gpstools.api.model.FeatureCollectionDTO
+import org.devshred.gpstools.api.model.PointDTO
 import org.devshred.gpstools.common.Constants.DEFAULT_TIMEZONE
 import org.devshred.gpstools.common.orElse
 import org.devshred.gpstools.formats.gps.GpsContainerMapper.Constants.SEMICIRCLES_TO_DEGREES
@@ -300,6 +302,32 @@ class GpsContainerMapper {
         }
 
         throw IllegalArgumentException("No activities found in TCX file")
+    }
+
+    fun fromGeoJson(
+        featureCollectionDTO: FeatureCollectionDTO,
+        name: String,
+    ): GpsContainer {
+        featureCollectionDTO.features
+            .filter { feature ->
+                feature.geometry is PointDTO
+            }.map {
+                val pointDTO = it.geometry as PointDTO
+                val properties = it.properties as Map<*, *>
+                GpsPointOfInterest(
+                    uuid = UUID.randomUUID(),
+                    latitude = pointDTO.coordinates[0].toDouble(),
+                    longitude = pointDTO.coordinates[1].toDouble(),
+                    name = properties["name"] as String?,
+                    type = PoiType.fromString(properties["type"] as String),
+                )
+            }.let { pointsOfInterest ->
+                return GpsContainer(
+                    name = name,
+                    pointsOfInterest = pointsOfInterest,
+                    track = null,
+                )
+            }
     }
 }
 

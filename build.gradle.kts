@@ -52,6 +52,7 @@ dependencies {
     implementation("com.google.protobuf:protobuf-java-util:$protoBufVersion")
 
     implementation("com.fasterxml.jackson:jackson-bom:2.19.0")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml")
 
     implementation("org.apache.commons:commons-lang3:3.17.0")
