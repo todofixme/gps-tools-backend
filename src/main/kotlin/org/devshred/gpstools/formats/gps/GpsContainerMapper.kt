@@ -187,7 +187,7 @@ class GpsContainerMapper {
 
             val feature = Feature(point)
             feature.properties["uuid"] = wayPoint.uuid.toString()
-            wayPoint.name?.let { feature.properties["name"] = wayPoint.name.toString() }
+            wayPoint.name?.let { feature.properties["name"] = wayPoint.name }
             wayPoint.type?.let { feature.properties["type"] = wayPoint.type.toString() }
 
             feature
