@@ -117,7 +117,10 @@ class FileService(
     fun getWaypoints(trackId: UUID): FeatureCollection {
         val file = store.get(trackId)
         val proto = protoService.readProtoContainer(file.storageLocation)
-        val gpsContainer = gpsMapper.fromProto(proto)
+        val gpsContainer =
+            gpsMapper
+                .fromProto(proto)
+                .removeDuplicatePointsOfInterest()
 
         return FeatureCollection(gpsMapper.toGeoJsonPoints(gpsContainer.pointsOfInterest))
     }
