@@ -578,7 +578,7 @@ fun CoursePointT.toGpsPointOfInterest() =
         latitude = position.latitudeDegrees,
         longitude = position.longitudeDegrees,
         elevation = altitudeMeters,
-        time = time.toGregorianCalendar().toInstant(),
+        time = time?.toGregorianCalendar()?.toInstant(),
         name = name,
         type = PoiType.fromTcxType(pointType),
     )

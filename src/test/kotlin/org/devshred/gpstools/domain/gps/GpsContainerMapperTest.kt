@@ -1,5 +1,7 @@
 package org.devshred.gpstools.domain.gps
 
+import com.garmin.xmlschemas.trainingcenterdatabase.v2.CoursePointT
+import com.garmin.xmlschemas.trainingcenterdatabase.v2.PositionT
 import io.jenetics.jpx.GPX
 import mil.nga.sf.geojson.FeatureCollection
 import mil.nga.sf.geojson.Point
@@ -629,6 +631,32 @@ class GpsContainerMapperTest {
         assertThat((point.geometry as Point).position.y).isEqualTo(-3.688)
         assertThat(point.properties["type"]).isEqualTo("FOOD")
         assertThat(point.properties["name"]).isEqualTo("Point 1")
+    }
+
+    @Test
+    fun `handle null date`() {
+        val coursePointT =
+            CoursePointT().apply {
+                time = null
+                name = "some point"
+                position =
+                    PositionT().apply {
+                        latitudeDegrees = 12.34
+                        longitudeDegrees = 67.89
+                    }
+                altitudeMeters = 1300.2
+                pointType = "First Aid"
+            }
+
+        val result = coursePointT.toGpsPointOfInterest()
+
+        assertThat(result.time).isNull()
+
+        assertThat(result.name).isEqualTo("some point")
+        assertThat(result.latitude).isEqualTo(12.34)
+        assertThat(result.longitude).isEqualTo(67.89)
+        assertThat(result.elevation).isEqualTo(1300.2)
+        assertThat(result.type).isEqualTo(PoiType.FIRST_AID)
     }
 
     private fun randomWayPoint(): GpxWayPoint =
