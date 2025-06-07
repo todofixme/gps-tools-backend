@@ -8,7 +8,7 @@ plugins {
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.spring") version kotlinVersion
 
-    id("org.springframework.boot") version "3.4.6"
+    id("org.springframework.boot") version "3.5.0"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.openapi.generator") version "7.13.0"
 
@@ -18,9 +18,9 @@ plugins {
     id("com.palantir.git-version") version "3.3.0"
 
     id("com.github.ben-manes.versions") version "0.52.0"
-    id("org.jlleitschuh.gradle.ktlint") version "12.2.0"
+    id("org.jlleitschuh.gradle.ktlint") version "12.3.0"
 
-    id("com.intershop.gradle.jaxb") version "7.0.1"
+    id("com.intershop.gradle.jaxb") version "7.0.2"
 }
 
 group = "org.devshred"
@@ -33,15 +33,15 @@ repositories {
     mavenCentral()
 }
 
-val protoBufVersion = "4.31.0"
-val xmlunitVersion = "2.10.1"
+val protoBufVersion = "4.31.1"
+val xmlunitVersion = "2.10.2"
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-aop")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.apache.tika:tika-core:3.1.0")
+    implementation("org.apache.tika:tika-core:3.2.0")
 
     implementation("io.jenetics:jpx:3.2.1")
     implementation("com.garmin:fit:21.171.0")
@@ -70,7 +70,7 @@ dependencies {
     testImplementation("org.xmlunit:xmlunit-core:$xmlunitVersion")
     testImplementation("org.xmlunit:xmlunit-matchers:$xmlunitVersion")
     testImplementation("org.xmlunit:xmlunit-assertj:$xmlunitVersion")
-    testImplementation("org.apache.httpcomponents.client5:httpclient5:5.4.4")
+    testImplementation("org.apache.httpcomponents.client5:httpclient5:5.5")
 }
 
 val generatedOpenApiSourcesDir = "${layout.buildDirectory.get()}/generated-openapi"
