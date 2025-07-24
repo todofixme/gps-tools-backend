@@ -11,11 +11,11 @@ const val TCX_NAMESPACE = "http://www.garmin.com/xmlschemas/TrainingCenterDataba
     namespace = TCX_NAMESPACE,
 )
 class TrainingCenterDatabase(
-    @JacksonXmlElementWrapper(
+    @param:JacksonXmlElementWrapper(
         localName = "Courses",
         namespace = TCX_NAMESPACE,
     )
-    @JacksonXmlProperty(localName = "Course")
+    @param:JacksonXmlProperty(localName = "Course")
     private val course: MutableList<Course> = mutableListOf(),
 ) {
     fun addCourse(course: Course) {

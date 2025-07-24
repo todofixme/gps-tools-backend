@@ -4,14 +4,14 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 
 class Course(
-    @JacksonXmlProperty(localName = "Name")
+    @param:JacksonXmlProperty(localName = "Name")
     private val name: String,
-    @JacksonXmlProperty(localName = "Lap")
+    @param:JacksonXmlProperty(localName = "Lap")
     private var lap: Lap? = null,
-    @JacksonXmlProperty(localName = "Track")
+    @param:JacksonXmlProperty(localName = "Track")
     private var track: Track? = null,
-    @JacksonXmlProperty(localName = "CoursePoint")
-    @JacksonXmlElementWrapper(useWrapping = false)
+    @param:JacksonXmlProperty(localName = "CoursePoint")
+    @param:JacksonXmlElementWrapper(useWrapping = false)
     private val coursePoints: MutableList<CoursePoint> = mutableListOf(),
 ) {
     @JacksonXmlProperty(localName = "Name", namespace = TCX_NAMESPACE)

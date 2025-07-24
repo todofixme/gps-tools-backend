@@ -43,7 +43,7 @@ private const val API_PATH_MERGE = "$API_PATH_VERSION/merge"
 
 @WebMvcTest
 class TrackControllerTest(
-    @Autowired val mockMvc: MockMvc,
+    @param:Autowired val mockMvc: MockMvc,
 ) {
     @MockkBean
     lateinit var trackStore: TrackStore

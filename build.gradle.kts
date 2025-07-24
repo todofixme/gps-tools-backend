@@ -4,21 +4,21 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    val kotlinVersion = "2.1.21"
+    val kotlinVersion = "2.2.0"
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.spring") version kotlinVersion
 
-    id("org.springframework.boot") version "3.5.0"
+    id("org.springframework.boot") version "3.5.4"
     id("io.spring.dependency-management") version "1.1.7"
-    id("org.openapi.generator") version "7.13.0"
+    id("org.openapi.generator") version "7.14.0"
 
     id("com.google.protobuf") version "0.9.5"
 
     id("net.researchgate.release") version "3.1.0"
-    id("com.palantir.git-version") version "3.3.0"
+    id("com.palantir.git-version") version "4.0.0"
 
     id("com.github.ben-manes.versions") version "0.52.0"
-    id("org.jlleitschuh.gradle.ktlint") version "12.3.0"
+    id("org.jlleitschuh.gradle.ktlint") version "13.0.0"
 
     id("com.intershop.gradle.jaxb") version "7.0.2"
 }
@@ -34,28 +34,28 @@ repositories {
 }
 
 val protoBufVersion = "4.31.1"
-val xmlunitVersion = "2.10.2"
+val xmlunitVersion = "2.10.3"
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-aop")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.apache.tika:tika-core:3.2.0")
+    implementation("org.apache.tika:tika-core:3.2.1")
 
     implementation("io.jenetics:jpx:3.2.1")
-    implementation("com.garmin:fit:21.171.0")
+    implementation("com.garmin:fit:21.176.0")
     implementation("mil.nga:sf:2.2.2")
     implementation("mil.nga.sf:sf-geojson:3.3.3")
 
     implementation("com.google.protobuf:protobuf-kotlin:$protoBufVersion")
     implementation("com.google.protobuf:protobuf-java-util:$protoBufVersion")
 
-    implementation("com.fasterxml.jackson:jackson-bom:2.19.0")
+    implementation("com.fasterxml.jackson:jackson-bom:2.19.2")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml")
 
-    implementation("org.apache.commons:commons-lang3:3.17.0")
+    implementation("org.apache.commons:commons-lang3:3.18.0")
 
     implementation("jakarta.xml.bind:jakarta.xml.bind-api:4.0.2")
     implementation("org.glassfish.jaxb:jaxb-runtime:4.0.5")
@@ -153,7 +153,7 @@ protobuf {
 }
 
 ktlint {
-    version.set("1.6.0")
+    version.set("1.7.1")
     filter {
         exclude { entry -> entry.file.toString().contains("generated") }
     }

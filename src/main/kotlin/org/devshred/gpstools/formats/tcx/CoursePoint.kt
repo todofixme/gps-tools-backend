@@ -8,13 +8,13 @@ import java.time.ZonedDateTime
 
 @JacksonXmlRootElement
 class CoursePoint(
-    @JacksonXmlProperty(localName = "Name")
+    @param:JacksonXmlProperty(localName = "Name")
     private val name: String,
-    @JacksonXmlProperty(localName = "Time")
+    @param:JacksonXmlProperty(localName = "Time")
     private val time: ZonedDateTime? = null,
-    @JacksonXmlProperty(localName = "Position")
+    @param:JacksonXmlProperty(localName = "Position")
     private val position: Position,
-    @JacksonXmlProperty(localName = "PointType")
+    @param:JacksonXmlProperty(localName = "PointType")
     private val pointType: String? = null,
 ) {
     @JacksonXmlProperty(localName = "Name", namespace = TCX_NAMESPACE)

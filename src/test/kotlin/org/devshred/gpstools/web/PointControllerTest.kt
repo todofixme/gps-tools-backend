@@ -30,7 +30,7 @@ import java.util.UUID
 @WebMvcTest
 @Import(GeoJsonResponseAdvice::class)
 class PointControllerTest(
-    @Autowired val mockMvc: MockMvc,
+    @param:Autowired val mockMvc: MockMvc,
 ) {
     @MockkBean
     lateinit var trackStore: TrackStore

@@ -9,7 +9,7 @@ import java.time.LocalDateTime
 @Component
 class CleanupStoreJob(
     private val trackStore: TrackStore,
-    @Value("\${app.store-max-age}") private val maxAge: Long,
+    @param:Value("\${app.store-max-age}") private val maxAge: Long,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 

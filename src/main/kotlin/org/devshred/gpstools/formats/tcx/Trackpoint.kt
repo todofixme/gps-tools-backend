@@ -8,14 +8,14 @@ import java.math.RoundingMode
 import java.time.ZonedDateTime
 
 data class Trackpoint(
-    @JsonSerialize(using = ZonedDateTimeSerializer::class)
-    @JacksonXmlProperty(localName = "Time")
+    @param:JsonSerialize(using = ZonedDateTimeSerializer::class)
+    @param:JacksonXmlProperty(localName = "Time")
     private val time: ZonedDateTime,
-    @JacksonXmlProperty(localName = "Position")
+    @param:JacksonXmlProperty(localName = "Position")
     private val position: Position,
-    @JacksonXmlProperty(localName = "AltitudeMeters")
+    @param:JacksonXmlProperty(localName = "AltitudeMeters")
     private val altitudeMeters: BigDecimal,
-    @JacksonXmlProperty(localName = "DistanceMeters")
+    @param:JacksonXmlProperty(localName = "DistanceMeters")
     private val distanceMeters: BigDecimal,
 ) {
     constructor(time: ZonedDateTime, position: Position, altitudeMeters: Double, distanceMeters: Double) : this(

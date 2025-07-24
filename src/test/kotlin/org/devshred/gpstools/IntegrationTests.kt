@@ -20,7 +20,7 @@ import kotlin.collections.set
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class IntegrationTests(
-    @Autowired val testClient: WebTestClient,
+    @param:Autowired val testClient: WebTestClient,
 ) {
     @Test
     fun `trackFile lifecycle`() {
