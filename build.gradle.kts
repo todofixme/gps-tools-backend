@@ -41,7 +41,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-aop")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.apache.tika:tika-core:3.2.1")
+    implementation("org.apache.tika:tika-core:3.2.3")
 
     implementation("io.jenetics:jpx:3.2.1")
     implementation("com.garmin:fit:21.176.0")
