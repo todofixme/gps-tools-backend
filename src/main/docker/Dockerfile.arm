@@ -1,4 +1,4 @@
-FROM bellsoft/liberica-openjre-alpine:21
+FROM bellsoft/liberica-openjre-alpine:21.0.9
 VOLUME /tmp
 ARG JAR_FILE=build/libs/gps-tools-backend-*.jar
 COPY ${JAR_FILE} app.jar
