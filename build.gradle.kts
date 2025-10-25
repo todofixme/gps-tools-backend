@@ -8,7 +8,7 @@ plugins {
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.spring") version kotlinVersion
 
-    id("org.springframework.boot") version "3.5.4"
+    id("org.springframework.boot") version "3.5.7"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.openapi.generator") version "7.14.0"
 
