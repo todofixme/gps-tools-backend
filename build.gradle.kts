@@ -16,7 +16,7 @@ plugins {
     id("com.google.protobuf") version "0.9.5"
 
     id("net.researchgate.release") version "3.1.0"
-    id("com.palantir.git-version") version "4.1.0"
+    id("com.palantir.git-version") version "4.3.0"
 
     id("com.github.ben-manes.versions") version "0.53.0"
     id("org.jlleitschuh.gradle.ktlint") version "13.1.0"
