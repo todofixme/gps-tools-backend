@@ -45,7 +45,7 @@ dependencies {
     implementation("org.apache.tika:tika-core:3.2.3")
 
     implementation("io.jenetics:jpx:3.2.1")
-    implementation("com.garmin:fit:21.176.0")
+    implementation("com.garmin:fit:21.194.0")
     implementation("mil.nga:sf:2.2.2")
     implementation("mil.nga.sf:sf-geojson:3.3.3")
 
