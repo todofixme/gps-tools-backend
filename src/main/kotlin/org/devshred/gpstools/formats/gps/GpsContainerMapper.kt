@@ -240,7 +240,7 @@ class GpsContainerMapper {
                             ?.let { ZonedDateTime.ofInstant(trackPoint.time, DEFAULT_TIMEZONE) }
                             .orElse { timeFallback },
                         TcxPosition(trackPoint.latitude, trackPoint.longitude),
-                        trackPoint.elevation!!.toDouble(),
+                        trackPoint.elevation!!,
                         distance,
                     ),
                 )
@@ -599,7 +599,7 @@ fun TrackpointT.toGpsTrackPoint(): GpsTrackPoint {
         longitude = position.longitudeDegrees,
         elevation = altitudeMeters,
         time = time?.toGregorianCalendar()?.toInstant(),
-        speed = extension?.speed?.toDouble(),
+        speed = extension?.speed,
         power = extension?.watts,
         cadence = cadence?.toInt(),
         heartRate = heartRateBpm?.value?.toInt(),

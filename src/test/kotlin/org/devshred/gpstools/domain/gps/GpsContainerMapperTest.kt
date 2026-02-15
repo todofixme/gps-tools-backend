@@ -589,7 +589,7 @@ class GpsContainerMapperTest {
 
         assertThat(result.pointsOfInterest).hasSize(1)
         assertThat(result.pointsOfInterest[0].latitude).isEqualTo(gpsContainer.track!!.trackPoints[2].latitude)
-        assertThat(result.pointsOfInterest[0].longitude).isEqualTo(gpsContainer.track!!.trackPoints[2].longitude)
+        assertThat(result.pointsOfInterest[0].longitude).isEqualTo(gpsContainer.track.trackPoints[2].longitude)
     }
 
     @Test
@@ -606,14 +606,14 @@ class GpsContainerMapperTest {
             gpsContainer.copy(
                 pointsOfInterest = listOf(basePoi),
                 // remove timestamps from trackPoints
-                track = gpsContainer.track!!.copy(trackPoints = gpsContainer.track!!.trackPoints.map { it.copy(time = null) }),
+                track = gpsContainer.track!!.copy(trackPoints = gpsContainer.track.trackPoints.map { it.copy(time = null) }),
             )
 
         val result = cut.withOptimizedPointsOfInterest()
 
         assertThat(result.pointsOfInterest).hasSize(1)
-        assertThat(result.pointsOfInterest[0].latitude).isEqualTo(gpsContainer.track!!.trackPoints[2].latitude)
-        assertThat(result.pointsOfInterest[0].longitude).isEqualTo(gpsContainer.track!!.trackPoints[2].longitude)
+        assertThat(result.pointsOfInterest[0].latitude).isEqualTo(gpsContainer.track.trackPoints[2].latitude)
+        assertThat(result.pointsOfInterest[0].longitude).isEqualTo(gpsContainer.track.trackPoints[2].longitude)
     }
 
     @Test

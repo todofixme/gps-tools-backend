@@ -61,13 +61,15 @@ class GeoJsonResponseAdvice(
             val typeValue = node["type"].asText()
             var foundFirst = false
 
-            node.properties().asSequence().toList().forEach { (key, value) ->
+            node.properties().toList().forEach { (key, value) ->
                 when {
                     key == "type" && value.asText() == typeValue -> {
                         if (foundFirst) node.remove(key) else foundFirst = true
                     }
 
-                    value.isObject || value.isArray -> removeDuplicateTypeField(value)
+                    value.isObject || value.isArray -> {
+                        removeDuplicateTypeField(value)
+                    }
                 }
             }
         } else if (node.isArray) {

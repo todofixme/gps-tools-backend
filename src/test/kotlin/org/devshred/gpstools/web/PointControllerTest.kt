@@ -55,10 +55,10 @@ class PointControllerTest(
         assertThat(featureDTO.geometry.type).isEqualTo("Point")
         assertThat(featureDTO.geometry).isInstanceOf(PointDTO::class.java)
         assertThat((featureDTO.geometry as PointDTO).coordinates[0].toDouble()).isEqualTo(53.544225)
-        assertThat((featureDTO.geometry as PointDTO).coordinates[1].toDouble()).isEqualTo(10.064383)
+        assertThat(featureDTO.geometry.coordinates[1].toDouble()).isEqualTo(10.064383)
         assertThat(featureDTO.properties).isInstanceOf(Map::class.java)
         assertThat((featureDTO.properties as Map<*, *>)["name"]).isEqualTo("K1")
-        assertThat((featureDTO.properties as Map<*, *>)["type"]).isEqualTo("SUMMIT")
+        assertThat(featureDTO.properties["type"]).isEqualTo("SUMMIT")
     }
 
     @Test
