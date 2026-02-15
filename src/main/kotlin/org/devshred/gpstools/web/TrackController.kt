@@ -92,15 +92,22 @@ class TrackController(
 
         val inputStream =
             when (gpsType) {
-                GpsType.GPX -> fileService.getGpxInputStream(storedFile.storageLocation, trackName, waypoints, optimize)
-                GpsType.TCX -> fileService.getTcxInputStream(storedFile.storageLocation, trackName, waypoints, optimize)
-                GpsType.JSON ->
+                GpsType.GPX -> {
+                    fileService.getGpxInputStream(storedFile.storageLocation, trackName, waypoints, optimize)
+                }
+
+                GpsType.TCX -> {
+                    fileService.getTcxInputStream(storedFile.storageLocation, trackName, waypoints, optimize)
+                }
+
+                GpsType.JSON -> {
                     fileService.getGeoJsonInputStream(
                         storedFile.storageLocation,
                         trackName,
                         waypoints,
                         waypointsOnly,
                     )
+                }
 
                 else -> {
                     throw IllegalArgumentException("$gpsType is not supported yet")
