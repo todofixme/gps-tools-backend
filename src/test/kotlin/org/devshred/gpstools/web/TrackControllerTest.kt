@@ -538,5 +538,64 @@ class TrackControllerTest(
         assertThat(mapOf("foo" to "bar").getIgnoringCase("BAR")).isNull()
     }
 
+    @Test
+    fun `upload GeoJSON file with LineString track`() {
+        val trackName = "test"
+        val fileName = "$trackName.json"
+        val uuid = UUID.randomUUID()
+        val storageLocation = "/path/to/file"
+        val storedTrack = StoredTrack(uuid, fileName, storageLocation)
+
+        val geoJsonContent =
+            """
+            {
+              "type": "FeatureCollection",
+              "features": [
+                {
+                  "type": "Feature",
+                  "geometry": {
+                    "type": "LineString",
+                    "coordinates": [[37.29994, -3.133811], [37.176037, -3.596386]]
+                  },
+                  "properties": {"name": "Test Track"}
+                },
+                {
+                  "type": "Feature",
+                  "geometry": {
+                    "type": "Point",
+                    "coordinates": [37.203426, -3.439042]
+                  },
+                  "properties": {"name": "POI", "type": "FOOD"}
+                }
+              ]
+            }
+            """.trimIndent()
+
+        val multipartFile =
+            MockMultipartFile(
+                "file",
+                fileName,
+                "application/json",
+                geoJsonContent.byteInputStream(),
+            )
+
+        every { ioService.createTempFile(any<InputStream>(), fileName) } returns storedTrack
+        every { ioService.createTempFile(any<GpsContainer>(), trackName) } returns storedTrack
+        every { ioService.delete(any()) } returns Unit
+        every { trackStore.put(storedTrack) } returns Unit
+        every { fileService.getGpsContainerFromJsonFile(storedTrack) } returns mockk<GpsContainer>()
+
+        mockMvc
+            .perform(
+                multipart(API_PATH_TRACKS)
+                    .file(multipartFile),
+            ).andExpect(status().isOk)
+
+        verify { ioService.createTempFile(any<InputStream>(), fileName) }
+        verify { fileService.getGpsContainerFromJsonFile(storedTrack) }
+        verify { ioService.createTempFile(any<GpsContainer>(), trackName) }
+        verify { trackStore.put(storedTrack) }
+    }
+
     private fun emptyByteArrayInputStream() = ByteArrayInputStream(byteArrayOf())
 }

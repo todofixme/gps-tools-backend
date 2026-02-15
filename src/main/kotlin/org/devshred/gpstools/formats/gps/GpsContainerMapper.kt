@@ -16,6 +16,7 @@ import mil.nga.sf.geojson.LineString
 import mil.nga.sf.geojson.Point
 import mil.nga.sf.geojson.Position
 import org.devshred.gpstools.api.model.FeatureCollectionDTO
+import org.devshred.gpstools.api.model.LineStringDTO
 import org.devshred.gpstools.api.model.PointDTO
 import org.devshred.gpstools.common.Constants.DEFAULT_TIMEZONE
 import org.devshred.gpstools.common.orElse
@@ -304,30 +305,63 @@ class GpsContainerMapper {
         throw IllegalArgumentException("No activities found in TCX file")
     }
 
+    /**
+     * Converts a GeoJSON FeatureCollection to a GpsContainer.
+     *
+     * Extracts the first LineString feature as track and all Point features as POIs.
+     * Coordinate order: [latitude, longitude, ?elevation].
+     *
+     * @param featureCollectionDTO GeoJSON feature collection
+     * @param name Fallback name if LineString has no name property
+     * @return GpsContainer with track and/or points of interest
+     */
     fun fromGeoJson(
         featureCollectionDTO: FeatureCollectionDTO,
         name: String,
     ): GpsContainer {
-        featureCollectionDTO.features
-            .filter { feature ->
-                feature.geometry is PointDTO
-            }.map {
-                val pointDTO = it.geometry as PointDTO
-                val properties = it.properties as Map<*, *>
-                GpsPointOfInterest(
-                    uuid = UUID.randomUUID(),
-                    latitude = pointDTO.coordinates[0].toDouble(),
-                    longitude = pointDTO.coordinates[1].toDouble(),
-                    name = properties["name"] as String?,
-                    type = PoiType.fromString(properties["type"] as String),
-                )
-            }.let { pointsOfInterest ->
-                return GpsContainer(
-                    name = name,
-                    pointsOfInterest = pointsOfInterest,
-                    track = null,
-                )
+        val lineStringFeature =
+            featureCollectionDTO.features
+                .firstOrNull { it.geometry is LineStringDTO }
+
+        val track: Track? =
+            lineStringFeature?.let { feature ->
+                val lineString = feature.geometry as LineStringDTO
+                val trackPoints =
+                    lineString.coordinates.map { coords ->
+                        GpsTrackPoint(
+                            latitude = coords[0].toDouble(),
+                            longitude = coords[1].toDouble(),
+                            elevation = coords.getOrNull(2)?.toDouble(),
+                        )
+                    }
+                Track(trackPoints)
             }
+
+        val trackName: String =
+            lineStringFeature?.let { feature ->
+                (feature.properties as? Map<*, *>)?.get("name") as? String
+            } ?: name
+
+        val pointsOfInterest =
+            featureCollectionDTO.features
+                .filter { it.geometry is PointDTO }
+                .map { feature ->
+                    val pointDTO = feature.geometry as PointDTO
+                    val properties = feature.properties as? Map<*, *> ?: emptyMap<String, Any>()
+                    GpsPointOfInterest(
+                        uuid = UUID.randomUUID(),
+                        latitude = pointDTO.coordinates[0].toDouble(),
+                        longitude = pointDTO.coordinates[1].toDouble(),
+                        name = properties["name"] as? String,
+                        type = (properties["type"] as? String)?.let { PoiType.fromString(it) },
+                    )
+                }
+
+        return GpsContainer(
+            name = trackName,
+            pointsOfInterest = pointsOfInterest,
+            track = track,
+        )
     }
 }
 

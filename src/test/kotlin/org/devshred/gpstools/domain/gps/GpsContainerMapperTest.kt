@@ -9,6 +9,10 @@ import mil.nga.sf.geojson.Position
 import org.apache.commons.lang3.RandomStringUtils
 import org.apache.commons.math3.random.RandomDataGenerator
 import org.assertj.core.api.Assertions.assertThat
+import org.devshred.gpstools.api.model.FeatureCollectionDTO
+import org.devshred.gpstools.api.model.FeatureDTO
+import org.devshred.gpstools.api.model.LineStringDTO
+import org.devshred.gpstools.api.model.PointDTO
 import org.devshred.gpstools.formats.gps.ExtensionValues
 import org.devshred.gpstools.formats.gps.GpsContainer
 import org.devshred.gpstools.formats.gps.GpsContainerMapper
@@ -34,6 +38,7 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.xmlunit.diff.DefaultNodeMatcher
 import org.xmlunit.diff.ElementSelectors
 import org.xmlunit.matchers.CompareMatcher
+import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 import java.util.stream.Stream
@@ -665,4 +670,226 @@ class GpsContainerMapperTest {
             .lat(randomGenerator.nextDouble())
             .lon(randomGenerator.nextDouble())
             .build()
+
+    @Test
+    fun `should convert LineString feature to Track`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates =
+                                        listOf(
+                                            listOf(BigDecimal("37.29994"), BigDecimal("-3.133811")),
+                                            listOf(BigDecimal("37.176037"), BigDecimal("-3.596386")),
+                                        ),
+                                    type = "LineString",
+                                ),
+                            properties = mapOf("name" to "Test Track"),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback Name")
+
+        assertThat(result.name).isEqualTo("Test Track")
+
+        val track = checkNotNull(result.track) { "track must not be null" }
+        assertThat(track.trackPoints).hasSize(2)
+        assertThat(track.trackPoints[0].latitude).isEqualTo(37.29994)
+        assertThat(track.trackPoints[0].longitude).isEqualTo(-3.133811)
+        assertThat(track.trackPoints[1].latitude).isEqualTo(37.176037)
+        assertThat(track.trackPoints[1].longitude).isEqualTo(-3.596386)
+
+        assertThat(result.pointsOfInterest).isEmpty()
+    }
+
+    @Test
+    fun `should convert LineString with elevation to Track`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates =
+                                        listOf(
+                                            listOf(
+                                                BigDecimal("-3.133811"),
+                                                BigDecimal("37.29994"),
+                                                BigDecimal("100.5"),
+                                            ),
+                                            listOf(
+                                                BigDecimal("-3.596386"),
+                                                BigDecimal("37.176037"),
+                                                BigDecimal("250.0"),
+                                            ),
+                                        ),
+                                    type = "LineString",
+                                ),
+                            properties = null,
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback Name")
+
+        assertThat(result.name).isEqualTo("Fallback Name")
+
+        val track = checkNotNull(result.track) { "track must not be null" }
+        assertThat(track.trackPoints).hasSize(2)
+        assertThat(track.trackPoints[0].elevation).isEqualTo(100.5)
+        assertThat(track.trackPoints[1].elevation).isEqualTo(250.0)
+    }
+
+    @Test
+    fun `should convert mixed LineString and Point features`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates =
+                                        listOf(
+                                            listOf(BigDecimal("-3.133811"), BigDecimal("37.29994")),
+                                            listOf(BigDecimal("-3.596386"), BigDecimal("37.176037")),
+                                        ),
+                                    type = "LineString",
+                                ),
+                            properties = mapOf("name" to "Track Name"),
+                            type = "Feature",
+                        ),
+                        FeatureDTO(
+                            geometry =
+                                PointDTO(
+                                    coordinates = listOf(BigDecimal("37.203426"), BigDecimal("-3.439042")),
+                                    type = "Point",
+                                ),
+                            properties = mapOf("name" to "POI", "type" to "FOOD"),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback Name")
+
+        assertThat(result.name).isEqualTo("Track Name")
+
+        val track = checkNotNull(result.track) { "track must not be null" }
+        assertThat(track.trackPoints).hasSize(2)
+
+        assertThat(result.pointsOfInterest).hasSize(1)
+        assertThat(result.pointsOfInterest[0].name).isEqualTo("POI")
+        assertThat(result.pointsOfInterest[0].type).isEqualTo(PoiType.FOOD)
+        assertThat(result.pointsOfInterest[0].latitude).isEqualTo(37.203426)
+        assertThat(result.pointsOfInterest[0].longitude).isEqualTo(-3.439042)
+    }
+
+    @Test
+    fun `should still convert Points-only GeoJSON`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                PointDTO(
+                                    coordinates = listOf(BigDecimal("48.2"), BigDecimal("12.5")),
+                                    type = "Point",
+                                ),
+                            properties = mapOf("name" to "POI"),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback Name")
+
+        assertThat(result.name).isEqualTo("Fallback Name")
+        assertThat(result.track).isNull()
+        assertThat(result.pointsOfInterest).hasSize(1)
+    }
+
+    @Test
+    fun `should use correct coordinate order for Point (lon-lat from GeoJSON)`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                PointDTO(
+                                    coordinates = listOf(BigDecimal("48.2"), BigDecimal("12.5")),
+                                    type = "Point",
+                                ),
+                            properties = mapOf("name" to "Test Point"),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Test")
+
+        assertThat(result.pointsOfInterest).hasSize(1)
+        assertThat(result.pointsOfInterest[0].latitude).isEqualTo(48.2)
+        assertThat(result.pointsOfInterest[0].longitude).isEqualTo(12.5)
+    }
+
+    @Test
+    fun `should use first LineString when multiple are present`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates =
+                                        listOf(
+                                            listOf(BigDecimal("2.0"), BigDecimal("1.0")),
+                                            listOf(BigDecimal("4.0"), BigDecimal("3.0")),
+                                        ),
+                                    type = "LineString",
+                                ),
+                            properties = mapOf("name" to "First Track"),
+                            type = "Feature",
+                        ),
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates =
+                                        listOf(
+                                            listOf(BigDecimal("6.0"), BigDecimal("5.0")),
+                                            listOf(BigDecimal("8.0"), BigDecimal("7.0")),
+                                        ),
+                                    type = "LineString",
+                                ),
+                            properties = mapOf("name" to "Second Track"),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+
+        assertThat(result.name).isEqualTo("First Track")
+
+        val track = checkNotNull(result.track) { "track must not be null" }
+        assertThat(track.trackPoints).hasSize(2)
+        assertThat(track.trackPoints[0].latitude).isEqualTo(2.0)
+        assertThat(track.trackPoints[0].longitude).isEqualTo(1.0)
+    }
 }
