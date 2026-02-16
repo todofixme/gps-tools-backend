@@ -349,7 +349,7 @@ class GpsContainerMapperTest {
                 .filter { it.geometry.type == "Point" }
                 .filter { it.properties["type"] == "FOOD" }
                 .map { (it.geometry as Point).point },
-        ).isEqualTo(listOf(mil.nga.sf.Point(31.0, 32.0)))
+        ).isEqualTo(listOf(mil.nga.sf.Point(32.0, 31.0)))
     }
 
     @Test
@@ -632,8 +632,8 @@ class GpsContainerMapperTest {
         assertThat(result).hasSize(1)
         val point = result.first()
         assertThat(point.geometry).isInstanceOf(Point::class.java)
-        assertThat((point.geometry as Point).position.x).isEqualTo(36.733)
-        assertThat((point.geometry as Point).position.y).isEqualTo(-3.688)
+        assertThat((point.geometry as Point).position.x).isEqualTo(-3.688)
+        assertThat((point.geometry as Point).position.y).isEqualTo(36.733)
         assertThat(point.properties["type"]).isEqualTo("FOOD")
         assertThat(point.properties["name"]).isEqualTo("Point 1")
     }
@@ -700,10 +700,10 @@ class GpsContainerMapperTest {
 
         val track = checkNotNull(result.track) { "track must not be null" }
         assertThat(track.trackPoints).hasSize(2)
-        assertThat(track.trackPoints[0].latitude).isEqualTo(37.29994)
-        assertThat(track.trackPoints[0].longitude).isEqualTo(-3.133811)
-        assertThat(track.trackPoints[1].latitude).isEqualTo(37.176037)
-        assertThat(track.trackPoints[1].longitude).isEqualTo(-3.596386)
+        assertThat(track.trackPoints[0].latitude).isEqualTo(-3.133811)
+        assertThat(track.trackPoints[0].longitude).isEqualTo(37.29994)
+        assertThat(track.trackPoints[1].latitude).isEqualTo(-3.596386)
+        assertThat(track.trackPoints[1].longitude).isEqualTo(37.176037)
 
         assertThat(result.pointsOfInterest).isEmpty()
     }
@@ -791,8 +791,8 @@ class GpsContainerMapperTest {
         assertThat(result.pointsOfInterest).hasSize(1)
         assertThat(result.pointsOfInterest[0].name).isEqualTo("POI")
         assertThat(result.pointsOfInterest[0].type).isEqualTo(PoiType.FOOD)
-        assertThat(result.pointsOfInterest[0].latitude).isEqualTo(37.203426)
-        assertThat(result.pointsOfInterest[0].longitude).isEqualTo(-3.439042)
+        assertThat(result.pointsOfInterest[0].latitude).isEqualTo(-3.439042)
+        assertThat(result.pointsOfInterest[0].longitude).isEqualTo(37.203426)
     }
 
     @Test
@@ -843,8 +843,8 @@ class GpsContainerMapperTest {
         val result = mapper.fromGeoJson(featureCollectionDTO, "Test")
 
         assertThat(result.pointsOfInterest).hasSize(1)
-        assertThat(result.pointsOfInterest[0].latitude).isEqualTo(48.2)
-        assertThat(result.pointsOfInterest[0].longitude).isEqualTo(12.5)
+        assertThat(result.pointsOfInterest[0].latitude).isEqualTo(12.5)
+        assertThat(result.pointsOfInterest[0].longitude).isEqualTo(48.2)
     }
 
     @Test
@@ -889,7 +889,7 @@ class GpsContainerMapperTest {
 
         val track = checkNotNull(result.track) { "track must not be null" }
         assertThat(track.trackPoints).hasSize(2)
-        assertThat(track.trackPoints[0].latitude).isEqualTo(2.0)
-        assertThat(track.trackPoints[0].longitude).isEqualTo(1.0)
+        assertThat(track.trackPoints[0].latitude).isEqualTo(1.0)
+        assertThat(track.trackPoints[0].longitude).isEqualTo(2.0)
     }
 }

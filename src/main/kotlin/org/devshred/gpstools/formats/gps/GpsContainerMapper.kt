@@ -183,7 +183,7 @@ class GpsContainerMapper {
 
     fun toGeoJsonPoints(wayPoints: List<GpsPointOfInterest>): List<Feature> =
         wayPoints.map { wayPoint ->
-            val position = Position(wayPoint.latitude, wayPoint.longitude)
+            val position = Position(wayPoint.longitude, wayPoint.latitude)
             val point = Point(position)
 
             val feature = Feature(point)
@@ -309,7 +309,7 @@ class GpsContainerMapper {
      * Converts a GeoJSON FeatureCollection to a GpsContainer.
      *
      * Extracts the first LineString feature as track and all Point features as POIs.
-     * Coordinate order: [latitude, longitude, ?elevation].
+     * Coordinate order based on GeoJSON spec: [longitude, latitude, ?elevation].
      *
      * @param featureCollectionDTO GeoJSON feature collection
      * @param name Fallback name if LineString has no name property
@@ -329,8 +329,8 @@ class GpsContainerMapper {
                 val trackPoints =
                     lineString.coordinates.map { coords ->
                         GpsTrackPoint(
-                            latitude = coords[0].toDouble(),
-                            longitude = coords[1].toDouble(),
+                            latitude = coords[1].toDouble(),
+                            longitude = coords[0].toDouble(),
                             elevation = coords.getOrNull(2)?.toDouble(),
                         )
                     }
@@ -350,8 +350,8 @@ class GpsContainerMapper {
                     val properties = feature.properties as? Map<*, *> ?: emptyMap<String, Any>()
                     GpsPointOfInterest(
                         uuid = UUID.randomUUID(),
-                        latitude = pointDTO.coordinates[0].toDouble(),
-                        longitude = pointDTO.coordinates[1].toDouble(),
+                        latitude = pointDTO.coordinates[1].toDouble(),
+                        longitude = pointDTO.coordinates[0].toDouble(),
                         name = properties["name"] as? String,
                         type = (properties["type"] as? String)?.let { PoiType.fromString(it) },
                     )
