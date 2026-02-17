@@ -892,4 +892,361 @@ class GpsContainerMapperTest {
         assertThat(track.trackPoints[0].latitude).isEqualTo(1.0)
         assertThat(track.trackPoints[0].longitude).isEqualTo(2.0)
     }
+
+    @Test
+    fun `should extract times from coordinateProperties in LineString`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates =
+                                        listOf(
+                                            listOf(BigDecimal("10.0"), BigDecimal("53.0"), BigDecimal("5.0")),
+                                            listOf(BigDecimal("10.1"), BigDecimal("53.1"), BigDecimal("5.5")),
+                                        ),
+                                    type = "LineString",
+                                ),
+                            properties =
+                                mapOf(
+                                    "name" to "Test Track",
+                                    "coordinateProperties" to mapOf("times" to listOf(0, 5000)),
+                                ),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+        val beforeParsing = Instant.now()
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+
+        val afterParsing = Instant.now()
+        val track = checkNotNull(result.track) { "track must not be null" }
+        assertThat(track.trackPoints).hasSize(2)
+
+        val firstTime = checkNotNull(track.trackPoints[0].time) { "first time must not be null" }
+        val secondTime = checkNotNull(track.trackPoints[1].time) { "second time must not be null" }
+
+        assertThat(firstTime).isBetween(beforeParsing.minusMillis(100), afterParsing.plusMillis(100))
+        assertThat(secondTime).isBetween(
+            beforeParsing.plusMillis(5000).minusMillis(100),
+            afterParsing.plusMillis(5000).plusMillis(100),
+        )
+    }
+
+    @Test
+    fun `should handle LineString without coordinateProperties`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates =
+                                        listOf(
+                                            listOf(BigDecimal("10.0"), BigDecimal("53.0")),
+                                            listOf(BigDecimal("10.1"), BigDecimal("53.1")),
+                                        ),
+                                    type = "LineString",
+                                ),
+                            properties = mapOf("name" to "Test Track"),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+
+        val track = checkNotNull(result.track) { "track must not be null" }
+        assertThat(track.trackPoints).hasSize(2)
+        assertThat(track.trackPoints[0].time).isNull()
+        assertThat(track.trackPoints[1].time).isNull()
+    }
+
+    @Test
+    fun `should handle empty coordinateProperties object`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates =
+                                        listOf(
+                                            listOf(BigDecimal("10.0"), BigDecimal("53.0")),
+                                            listOf(BigDecimal("10.1"), BigDecimal("53.1")),
+                                        ),
+                                    type = "LineString",
+                                ),
+                            properties =
+                                mapOf(
+                                    "name" to "Test Track",
+                                    "coordinateProperties" to emptyMap<String, Any>(),
+                                ),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+
+        val track = checkNotNull(result.track) { "track must not be null" }
+        assertThat(track.trackPoints).hasSize(2)
+        assertThat(track.trackPoints[0].time).isNull()
+        assertThat(track.trackPoints[1].time).isNull()
+    }
+
+    @Test
+    fun `should handle coordinateProperties with null times`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates =
+                                        listOf(
+                                            listOf(BigDecimal("10.0"), BigDecimal("53.0")),
+                                            listOf(BigDecimal("10.1"), BigDecimal("53.1")),
+                                        ),
+                                    type = "LineString",
+                                ),
+                            properties =
+                                mapOf(
+                                    "name" to "Test Track",
+                                    "coordinateProperties" to mapOf("times" to null),
+                                ),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+
+        val track = checkNotNull(result.track) { "track must not be null" }
+        assertThat(track.trackPoints).hasSize(2)
+        assertThat(track.trackPoints[0].time).isNull()
+        assertThat(track.trackPoints[1].time).isNull()
+    }
+
+    @Test
+    fun `should throw exception when times array length does not match coordinates`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates =
+                                        listOf(
+                                            listOf(BigDecimal("10.0"), BigDecimal("53.0")),
+                                            listOf(BigDecimal("10.1"), BigDecimal("53.1")),
+                                            listOf(BigDecimal("10.2"), BigDecimal("53.2")),
+                                        ),
+                                    type = "LineString",
+                                ),
+                            properties =
+                                mapOf(
+                                    "name" to "Test Track",
+                                    "coordinateProperties" to mapOf("times" to listOf(0, 5000)),
+                                ),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        org.assertj.core.api.Assertions
+            .assertThatThrownBy {
+                mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+            }.isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessageContaining("coordinateProperties.times array length")
+            .hasMessageContaining("must match coordinates length")
+    }
+
+    @Test
+    fun `should parse test_advanced json with 44 coordinate properties`() {
+        val json = java.io.File("src/test/http/data/test_advanced.json").readText()
+        val featureCollectionDTO =
+            com.fasterxml.jackson.module.kotlin
+                .jacksonObjectMapper()
+                .readValue(json, FeatureCollectionDTO::class.java)
+        val beforeParsing = Instant.now()
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+
+        val afterParsing = Instant.now()
+        val track = checkNotNull(result.track) { "track must not be null" }
+        assertThat(track.trackPoints).hasSize(44)
+
+        val firstTime = checkNotNull(track.trackPoints[0].time) { "first time must not be null" }
+        val lastTime = checkNotNull(track.trackPoints[43].time) { "last time must not be null" }
+
+        assertThat(firstTime).isBetween(beforeParsing.minusMillis(100), afterParsing.plusMillis(100))
+        assertThat(lastTime).isBetween(
+            beforeParsing.plusMillis(487837).minusMillis(100),
+            afterParsing.plusMillis(487837).plusMillis(100),
+        )
+    }
+
+    @Test
+    fun `should handle times starting with non-zero offset`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates =
+                                        listOf(
+                                            listOf(BigDecimal("10.0"), BigDecimal("53.0")),
+                                            listOf(BigDecimal("10.1"), BigDecimal("53.1")),
+                                            listOf(BigDecimal("10.2"), BigDecimal("53.2")),
+                                        ),
+                                    type = "LineString",
+                                ),
+                            properties =
+                                mapOf(
+                                    "name" to "Test Track",
+                                    "coordinateProperties" to mapOf("times" to listOf(1000, 2000, 3000)),
+                                ),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+        val beforeParsing = Instant.now()
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+
+        val afterParsing = Instant.now()
+        val track = checkNotNull(result.track) { "track must not be null" }
+        assertThat(track.trackPoints).hasSize(3)
+
+        val firstTime = checkNotNull(track.trackPoints[0].time) { "first time must not be null" }
+
+        assertThat(firstTime).isBetween(
+            beforeParsing.plusMillis(1000).minusMillis(100),
+            afterParsing.plusMillis(1000).plusMillis(100),
+        )
+    }
+
+    @Test
+    fun `should use provided clock for timestamp calculation`() {
+        val fixedInstant = Instant.parse("2024-01-15T10:30:00Z")
+        val fixedClock = java.time.Clock.fixed(fixedInstant, java.time.ZoneOffset.UTC)
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates =
+                                        listOf(
+                                            listOf(BigDecimal("10.0"), BigDecimal("53.0")),
+                                            listOf(BigDecimal("10.1"), BigDecimal("53.1")),
+                                        ),
+                                    type = "LineString",
+                                ),
+                            properties =
+                                mapOf(
+                                    "name" to "Test Track",
+                                    "coordinateProperties" to mapOf("times" to listOf(0, 5000)),
+                                ),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback", fixedClock)
+
+        val track = checkNotNull(result.track) { "track must not be null" }
+        assertThat(track.trackPoints).hasSize(2)
+        assertThat(track.trackPoints[0].time).isEqualTo(fixedInstant)
+        assertThat(track.trackPoints[1].time).isEqualTo(fixedInstant.plusMillis(5000))
+    }
+
+    @Test
+    fun `should throw detailed exception when times contains non-numeric value`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates =
+                                        listOf(
+                                            listOf(BigDecimal("10.0"), BigDecimal("53.0")),
+                                            listOf(BigDecimal("10.1"), BigDecimal("53.1")),
+                                            listOf(BigDecimal("10.2"), BigDecimal("53.2")),
+                                        ),
+                                    type = "LineString",
+                                ),
+                            properties =
+                                mapOf(
+                                    "name" to "Test Track",
+                                    "coordinateProperties" to mapOf("times" to listOf(0, "invalid", 5000)),
+                                ),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        org.assertj.core.api.Assertions
+            .assertThatThrownBy {
+                mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+            }.isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessageContaining("coordinateProperties.times[1]")
+            .hasMessageContaining("not a number")
+    }
+
+    @Test
+    fun `should throw detailed exception when times contains null value`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates =
+                                        listOf(
+                                            listOf(BigDecimal("10.0"), BigDecimal("53.0")),
+                                            listOf(BigDecimal("10.1"), BigDecimal("53.1")),
+                                        ),
+                                    type = "LineString",
+                                ),
+                            properties =
+                                mapOf(
+                                    "name" to "Test Track",
+                                    "coordinateProperties" to mapOf("times" to listOf(0, null)),
+                                ),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        org.assertj.core.api.Assertions
+            .assertThatThrownBy {
+                mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+            }.isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessageContaining("coordinateProperties.times[1]")
+            .hasMessageContaining("null")
+    }
 }

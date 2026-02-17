@@ -37,6 +37,7 @@ import org.devshred.gpstools.formats.tcx.Trackpoint
 import org.devshred.gpstools.formats.tcx.TrainingCenterDatabase
 import org.springframework.stereotype.Component
 import org.w3c.dom.Node
+import java.time.Clock
 import java.time.Instant
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -240,7 +241,7 @@ class GpsContainerMapper {
                             ?.let { ZonedDateTime.ofInstant(trackPoint.time, DEFAULT_TIMEZONE) }
                             .orElse { timeFallback },
                         TcxPosition(trackPoint.latitude, trackPoint.longitude),
-                        trackPoint.elevation!!,
+                        trackPoint.elevation ?: 0.0,
                         distance,
                     ),
                 )
@@ -318,6 +319,7 @@ class GpsContainerMapper {
     fun fromGeoJson(
         featureCollectionDTO: FeatureCollectionDTO,
         name: String,
+        clock: Clock = Clock.systemUTC(),
     ): GpsContainer {
         val lineStringFeature =
             featureCollectionDTO.features
@@ -326,12 +328,16 @@ class GpsContainerMapper {
         val track: Track? =
             lineStringFeature?.let { feature ->
                 val lineString = feature.geometry as LineStringDTO
+                val coordinates = lineString.coordinates
+                val times = extractTimestamps(feature.properties, coordinates.size, clock)
+
                 val trackPoints =
-                    lineString.coordinates.map { coords ->
+                    coordinates.mapIndexed { index, coords ->
                         GpsTrackPoint(
                             latitude = coords[1].toDouble(),
                             longitude = coords[0].toDouble(),
                             elevation = coords.getOrNull(2)?.toDouble(),
+                            time = times?.getOrNull(index),
                         )
                     }
                 Track(trackPoints)
@@ -362,6 +368,59 @@ class GpsContainerMapper {
             pointsOfInterest = pointsOfInterest,
             track = track,
         )
+    }
+
+    /**
+     * Extracts timestamps from coordinateProperties.times.
+     *
+     * Converts relative millisecond offsets to absolute Instant timestamps.
+     * The base time is taken from the provided clock (defaults to current system time).
+     * Each value in the times array represents milliseconds to add to the base time.
+     *
+     * @param properties Feature properties (may contain coordinateProperties)
+     * @param coordinatesCount Expected array length for validation
+     * @param clock Clock for base timestamp (defaults to system UTC, injectable for testing)
+     * @return List of Instants or null if no valid times found
+     * @throws IllegalArgumentException if times array length != coordinates length or contains invalid values
+     */
+    private fun extractTimestamps(
+        properties: Any?,
+        coordinatesCount: Int,
+        clock: Clock,
+    ): List<Instant>? {
+        val propsMap = properties as? Map<*, *> ?: return null
+        val coordProps = propsMap["coordinateProperties"] as? Map<*, *> ?: return null
+        val timesList = coordProps["times"] as? List<*> ?: return null
+
+        val times =
+            timesList.mapIndexed { index, value ->
+                when (value) {
+                    null -> {
+                        throw IllegalArgumentException(
+                            "coordinateProperties.times[$index] is null",
+                        )
+                    }
+
+                    !is Number -> {
+                        throw IllegalArgumentException(
+                            "coordinateProperties.times[$index] is not a number (value: $value, type: ${value::class.simpleName})",
+                        )
+                    }
+
+                    else -> {
+                        value.toLong()
+                    }
+                }
+            }
+
+        if (times.size != coordinatesCount) {
+            throw IllegalArgumentException(
+                "coordinateProperties.times array length (${times.size}) must match coordinates length ($coordinatesCount)",
+            )
+        }
+
+        val baseTime = Instant.now(clock)
+        return times.map { offsetMs -> baseTime.plusMillis(offsetMs) }
     }
 }
 
