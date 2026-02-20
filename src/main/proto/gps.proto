@@ -57,8 +57,16 @@ message ProtoTrack {
   repeated ProtoTrackPoint trackPoints = 1;
 }
 
+message ProtoMetadata {
+  optional string description = 1;
+  optional string copyright_author = 2;
+  optional int32 copyright_year = 3;
+  optional string link_href = 4;
+}
+
 message ProtoContainer {
   optional string name = 1;
   repeated ProtoPointOfInterest pointsOfInterest = 2;
   ProtoTrack track = 3;
+  optional ProtoMetadata metadata = 4;
 }

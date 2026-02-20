@@ -2,6 +2,7 @@ package org.devshred.gpstools.domain.gps
 
 import org.assertj.core.api.Assertions.assertThat
 import org.devshred.gpstools.formats.gps.GpsContainer
+import org.devshred.gpstools.formats.gps.GpsMetadata
 import org.devshred.gpstools.formats.gps.PoiType
 import org.devshred.gpstools.formats.gps.PointOfInterest
 import org.devshred.gpstools.formats.gps.Track
@@ -125,6 +126,26 @@ class GpsContainerTest {
 
         assertThat(actual.pointsOfInterest[1].name).isEqualTo("Finish")
         assertThat(actual.pointsOfInterest[1].latitude).isEqualTo(36.73361890)
+    }
+
+    @Test
+    fun `withOptimizedPointsOfInterest preserves metadata`() {
+        val metadata = GpsMetadata(description = "My Tour", copyrightAuthor = "Author")
+        val containerWithMeta = gpsContainer.copy(metadata = metadata)
+
+        val result = containerWithMeta.withOptimizedPointsOfInterest()
+
+        assertThat(result.metadata).isEqualTo(metadata)
+    }
+
+    @Test
+    fun `removeDuplicatePointsOfInterest preserves metadata`() {
+        val metadata = GpsMetadata(description = "My Tour", copyrightAuthor = "Author")
+        val containerWithMeta = gpsContainer.copy(metadata = metadata)
+
+        val result = containerWithMeta.removeDuplicatePointsOfInterest()
+
+        assertThat(result.metadata).isEqualTo(metadata)
     }
 
     @Test

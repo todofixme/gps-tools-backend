@@ -6,6 +6,7 @@ data class GpsContainer(
     val name: String?,
     val pointsOfInterest: List<PointOfInterest>,
     val track: Track?,
+    val metadata: GpsMetadata? = null,
 ) {
     fun withOptimizedPointsOfInterest(tolerance: Int = MAX_DISTANCE_BETWEEN_TRACK_AND_WAYPOINT): GpsContainer {
         val optimizedWayPoints =
@@ -13,7 +14,7 @@ data class GpsContainer(
                 .mapNotNull { findPointOnTrackNearestTo(it, tolerance) }
                 .sortedBy { it.time }
 
-        return GpsContainer(name, optimizedWayPoints, track)
+        return GpsContainer(name, optimizedWayPoints, track, metadata)
     }
 
     private fun findPointOnTrackNearestTo(point: PointOfInterest): PointOfInterest {
@@ -61,7 +62,7 @@ data class GpsContainer(
             pointsOfInterest
                 .distinctBy { Triple(it.latitude, it.longitude, it.name) }
 
-        return GpsContainer(name, cleanedPoints, track)
+        return GpsContainer(name, cleanedPoints, track, metadata)
     }
 }
 

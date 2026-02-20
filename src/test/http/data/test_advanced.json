@@ -230,6 +230,12 @@
       },
       "properties": {
         "name": "B 1 2km",
+        "desc": "WfF ERT Savoyen-Tour 2024",
+        "copyright": {
+          "author": "Johannes Schmidt",
+          "year": 2026
+        },
+        "link": "https://www.komoot.com/de-de/tour/1212348753",
         "coordinateProperties": {
           "times": [
             0,

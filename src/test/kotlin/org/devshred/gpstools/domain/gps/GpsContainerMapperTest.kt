@@ -1,14 +1,18 @@
 package org.devshred.gpstools.domain.gps
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.garmin.xmlschemas.trainingcenterdatabase.v2.CoursePointT
 import com.garmin.xmlschemas.trainingcenterdatabase.v2.PositionT
+import io.jenetics.jpx.Copyright
 import io.jenetics.jpx.GPX
+import io.jenetics.jpx.Link
 import mil.nga.sf.geojson.FeatureCollection
 import mil.nga.sf.geojson.Point
 import mil.nga.sf.geojson.Position
 import org.apache.commons.lang3.RandomStringUtils
 import org.apache.commons.math3.random.RandomDataGenerator
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.devshred.gpstools.api.model.FeatureCollectionDTO
 import org.devshred.gpstools.api.model.FeatureDTO
 import org.devshred.gpstools.api.model.LineStringDTO
@@ -16,6 +20,7 @@ import org.devshred.gpstools.api.model.PointDTO
 import org.devshred.gpstools.formats.gps.ExtensionValues
 import org.devshred.gpstools.formats.gps.GpsContainer
 import org.devshred.gpstools.formats.gps.GpsContainerMapper
+import org.devshred.gpstools.formats.gps.GpsMetadata
 import org.devshred.gpstools.formats.gps.PoiType
 import org.devshred.gpstools.formats.gps.PointOfInterest
 import org.devshred.gpstools.formats.gps.Track
@@ -38,8 +43,12 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.xmlunit.diff.DefaultNodeMatcher
 import org.xmlunit.diff.ElementSelectors
 import org.xmlunit.matchers.CompareMatcher
+import java.io.File
 import java.math.BigDecimal
+import java.nio.file.Path
+import java.time.Clock
 import java.time.Instant
+import java.time.ZoneOffset
 import java.util.UUID
 import java.util.stream.Stream
 import io.jenetics.jpx.WayPoint as GpxWayPoint
@@ -664,6 +673,566 @@ class GpsContainerMapperTest {
         assertThat(result.type).isEqualTo(PoiType.FIRST_AID)
     }
 
+    @Test
+    fun `should read description from GPX metadata`() {
+        val gpx =
+            GPX
+                .builder()
+                .metadata { m -> m.desc("My Description") }
+                .build()
+
+        val result = mapper.fromGpx(gpx)
+
+        assertThat(result.metadata?.description).isEqualTo("My Description")
+    }
+
+    @Test
+    fun `should read copyright from GPX metadata`() {
+        val gpx =
+            GPX
+                .builder()
+                .metadata { m -> m.copyright(Copyright.of("Johannes Schmidt", 2024)) }
+                .build()
+
+        val result = mapper.fromGpx(gpx)
+
+        assertThat(result.metadata?.copyrightAuthor).isEqualTo("Johannes Schmidt")
+        assertThat(result.metadata?.copyrightYear).isEqualTo(2024)
+    }
+
+    @Test
+    fun `should read link href from GPX metadata`() {
+        val gpx =
+            GPX
+                .builder()
+                .metadata { m -> m.addLink(Link.of("https://example.com", "Example", null)) }
+                .build()
+
+        val result = mapper.fromGpx(gpx)
+
+        assertThat(result.metadata?.linkHref).isEqualTo("https://example.com")
+    }
+
+    @Test
+    fun `should return null metadata when GPX has no metadata fields`() {
+        val gpx = GPX.builder().build()
+
+        val result = mapper.fromGpx(gpx)
+
+        assertThat(result.metadata).isNull()
+    }
+
+    @Test
+    fun `should write description to GPX metadata`() {
+        val container =
+            GpsContainer(
+                name = "My Track",
+                metadata = GpsMetadata(description = "My Description"),
+                pointsOfInterest = emptyList(),
+                track = null,
+            )
+
+        val gpx = mapper.toGpx(container)
+
+        assertThat(
+            gpx.metadata
+                .get()
+                .description
+                .get(),
+        ).isEqualTo("My Description")
+    }
+
+    @Test
+    fun `should write copyright to GPX metadata`() {
+        val container =
+            GpsContainer(
+                name = "My Track",
+                metadata = GpsMetadata(copyrightAuthor = "Johannes Schmidt", copyrightYear = 2024),
+                pointsOfInterest = emptyList(),
+                track = null,
+            )
+
+        val gpx = mapper.toGpx(container)
+
+        assertThat(
+            gpx.metadata
+                .get()
+                .copyright
+                .get()
+                .author,
+        ).isEqualTo("Johannes Schmidt")
+        assertThat(
+            gpx.metadata
+                .get()
+                .copyright
+                .get()
+                .year
+                .get()
+                .value,
+        ).isEqualTo(2024)
+    }
+
+    @Test
+    fun `should write link to GPX metadata with text combining desc and name`() {
+        val container =
+            GpsContainer(
+                name = "My Track",
+                metadata = GpsMetadata(description = "My Description", linkHref = "https://example.com"),
+                pointsOfInterest = emptyList(),
+                track = null,
+            )
+
+        val gpx = mapper.toGpx(container)
+
+        assertThat(gpx.metadata.get().links).hasSize(1)
+        assertThat(
+            gpx.metadata
+                .get()
+                .links[0]
+                .href
+                .toString(),
+        ).isEqualTo("https://example.com")
+        assertThat(
+            gpx.metadata
+                .get()
+                .links[0]
+                .text
+                .get(),
+        ).isEqualTo("My Description; My Track")
+    }
+
+    @Test
+    fun `should round-trip metadata through proto`() {
+        val container =
+            GpsContainer(
+                name = "My Track",
+                metadata =
+                    GpsMetadata(
+                        description = "My Description",
+                        copyrightAuthor = "Johannes Schmidt",
+                        copyrightYear = 2024,
+                        linkHref = "https://example.com",
+                    ),
+                pointsOfInterest = emptyList(),
+                track = null,
+            )
+
+        val proto = mapper.toProto(container)
+        val result = mapper.fromProto(proto)
+
+        assertThat(result.metadata?.description).isEqualTo("My Description")
+        assertThat(result.metadata?.copyrightAuthor).isEqualTo("Johannes Schmidt")
+        assertThat(result.metadata?.copyrightYear).isEqualTo(2024)
+        assertThat(result.metadata?.linkHref).isEqualTo("https://example.com")
+    }
+
+    @Test
+    fun `should not write copyright when only copyrightYear is set without author`() {
+        val container =
+            GpsContainer(
+                name = "My Track",
+                metadata = GpsMetadata(copyrightYear = 2024),
+                pointsOfInterest = emptyList(),
+                track = null,
+            )
+
+        val gpx = mapper.toGpx(container)
+
+        assertThat(gpx.metadata.get().copyright).isEmpty
+    }
+
+    @Test
+    fun `should write copyright with only author when year is absent`() {
+        val container =
+            GpsContainer(
+                name = "My Track",
+                metadata = GpsMetadata(copyrightAuthor = "Johannes Schmidt"),
+                pointsOfInterest = emptyList(),
+                track = null,
+            )
+
+        val gpx = mapper.toGpx(container)
+
+        assertThat(
+            gpx.metadata
+                .get()
+                .copyright
+                .get()
+                .author,
+        ).isEqualTo("Johannes Schmidt")
+        assertThat(
+            gpx.metadata
+                .get()
+                .copyright
+                .get()
+                .year,
+        ).isEmpty
+    }
+
+    @Test
+    fun `should write link text with only name when description is absent`() {
+        val container =
+            GpsContainer(
+                name = "My Track",
+                metadata = GpsMetadata(linkHref = "https://example.com"),
+                pointsOfInterest = emptyList(),
+                track = null,
+            )
+
+        val gpx = mapper.toGpx(container)
+
+        assertThat(
+            gpx.metadata
+                .get()
+                .links[0]
+                .text
+                .get(),
+        ).isEqualTo("My Track")
+    }
+
+    @Test
+    fun `should write link to GPX track node`() {
+        val container =
+            GpsContainer(
+                name = "My Track",
+                metadata = GpsMetadata(description = "My Description", linkHref = "https://example.com"),
+                pointsOfInterest = emptyList(),
+                track = Track(listOf(TrackPoint(1.0, 2.0))),
+            )
+
+        val gpx = mapper.toGpx(container)
+
+        assertThat(gpx.tracks[0].links).hasSize(1)
+        assertThat(
+            gpx.tracks[0]
+                .links[0]
+                .href
+                .toString(),
+        ).isEqualTo("https://example.com")
+        assertThat(
+            gpx.tracks[0]
+                .links[0]
+                .text
+                .get(),
+        ).isEqualTo("My Description; My Track")
+    }
+
+    @Test
+    fun `should write link to GPX track node with only name when description is absent`() {
+        val container =
+            GpsContainer(
+                name = "My Track",
+                metadata = GpsMetadata(linkHref = "https://example.com"),
+                pointsOfInterest = emptyList(),
+                track = Track(listOf(TrackPoint(1.0, 2.0))),
+            )
+
+        val gpx = mapper.toGpx(container)
+
+        assertThat(
+            gpx.tracks[0]
+                .links[0]
+                .text
+                .get(),
+        ).isEqualTo("My Track")
+    }
+
+    @Test
+    fun `should not write link to GPX track node when metadata has no link`() {
+        val container =
+            GpsContainer(
+                name = "My Track",
+                metadata = GpsMetadata(description = "My Description"),
+                pointsOfInterest = emptyList(),
+                track = Track(listOf(TrackPoint(1.0, 2.0))),
+            )
+
+        val gpx = mapper.toGpx(container)
+
+        assertThat(gpx.tracks[0].links).isEmpty()
+    }
+
+    @Test
+    fun `should read all metadata fields from GPX file`() {
+        val gpx =
+            GPX.read(
+                Path.of("src/test/http/data/metadata.gpx"),
+            )
+
+        val result = mapper.fromGpx(gpx)
+
+        assertThat(result.metadata?.description).isEqualTo("WfF ERT Savoyen-Tour 2024")
+        assertThat(result.metadata?.copyrightAuthor).isEqualTo("Johannes Schmidt")
+        assertThat(result.metadata?.copyrightYear).isEqualTo(2024)
+        assertThat(result.metadata?.linkHref).isEqualTo("https://www.komoot.com/de-de/tour/1212348753")
+    }
+
+    @Test
+    fun `should write desc to GeoJSON LineString properties`() {
+        val container =
+            GpsContainer(
+                name = "My Track",
+                metadata = GpsMetadata(description = "My Description"),
+                pointsOfInterest = emptyList(),
+                track = Track(listOf(TrackPoint(1.0, 2.0))),
+            )
+
+        val result = mapper.toGeoJson(container)
+
+        val lineStringFeature = result.features.first { it.geometry.type == "LineString" }
+        assertThat(lineStringFeature.properties["desc"]).isEqualTo("My Description")
+    }
+
+    @Test
+    fun `should write copyright to GeoJSON LineString properties`() {
+        val container =
+            GpsContainer(
+                name = "My Track",
+                metadata = GpsMetadata(copyrightAuthor = "Johannes Schmidt", copyrightYear = 2026),
+                pointsOfInterest = emptyList(),
+                track = Track(listOf(TrackPoint(1.0, 2.0))),
+            )
+
+        val result = mapper.toGeoJson(container)
+
+        val lineStringFeature = result.features.first { it.geometry.type == "LineString" }
+        val copyright = lineStringFeature.properties["copyright"] as Map<*, *>
+        assertThat(copyright["author"]).isEqualTo("Johannes Schmidt")
+        assertThat(copyright["year"]).isEqualTo(2026)
+    }
+
+    @Test
+    fun `should write copyright with only author to GeoJSON`() {
+        val container =
+            GpsContainer(
+                name = "My Track",
+                metadata = GpsMetadata(copyrightAuthor = "Johannes Schmidt"),
+                pointsOfInterest = emptyList(),
+                track = Track(listOf(TrackPoint(1.0, 2.0))),
+            )
+
+        val result = mapper.toGeoJson(container)
+
+        val lineStringFeature = result.features.first { it.geometry.type == "LineString" }
+        val copyright = lineStringFeature.properties["copyright"] as Map<*, *>
+        assertThat(copyright["author"]).isEqualTo("Johannes Schmidt")
+        assertThat(copyright["year"]).isNull()
+    }
+
+    @Test
+    fun `should write copyright with only year to GeoJSON`() {
+        val container =
+            GpsContainer(
+                name = "My Track",
+                metadata = GpsMetadata(copyrightYear = 2026),
+                pointsOfInterest = emptyList(),
+                track = Track(listOf(TrackPoint(1.0, 2.0))),
+            )
+
+        val result = mapper.toGeoJson(container)
+
+        val lineStringFeature = result.features.first { it.geometry.type == "LineString" }
+        val copyright = lineStringFeature.properties["copyright"] as Map<*, *>
+        assertThat(copyright["year"]).isEqualTo(2026)
+        assertThat(copyright["author"]).isNull()
+    }
+
+    @Test
+    fun `should write link to GeoJSON LineString properties`() {
+        val container =
+            GpsContainer(
+                name = "My Track",
+                metadata = GpsMetadata(linkHref = "https://example.com"),
+                pointsOfInterest = emptyList(),
+                track = Track(listOf(TrackPoint(1.0, 2.0))),
+            )
+
+        val result = mapper.toGeoJson(container)
+
+        val lineStringFeature = result.features.first { it.geometry.type == "LineString" }
+        assertThat(lineStringFeature.properties["link"]).isEqualTo("https://example.com")
+    }
+
+    @Test
+    fun `should not write metadata properties when metadata is null`() {
+        val container =
+            GpsContainer(
+                name = "My Track",
+                metadata = null,
+                pointsOfInterest = emptyList(),
+                track = Track(listOf(TrackPoint(1.0, 2.0))),
+            )
+
+        val result = mapper.toGeoJson(container)
+
+        val lineStringFeature = result.features.first { it.geometry.type == "LineString" }
+        assertThat(lineStringFeature.properties).doesNotContainKey("desc")
+        assertThat(lineStringFeature.properties).doesNotContainKey("copyright")
+        assertThat(lineStringFeature.properties).doesNotContainKey("link")
+    }
+
+    @Test
+    fun `should extract desc from GeoJSON properties`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates = listOf(listOf(BigDecimal("10.0"), BigDecimal("53.0"))),
+                                    type = "LineString",
+                                ),
+                            properties = mapOf("name" to "Track", "desc" to "My Description"),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+
+        assertThat(result.metadata?.description).isEqualTo("My Description")
+    }
+
+    @Test
+    fun `should extract copyright from GeoJSON properties`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates = listOf(listOf(BigDecimal("10.0"), BigDecimal("53.0"))),
+                                    type = "LineString",
+                                ),
+                            properties = mapOf("copyright" to mapOf("author" to "Johannes Schmidt", "year" to 2026)),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+
+        assertThat(result.metadata?.copyrightAuthor).isEqualTo("Johannes Schmidt")
+        assertThat(result.metadata?.copyrightYear).isEqualTo(2026)
+    }
+
+    @Test
+    fun `should extract link from GeoJSON properties`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates = listOf(listOf(BigDecimal("10.0"), BigDecimal("53.0"))),
+                                    type = "LineString",
+                                ),
+                            properties = mapOf("link" to "https://www.komoot.com/tour/123"),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+
+        assertThat(result.metadata?.linkHref).isEqualTo("https://www.komoot.com/tour/123")
+    }
+
+    @Test
+    fun `should extract full metadata from test_advanced json`() {
+        val json = File("src/test/http/data/test_advanced.json").readText()
+        val featureCollectionDTO =
+            jacksonObjectMapper()
+                .readValue(json, FeatureCollectionDTO::class.java)
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+
+        assertThat(result.metadata?.description).isEqualTo("WfF ERT Savoyen-Tour 2024")
+        assertThat(result.metadata?.copyrightAuthor).isEqualTo("Johannes Schmidt")
+        assertThat(result.metadata?.copyrightYear).isEqualTo(2026)
+        assertThat(result.metadata?.linkHref).isEqualTo("https://www.komoot.com/de-de/tour/1212348753")
+    }
+
+    @Test
+    fun `should return null metadata when no metadata fields in GeoJSON`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates = listOf(listOf(BigDecimal("10.0"), BigDecimal("53.0"))),
+                                    type = "LineString",
+                                ),
+                            properties = mapOf("name" to "Track"),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+
+        assertThat(result.metadata).isNull()
+    }
+
+    @Test
+    fun `should extract copyright with only author from GeoJSON properties`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates = listOf(listOf(BigDecimal("10.0"), BigDecimal("53.0"))),
+                                    type = "LineString",
+                                ),
+                            properties = mapOf("copyright" to mapOf("author" to "Johannes Schmidt")),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+
+        assertThat(result.metadata?.copyrightAuthor).isEqualTo("Johannes Schmidt")
+        assertThat(result.metadata?.copyrightYear).isNull()
+    }
+
+    @Test
+    fun `should extract copyright with only year from GeoJSON properties`() {
+        val featureCollectionDTO =
+            FeatureCollectionDTO(
+                features =
+                    listOf(
+                        FeatureDTO(
+                            geometry =
+                                LineStringDTO(
+                                    coordinates = listOf(listOf(BigDecimal("10.0"), BigDecimal("53.0"))),
+                                    type = "LineString",
+                                ),
+                            properties = mapOf("copyright" to mapOf("year" to 2026)),
+                            type = "Feature",
+                        ),
+                    ),
+                type = "FeatureCollection",
+            )
+
+        val result = mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+
+        assertThat(result.metadata?.copyrightAuthor).isNull()
+        assertThat(result.metadata?.copyrightYear).isEqualTo(2026)
+    }
+
     private fun randomWayPoint(): GpxWayPoint =
         GpxWayPoint
             .builder()
@@ -1066,20 +1635,18 @@ class GpsContainerMapperTest {
                 type = "FeatureCollection",
             )
 
-        org.assertj.core.api.Assertions
-            .assertThatThrownBy {
-                mapper.fromGeoJson(featureCollectionDTO, "Fallback")
-            }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThatThrownBy {
+            mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+        }.isInstanceOf(IllegalArgumentException::class.java)
             .hasMessageContaining("coordinateProperties.times array length")
             .hasMessageContaining("must match coordinates length")
     }
 
     @Test
     fun `should parse test_advanced json with 44 coordinate properties`() {
-        val json = java.io.File("src/test/http/data/test_advanced.json").readText()
+        val json = File("src/test/http/data/test_advanced.json").readText()
         val featureCollectionDTO =
-            com.fasterxml.jackson.module.kotlin
-                .jacksonObjectMapper()
+            jacksonObjectMapper()
                 .readValue(json, FeatureCollectionDTO::class.java)
         val beforeParsing = Instant.now()
 
@@ -1145,7 +1712,7 @@ class GpsContainerMapperTest {
     @Test
     fun `should use provided clock for timestamp calculation`() {
         val fixedInstant = Instant.parse("2024-01-15T10:30:00Z")
-        val fixedClock = java.time.Clock.fixed(fixedInstant, java.time.ZoneOffset.UTC)
+        val fixedClock = Clock.fixed(fixedInstant, ZoneOffset.UTC)
         val featureCollectionDTO =
             FeatureCollectionDTO(
                 features =
@@ -1207,10 +1774,9 @@ class GpsContainerMapperTest {
                 type = "FeatureCollection",
             )
 
-        org.assertj.core.api.Assertions
-            .assertThatThrownBy {
-                mapper.fromGeoJson(featureCollectionDTO, "Fallback")
-            }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThatThrownBy {
+            mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+        }.isInstanceOf(IllegalArgumentException::class.java)
             .hasMessageContaining("coordinateProperties.times[1]")
             .hasMessageContaining("not a number")
     }
@@ -1242,10 +1808,9 @@ class GpsContainerMapperTest {
                 type = "FeatureCollection",
             )
 
-        org.assertj.core.api.Assertions
-            .assertThatThrownBy {
-                mapper.fromGeoJson(featureCollectionDTO, "Fallback")
-            }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThatThrownBy {
+            mapper.fromGeoJson(featureCollectionDTO, "Fallback")
+        }.isInstanceOf(IllegalArgumentException::class.java)
             .hasMessageContaining("coordinateProperties.times[1]")
             .hasMessageContaining("null")
     }

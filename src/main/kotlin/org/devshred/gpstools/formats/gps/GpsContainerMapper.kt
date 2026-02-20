@@ -8,7 +8,9 @@ import com.garmin.xmlschemas.trainingcenterdatabase.v2.CoursePointT
 import com.garmin.xmlschemas.trainingcenterdatabase.v2.TrackpointT
 import com.garmin.xmlschemas.trainingcenterdatabase.v2.TrainingCenterDatabaseT
 import com.google.protobuf.Timestamp
+import io.jenetics.jpx.Copyright
 import io.jenetics.jpx.GPX
+import io.jenetics.jpx.Link
 import io.jenetics.jpx.geom.Geoid
 import mil.nga.sf.geojson.Feature
 import mil.nga.sf.geojson.FeatureCollection
@@ -23,10 +25,12 @@ import org.devshred.gpstools.common.orElse
 import org.devshred.gpstools.formats.gps.GpsContainerMapper.Constants.SEMICIRCLES_TO_DEGREES
 import org.devshred.gpstools.formats.gpx.GPX_CREATOR
 import org.devshred.gpstools.formats.proto.ProtoContainer
+import org.devshred.gpstools.formats.proto.ProtoMetadata
 import org.devshred.gpstools.formats.proto.ProtoPoiType
 import org.devshred.gpstools.formats.proto.ProtoPointOfInterest
 import org.devshred.gpstools.formats.proto.ProtoTrackPoint
 import org.devshred.gpstools.formats.proto.protoContainer
+import org.devshred.gpstools.formats.proto.protoMetadata
 import org.devshred.gpstools.formats.proto.protoPointOfInterest
 import org.devshred.gpstools.formats.proto.protoTrack
 import org.devshred.gpstools.formats.proto.protoTrackPoint
@@ -37,6 +41,7 @@ import org.devshred.gpstools.formats.tcx.Trackpoint
 import org.devshred.gpstools.formats.tcx.TrainingCenterDatabase
 import org.springframework.stereotype.Component
 import org.w3c.dom.Node
+import java.net.URI
 import java.time.Clock
 import java.time.Instant
 import java.time.ZonedDateTime
@@ -59,6 +64,7 @@ class GpsContainerMapper {
     fun toProto(gpsContainer: GpsContainer): ProtoContainer =
         protoContainer {
             gpsContainer.name?.let { name = it }
+            gpsContainer.metadata?.let { metadata = it.toProto() }
             gpsContainer.pointsOfInterest.map { it.toProto() }.forEach { pointsOfInterest += it }
             gpsContainer.track?.let { gpsTrack ->
                 track =
@@ -71,6 +77,7 @@ class GpsContainerMapper {
     fun fromProto(protoContainer: ProtoContainer): GpsContainer =
         GpsContainer(
             name = protoContainer.name,
+            metadata = if (protoContainer.hasMetadata()) protoContainer.metadata.toGps() else null,
             pointsOfInterest = protoContainer.pointsOfInterestList.map { it.toGps() },
             track =
                 protoContainer.track
@@ -80,10 +87,30 @@ class GpsContainerMapper {
 
     fun toGpx(gpsCont: GpsContainer): GPX {
         val gpxBuilder = GPX.builder().creator(GPX_CREATOR)
-        gpsCont.name?.let { gpsName -> gpxBuilder.metadata { gpx -> gpx.name(gpsName) } }
+        if (gpsCont.name != null || gpsCont.metadata != null) {
+            gpxBuilder.metadata { m ->
+                gpsCont.name?.let { m.name(it) }
+                gpsCont.metadata?.let { meta ->
+                    meta.description?.let { m.desc(it) }
+                    meta.copyrightAuthor?.let { author ->
+                        m.copyright(
+                            if (meta.copyrightYear != null) Copyright.of(author, meta.copyrightYear) else Copyright.of(author),
+                        )
+                    }
+                    meta.linkHref?.let { href ->
+                        m.addLink(buildGpxLink(href, meta.description, gpsCont.name))
+                    }
+                }
+            }
+        }
         gpxBuilder.wayPoints(gpsCont.pointsOfInterest.map { it.toGpx() })
         gpxBuilder.addTrack { track ->
             track.name(gpsCont.name)
+            gpsCont.metadata?.let { meta ->
+                meta.linkHref?.let { href ->
+                    track.addLink(buildGpxLink(href, meta.description, gpsCont.name))
+                }
+            }
             track.addSegment { segment ->
                 segment.points(gpsCont.track?.trackPoints?.map { it.toGpx() })
             }
@@ -107,6 +134,30 @@ class GpsContainerMapper {
             } else {
                 null
             }
+        val metadata: GpsMetadata? =
+            if (gpx.metadata.isPresent) {
+                val gpxMeta = gpx.metadata.get()
+                val description = gpxMeta.description.getOrNull()
+                val copyrightAuthor = gpxMeta.copyright.map { it.author }.getOrNull()
+                val copyrightYear =
+                    gpxMeta.copyright
+                        .flatMap { it.year }
+                        .map { it.value }
+                        .getOrNull()
+                val linkHref =
+                    gpxMeta.links
+                        .firstOrNull()
+                        ?.href
+                        ?.toString()
+                GpsMetadata.ofNullable(
+                    description = description,
+                    copyrightAuthor = copyrightAuthor,
+                    copyrightYear = copyrightYear,
+                    linkHref = linkHref,
+                )
+            } else {
+                null
+            }
         val wayPoints = gpx.wayPoints.map { it.toGpsPointOfInterest() }
         val track: Track? =
             if (gpx.tracks.isNotEmpty() && gpx.tracks[0].segments.isNotEmpty()) {
@@ -122,6 +173,7 @@ class GpsContainerMapper {
 
         return GpsContainer(
             name = trackName,
+            metadata = metadata,
             pointsOfInterest = wayPoints,
             track = track,
         )
@@ -172,6 +224,14 @@ class GpsContainerMapper {
                 val lineString = LineString(it)
                 val lineStringFeature = Feature(lineString)
                 lineStringFeature.properties["name"] = gpsContainer.name
+                gpsContainer.metadata?.let { meta ->
+                    meta.description?.let { lineStringFeature.properties["desc"] = it }
+                    val copyrightMap = mutableMapOf<String, Any>()
+                    meta.copyrightAuthor?.let { copyrightMap["author"] = it }
+                    meta.copyrightYear?.let { copyrightMap["year"] = it }
+                    if (copyrightMap.isNotEmpty()) lineStringFeature.properties["copyright"] = copyrightMap
+                    meta.linkHref?.let { lineStringFeature.properties["link"] = it }
+                }
 
                 featureCollection.addFeature(lineStringFeature)
             }
@@ -348,6 +408,8 @@ class GpsContainerMapper {
                 (feature.properties as? Map<*, *>)?.get("name") as? String
             } ?: name
 
+        val metadata: GpsMetadata? = extractMetadata(lineStringFeature?.properties)
+
         val pointsOfInterest =
             featureCollectionDTO.features
                 .filter { it.geometry is PointDTO }
@@ -365,8 +427,24 @@ class GpsContainerMapper {
 
         return GpsContainer(
             name = trackName,
+            metadata = metadata,
             pointsOfInterest = pointsOfInterest,
             track = track,
+        )
+    }
+
+    private fun extractMetadata(properties: Any?): GpsMetadata? {
+        val props = properties as? Map<*, *> ?: return null
+        val description = props["desc"] as? String
+        val copyright = props["copyright"] as? Map<*, *>
+        val copyrightAuthor = copyright?.get("author") as? String
+        val copyrightYear = (copyright?.get("year") as? Number)?.toInt()
+        val linkHref = props["link"] as? String
+        return GpsMetadata.ofNullable(
+            description = description,
+            copyrightAuthor = copyrightAuthor,
+            copyrightYear = copyrightYear,
+            linkHref = linkHref,
         )
     }
 
@@ -421,6 +499,15 @@ class GpsContainerMapper {
 
         val baseTime = Instant.now(clock)
         return times.map { offsetMs -> baseTime.plusMillis(offsetMs) }
+    }
+
+    private fun buildGpxLink(
+        href: String,
+        description: String?,
+        name: String?,
+    ): Link {
+        val linkText = listOfNotNull(description, name).joinToString("; ")
+        return Link.of(URI.create(href), linkText, null)
     }
 }
 
@@ -570,6 +657,24 @@ fun ProtoPointOfInterest.toGps(): GpsPointOfInterest =
     )
 
 fun ProtoPoiType.toGps(): PoiType = PoiType.fromString(this.name)
+
+fun GpsMetadata.toProto(): ProtoMetadata {
+    val meta = this
+    return protoMetadata {
+        meta.description?.let { description = it }
+        meta.copyrightAuthor?.let { copyrightAuthor = it }
+        meta.copyrightYear?.let { copyrightYear = it }
+        meta.linkHref?.let { linkHref = it }
+    }
+}
+
+fun ProtoMetadata.toGps(): GpsMetadata? =
+    GpsMetadata.ofNullable(
+        description = if (hasDescription()) description else null,
+        copyrightAuthor = if (hasCopyrightAuthor()) copyrightAuthor else null,
+        copyrightYear = if (hasCopyrightYear()) copyrightYear else null,
+        linkHref = if (hasLinkHref()) linkHref else null,
+    )
 
 fun GpxWayPoint.toGpsPointOfInterest(): GpsPointOfInterest {
     val gpx = this
