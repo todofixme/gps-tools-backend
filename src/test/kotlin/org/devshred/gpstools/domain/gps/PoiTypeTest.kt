@@ -79,4 +79,34 @@ class PoiTypeTest {
     fun `fromGpxSym returns null if element was not found`() {
         assertThat(fromGpxSym("unknown")).isNull()
     }
+
+    @Test
+    fun `tcxSafeType returns tcxType for all valid TCX types`() {
+        val validTcxTypes =
+            listOf(
+                PoiType.GENERIC,
+                PoiType.SUMMIT,
+                PoiType.VALLEY,
+                PoiType.WATER,
+                PoiType.FOOD,
+                PoiType.DANGER,
+                PoiType.LEFT,
+                PoiType.RIGHT,
+                PoiType.STRAIGHT,
+                PoiType.FIRST_AID,
+                PoiType.FOURTH_CATEGORY,
+                PoiType.THIRD_CATEGORY,
+                PoiType.SECOND_CATEGORY,
+                PoiType.FIRST_CATEGORY,
+                PoiType.HORS_CATEGORY,
+                PoiType.SPRINT,
+            )
+
+        validTcxTypes.forEach { assertThat(it.tcxSafeType).isEqualTo(it.tcxType) }
+    }
+
+    @Test
+    fun `tcxSafeType returns Generic for types not defined in TCX spec`() {
+        assertThat(PoiType.RESIDENCE.tcxSafeType).isEqualTo("Generic")
+    }
 }

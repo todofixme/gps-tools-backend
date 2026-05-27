@@ -3,6 +3,7 @@ package org.devshred.gpstools.formats.gps
 enum class PoiType(
     val tcxType: String,
     val gpxSym: String,
+    val validForTcx: Boolean = true,
 ) {
     GENERIC("Generic", "generic"),
     SUMMIT("Summit", "summit"),
@@ -19,9 +20,11 @@ enum class PoiType(
     SECOND_CATEGORY("2nd Category", "summit"),
     FIRST_CATEGORY("1st Category", "summit"),
     HORS_CATEGORY("Hors Category", "summit"),
-    RESIDENCE("Residence", "residence"),
+    RESIDENCE("Residence", "residence", false),
     SPRINT("Sprint", "sprint"),
     ;
+
+    val tcxSafeType: String get() = if (validForTcx) tcxType else GENERIC.tcxType
 
     companion object Factory {
         fun fromString(name: String): PoiType =

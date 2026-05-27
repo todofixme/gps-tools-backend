@@ -313,10 +313,10 @@ class GpsContainerMapper {
         gpsContainer.pointsOfInterest.forEach { poi: GpsPointOfInterest ->
             course.addCoursePoint(
                 CoursePoint(
-                    name = poi.name.orElse { "unnamed" },
+                    name = poi.name.orElse { "unnamed" }.take(10),
                     time = poi.time?.atZone(DEFAULT_TIMEZONE),
                     position = TcxPosition(poi.latitude, poi.longitude),
-                    pointType = poi.type?.tcxType,
+                    pointType = poi.type?.tcxSafeType,
                 ),
             )
         }
