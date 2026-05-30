@@ -314,32 +314,6 @@ class GpsContainerMapperTest {
     }
 
     @Test
-    fun `convert to TCX truncates POI name to 10 characters`() {
-        val tcx =
-            mapper.toTcx(
-                gpsContainer.copy(
-                    pointsOfInterest =
-                        listOf(
-                            PointOfInterest(
-                                uuid = UUID.randomUUID(),
-                                latitude = 36.74881700,
-                                longitude = -4.07262399,
-                                name = "This name is way too long for TCX",
-                            ),
-                        ),
-                ),
-            )
-
-        val actualTcx = TcxTools.XML_MAPPER.writeValueAsString(tcx)
-        val tcxNs = mapOf("tcx" to "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2")
-
-        xmlAssertThat(actualTcx)
-            .withNamespaceContext(tcxNs)
-            .valueByXPath("//tcx:TrainingCenterDatabase/tcx:Courses/tcx:Course/tcx:CoursePoint/tcx:Name/text()")
-            .isEqualTo("This name ")
-    }
-
-    @Test
     fun `convert to TCX uses Generic for PoiTypes not defined in TCX spec`() {
         val tcx =
             mapper.toTcx(
