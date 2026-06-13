@@ -59,7 +59,7 @@ dependencies {
     implementation("org.apache.commons:commons-lang3:3.20.0")
 
     implementation("jakarta.xml.bind:jakarta.xml.bind-api:4.0.5")
-    implementation("org.glassfish.jaxb:jaxb-runtime:4.0.6")
+    implementation("org.glassfish.jaxb:jaxb-runtime:4.0.9")
 
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.springframework.boot:spring-boot-starter-webflux")
