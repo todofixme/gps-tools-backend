@@ -13,7 +13,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
     id("org.openapi.generator") version "7.17.0"
 
-    id("com.google.protobuf") version "0.9.6"
+    id("com.google.protobuf") version "0.10.0"
 
     id("net.researchgate.release") version "3.1.0"
     id("com.palantir.git-version") version "4.3.0"
