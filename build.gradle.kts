@@ -71,7 +71,7 @@ dependencies {
     testImplementation("org.xmlunit:xmlunit-core:$xmlunitVersion")
     testImplementation("org.xmlunit:xmlunit-matchers:$xmlunitVersion")
     testImplementation("org.xmlunit:xmlunit-assertj:$xmlunitVersion")
-    testImplementation("org.apache.httpcomponents.client5:httpclient5:5.6")
+    testImplementation("org.apache.httpcomponents.client5:httpclient5:5.6.4")
 }
 
 val generatedOpenApiSourcesDir = "${layout.buildDirectory.get()}/generated-openapi"
