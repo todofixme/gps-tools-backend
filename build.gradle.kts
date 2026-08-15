@@ -19,7 +19,7 @@ plugins {
     id("com.palantir.git-version") version "4.3.0"
 
     id("com.github.ben-manes.versions") version "0.53.0"
-    id("org.jlleitschuh.gradle.ktlint") version "14.0.1"
+    id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
 
     id("com.intershop.gradle.jaxb") version "7.0.2"
 }
