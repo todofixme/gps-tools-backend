@@ -5,21 +5,21 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    val kotlinVersion = "2.3.10"
+    val kotlinVersion = "2.3.21"
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.spring") version kotlinVersion
 
-    id("org.springframework.boot") version "3.5.10"
+    id("org.springframework.boot") version "3.5.16"
     id("io.spring.dependency-management") version "1.1.7"
-    id("org.openapi.generator") version "7.17.0"
+    id("org.openapi.generator") version "7.26.0"
 
-    id("com.google.protobuf") version "0.9.6"
+    id("com.google.protobuf") version "0.10.0"
 
-    id("net.researchgate.release") version "3.1.0"
+    id("net.researchgate.release") version "3.2.0"
     id("com.palantir.git-version") version "4.3.0"
 
-    id("com.github.ben-manes.versions") version "0.53.0"
-    id("org.jlleitschuh.gradle.ktlint") version "14.0.1"
+    id("io.github.ben-manes.versions") version "0.66.0"
+    id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
 
     id("com.intershop.gradle.jaxb") version "7.0.2"
 }
@@ -34,8 +34,8 @@ repositories {
     mavenCentral()
 }
 
-val protoBufVersion = "4.33.5"
-val xmlunitVersion = "2.11.0"
+val protoBufVersion = "4.36.2"
+val xmlunitVersion = "2.14.0"
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -45,21 +45,21 @@ dependencies {
     implementation("org.apache.tika:tika-core:3.2.3")
 
     implementation("io.jenetics:jpx:3.2.1")
-    implementation("com.garmin:fit:21.194.0")
+    implementation("com.garmin:fit:21.218.0")
     implementation("mil.nga:sf:2.2.2")
     implementation("mil.nga.sf:sf-geojson:3.3.3")
 
     implementation("com.google.protobuf:protobuf-kotlin:$protoBufVersion")
     implementation("com.google.protobuf:protobuf-java-util:$protoBufVersion")
 
-    implementation("com.fasterxml.jackson:jackson-bom:2.21.0")
+    implementation("com.fasterxml.jackson:jackson-bom:2.22.4")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml")
 
-    implementation("org.apache.commons:commons-lang3:3.20.0")
+    implementation("org.apache.commons:commons-lang3:3.21.0")
 
     implementation("jakarta.xml.bind:jakarta.xml.bind-api:4.0.5")
-    implementation("org.glassfish.jaxb:jaxb-runtime:4.0.6")
+    implementation("org.glassfish.jaxb:jaxb-runtime:4.0.9")
 
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.springframework.boot:spring-boot-starter-webflux")
@@ -71,7 +71,7 @@ dependencies {
     testImplementation("org.xmlunit:xmlunit-core:$xmlunitVersion")
     testImplementation("org.xmlunit:xmlunit-matchers:$xmlunitVersion")
     testImplementation("org.xmlunit:xmlunit-assertj:$xmlunitVersion")
-    testImplementation("org.apache.httpcomponents.client5:httpclient5:5.6")
+    testImplementation("org.apache.httpcomponents.client5:httpclient5:5.6.5")
 }
 
 val generatedOpenApiSourcesDir = "${layout.buildDirectory.get()}/generated-openapi"
