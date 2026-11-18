@@ -11,17 +11,17 @@ plugins {
 
     id("org.springframework.boot") version "3.5.16"
     id("io.spring.dependency-management") version "1.1.7"
-    id("org.openapi.generator") version "7.26.0"
+    id("org.openapi.generator") version "7.27.0"
 
-    id("com.google.protobuf") version "0.10.0"
+    id("com.google.protobuf") version "0.10.1"
 
     id("net.researchgate.release") version "3.2.0"
-    id("com.palantir.git-version") version "4.3.0"
+    id("com.palantir.git-version") version "5.2.0"
 
-    id("io.github.ben-manes.versions") version "0.66.0"
+    id("io.github.ben-manes.versions") version "0.67.0"
     id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
 
-    id("com.intershop.gradle.jaxb") version "7.0.2"
+    id("com.intershop.gradle.jaxb") version "9.0.0"
 }
 
 group = "org.devshred"
@@ -42,21 +42,21 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-aop")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.apache.tika:tika-core:3.2.3")
+    implementation("org.apache.tika:tika-core:3.3.3")
 
     implementation("io.jenetics:jpx:3.2.1")
-    implementation("com.garmin:fit:21.218.0")
+    implementation("com.garmin:fit:21.222.0")
     implementation("mil.nga:sf:2.2.2")
     implementation("mil.nga.sf:sf-geojson:3.3.3")
 
     implementation("com.google.protobuf:protobuf-kotlin:$protoBufVersion")
     implementation("com.google.protobuf:protobuf-java-util:$protoBufVersion")
 
-    implementation("com.fasterxml.jackson:jackson-bom:2.22.4")
+    implementation("com.fasterxml.jackson:jackson-bom:2.23.0")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml")
 
-    implementation("org.apache.commons:commons-lang3:3.21.0")
+    implementation("org.apache.commons:commons-lang3:3.22.0")
 
     implementation("jakarta.xml.bind:jakarta.xml.bind-api:4.0.5")
     implementation("org.glassfish.jaxb:jaxb-runtime:4.0.9")
@@ -85,7 +85,7 @@ openApiGenerate {
     configFile.set("src/main/spec/api-config.json")
 }
 
-java.sourceSets["main"].java.srcDir(generatedOpenApiSourcesDir)
+java.sourceSets["main"].java.srcDir("$generatedOpenApiSourcesDir/src/main/kotlin")
 
 tasks.withType<KotlinCompile> {
     kotlin {
